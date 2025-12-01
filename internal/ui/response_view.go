@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -72,6 +73,14 @@ type ResponseView struct {
 	bodyEditor   *components.Editor
 	statusBadge  StatusBadge
 	scrollOffset int
+	isLoading    bool // Whether a request is in progress
+	loaderFrame  int  // Animation frame for loader
+
+	// Cursor tracking for vim-like navigation
+	headersCursor int
+	cookiesCursor int
+	headersKeys   []string // Sorted header keys for stable iteration
+	cookiesKeys   []string // Sorted cookie keys for stable iteration
 }
 
 // NewResponseView creates a new response view
@@ -87,17 +96,21 @@ func NewResponseView() *ResponseView {
 	bodyEditor.SetReadOnly(true)
 
 	return &ResponseView{
-		statusCode:   0,
-		status:       "No response yet",
-		headers:      make(map[string]string),
-		cookies:      make(map[string]string),
-		body:         "",
-		time:         "0ms",
-		size:         "0B",
-		tabs:         tabs,
-		bodyEditor:   bodyEditor,
-		statusBadge:  NewStatusBadge(0),
-		scrollOffset: 0,
+		statusCode:    0,
+		status:        "No response yet",
+		headers:       make(map[string]string),
+		cookies:       make(map[string]string),
+		body:          "",
+		time:          "0ms",
+		size:          "0B",
+		tabs:          tabs,
+		bodyEditor:    bodyEditor,
+		statusBadge:   NewStatusBadge(0),
+		scrollOffset:  0,
+		headersCursor: 0,
+		cookiesCursor: 0,
+		headersKeys:   []string{},
+		cookiesKeys:   []string{},
 	}
 }
 
@@ -105,48 +118,120 @@ func NewResponseView() *ResponseView {
 func (r ResponseView) Update(msg tea.Msg, cfg *config.GlobalConfig) (ResponseView, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Tab navigation
+		activeTab := r.tabs.GetActive()
+
+		// Tab navigation with Tab key
 		switch msg.String() {
 		case "tab":
 			r.tabs.Next()
+			return r, nil
 		case "shift+tab":
 			r.tabs.Previous()
+			return r, nil
 		case "1":
 			r.tabs.SetActive(0) // Body
+			return r, nil
 		case "2":
 			r.tabs.SetActive(1) // Cookies
+			return r, nil
 		case "3":
 			r.tabs.SetActive(2) // Headers
+			return r, nil
 		}
 
-		// VIEW mode scrolling in body
-		activeTab := r.tabs.GetActive()
-		if activeTab == "Body" {
+		// Tab-specific navigation
+		switch activeTab {
+		case "Body":
+			// Forward all keys to body editor for vim-like navigation
 			editor, _ := r.bodyEditor.Update(msg, false) // Read-only navigation
 			r.bodyEditor = editor
+
+		case "Cookies":
+			// Vim-like navigation in cookies list
+			switch msg.String() {
+			case "j", "down":
+				if r.cookiesCursor < len(r.cookiesKeys)-1 {
+					r.cookiesCursor++
+				}
+			case "k", "up":
+				if r.cookiesCursor > 0 {
+					r.cookiesCursor--
+				}
+			case "g":
+				r.cookiesCursor = 0
+			case "G":
+				if len(r.cookiesKeys) > 0 {
+					r.cookiesCursor = len(r.cookiesKeys) - 1
+				}
+			}
+
+		case "Headers":
+			// Vim-like navigation in headers list
+			switch msg.String() {
+			case "j", "down":
+				if r.headersCursor < len(r.headersKeys)-1 {
+					r.headersCursor++
+				}
+			case "k", "up":
+				if r.headersCursor > 0 {
+					r.headersCursor--
+				}
+			case "g":
+				r.headersCursor = 0
+			case "G":
+				if len(r.headersKeys) > 0 {
+					r.headersCursor = len(r.headersKeys) - 1
+				}
+			}
 		}
 	}
 
 	return r, nil
 }
 
+// GetActiveTab returns the currently active tab name
+func (r *ResponseView) GetActiveTab() string {
+	return r.tabs.GetActive()
+}
+
 // View renders the response view
 func (r ResponseView) View(width, height int, active bool) string {
 	var result strings.Builder
 
-	// Status bar with badge, time, and size
-	if r.statusCode > 0 {
-		result.WriteString(r.statusBadge.Render())
-		result.WriteString(" ")
+	// Show loading bar if request is in progress
+	if r.isLoading {
+		// Use the horizontal loader from components
+		loaderLine := components.HorizontalLoader(width, r.loaderFrame, "Sending request")
+		result.WriteString(loaderLine)
+		result.WriteString("\n")
+	} else if r.statusCode > 0 {
+		// Status bar with badge and icons for time/size aligned to right
+		statusPart := r.statusBadge.Render()
 
-		timeStyle := lipgloss.NewStyle().
-			Foreground(styles.Teal)
-		result.WriteString(timeStyle.Render(fmt.Sprintf("Time: %s", r.time)))
-		result.WriteString(" ")
+		// Right-aligned time and size with Nerd Font / Unicode icons
+		// Using:  (nf-fa-clock) or ◷ for time,  (nf-fa-database) or ◊ for size
+		timeStyle := lipgloss.NewStyle().Foreground(styles.Teal)
+		sizeStyle := lipgloss.NewStyle().Foreground(styles.Peach)
 
-		sizeStyle := lipgloss.NewStyle().
-			Foreground(styles.Peach)
-		result.WriteString(sizeStyle.Render(fmt.Sprintf("Size: %s", r.size)))
+		// Unicode icons that work in most terminals
+		timeIcon := "◷" // Clock icon
+		sizeIcon := "◆" // Size/data icon
+
+		timeText := timeStyle.Render(fmt.Sprintf("%s %s", timeIcon, r.time))
+		sizeText := sizeStyle.Render(fmt.Sprintf("%s %s", sizeIcon, r.size))
+		rightPart := timeText + "  " + sizeText
+
+		// Calculate padding to align right part to the right
+		statusLen := lipgloss.Width(statusPart)
+		rightLen := lipgloss.Width(rightPart)
+		padding := width - statusLen - rightLen - 2
+		if padding < 1 {
+			padding = 1
+		}
+
+		result.WriteString(statusPart)
+		result.WriteString(strings.Repeat(" ", padding))
+		result.WriteString(rightPart)
 		result.WriteString("\n")
 	}
 
@@ -161,12 +246,22 @@ func (r ResponseView) View(width, height int, active bool) string {
 
 	// Tab content
 	var tabContent string
-	contentHeight := height - 4
-	if r.statusCode > 0 {
-		contentHeight-- // Account for status bar
+	// Calculate content height: total height minus tab bar (1), separator (1)
+	contentHeight := height - 2
+	if r.statusCode > 0 || r.isLoading {
+		contentHeight-- // Account for status bar or loading bar
+	}
+	if contentHeight < 3 {
+		contentHeight = 3
 	}
 
-	if r.statusCode == 0 {
+	if r.isLoading {
+		// Show loading message in content area
+		loadingStyle := lipgloss.NewStyle().
+			Foreground(styles.Blue).
+			Italic(true)
+		tabContent = loadingStyle.Render("Waiting for response...")
+	} else if r.statusCode == 0 {
 		tabContent = lipgloss.NewStyle().
 			Foreground(styles.Subtext0).
 			Render("No response yet. Send a request with Ctrl+S")
@@ -210,16 +305,49 @@ func (r *ResponseView) renderCookiesTab(width, height int) string {
 	result.WriteString(strings.Repeat("─", width))
 	result.WriteString("\n")
 
-	if len(r.cookies) == 0 {
+	if len(r.cookiesKeys) == 0 {
 		result.WriteString(lipgloss.NewStyle().
 			Foreground(styles.Subtext0).
 			Render("No cookies in response"))
 	} else {
-		for key, value := range r.cookies {
-			keyStyle := lipgloss.NewStyle().Foreground(styles.Text)
-			valueStyle := lipgloss.NewStyle().Foreground(styles.Subtext1)
-			result.WriteString(keyStyle.Render(fmt.Sprintf("%-25s", key)))
-			result.WriteString(valueStyle.Render(truncateString(value, width-26)))
+		// Calculate how many rows we can show
+		visibleRows := height - 2 // Account for header and separator
+		startIdx := 0
+		if r.cookiesCursor >= visibleRows {
+			startIdx = r.cookiesCursor - visibleRows + 1
+		}
+
+		for i := startIdx; i < len(r.cookiesKeys) && i < startIdx+visibleRows; i++ {
+			key := r.cookiesKeys[i]
+			value := r.cookies[key]
+
+			// Truncate key and value to fit width
+			keyWidth := 25
+			valueWidth := width - keyWidth - 1
+			if len(key) > keyWidth {
+				key = key[:keyWidth]
+			}
+			if len(value) > valueWidth && valueWidth > 0 {
+				value = value[:valueWidth]
+			}
+
+			// Highlight selected row
+			if i == r.cookiesCursor {
+				rowStyle := lipgloss.NewStyle().
+					Background(styles.Surface1).
+					Foreground(styles.Text)
+				row := fmt.Sprintf("%-25s %s", key, value)
+				// Pad to full width
+				if len(row) < width {
+					row += strings.Repeat(" ", width-len(row))
+				}
+				result.WriteString(rowStyle.Render(row))
+			} else {
+				keyStyle := lipgloss.NewStyle().Foreground(styles.Text)
+				valueStyle := lipgloss.NewStyle().Foreground(styles.Subtext1)
+				result.WriteString(keyStyle.Render(fmt.Sprintf("%-25s", key)))
+				result.WriteString(valueStyle.Render(value))
+			}
 			result.WriteString("\n")
 		}
 	}
@@ -239,16 +367,49 @@ func (r *ResponseView) renderHeadersTab(width, height int) string {
 	result.WriteString(strings.Repeat("─", width))
 	result.WriteString("\n")
 
-	if len(r.headers) == 0 {
+	if len(r.headersKeys) == 0 {
 		result.WriteString(lipgloss.NewStyle().
 			Foreground(styles.Subtext0).
 			Render("No headers in response"))
 	} else {
-		for key, value := range r.headers {
-			keyStyle := lipgloss.NewStyle().Foreground(styles.Text)
-			valueStyle := lipgloss.NewStyle().Foreground(styles.Subtext1)
-			result.WriteString(keyStyle.Render(fmt.Sprintf("%-25s", key)))
-			result.WriteString(valueStyle.Render(truncateString(value, width-26)))
+		// Calculate how many rows we can show
+		visibleRows := height - 2 // Account for header and separator
+		startIdx := 0
+		if r.headersCursor >= visibleRows {
+			startIdx = r.headersCursor - visibleRows + 1
+		}
+
+		for i := startIdx; i < len(r.headersKeys) && i < startIdx+visibleRows; i++ {
+			key := r.headersKeys[i]
+			value := r.headers[key]
+
+			// Truncate key and value to fit width
+			keyWidth := 25
+			valueWidth := width - keyWidth - 1
+			if len(key) > keyWidth {
+				key = key[:keyWidth]
+			}
+			if len(value) > valueWidth && valueWidth > 0 {
+				value = value[:valueWidth]
+			}
+
+			// Highlight selected row
+			if i == r.headersCursor {
+				rowStyle := lipgloss.NewStyle().
+					Background(styles.Surface1).
+					Foreground(styles.Text)
+				row := fmt.Sprintf("%-25s %s", key, value)
+				// Pad to full width
+				if len(row) < width {
+					row += strings.Repeat(" ", width-len(row))
+				}
+				result.WriteString(rowStyle.Render(row))
+			} else {
+				keyStyle := lipgloss.NewStyle().Foreground(styles.Text)
+				valueStyle := lipgloss.NewStyle().Foreground(styles.Subtext1)
+				result.WriteString(keyStyle.Render(fmt.Sprintf("%-25s", key)))
+				result.WriteString(valueStyle.Render(value))
+			}
 			result.WriteString("\n")
 		}
 	}
@@ -266,9 +427,40 @@ func (r *ResponseView) SetResponse(statusCode int, status string, headers map[st
 	r.time = time
 	r.size = size
 	r.statusBadge = NewStatusBadge(statusCode)
+	r.isLoading = false // Clear loading state when response is received
 
-	// Update body editor with response body
+	// Update body editor with response body and auto-format JSON
 	r.bodyEditor.SetContent(body)
+
+	// Check if content type is JSON and auto-format
+	contentType := ""
+	for k, v := range headers {
+		if strings.ToLower(k) == "content-type" {
+			contentType = strings.ToLower(v)
+			break
+		}
+	}
+	if strings.Contains(contentType, "json") || strings.HasPrefix(strings.TrimSpace(body), "{") || strings.HasPrefix(strings.TrimSpace(body), "[") {
+		// Auto-format JSON for better readability
+		r.bodyEditor.FormatJSON()
+	}
+
+	// Sort header and cookie keys for stable iteration
+	r.headersKeys = make([]string, 0, len(headers))
+	for k := range headers {
+		r.headersKeys = append(r.headersKeys, k)
+	}
+	sort.Strings(r.headersKeys)
+
+	r.cookiesKeys = make([]string, 0, len(cookies))
+	for k := range cookies {
+		r.cookiesKeys = append(r.cookiesKeys, k)
+	}
+	sort.Strings(r.cookiesKeys)
+
+	// Reset cursors
+	r.headersCursor = 0
+	r.cookiesCursor = 0
 }
 
 // ClearResponse clears the response view
@@ -282,6 +474,10 @@ func (r *ResponseView) ClearResponse() {
 	r.size = "0B"
 	r.statusBadge = NewStatusBadge(0)
 	r.bodyEditor.SetContent("")
+	r.headersKeys = []string{}
+	r.cookiesKeys = []string{}
+	r.headersCursor = 0
+	r.cookiesCursor = 0
 }
 
 // truncateString truncates a string to maxLen characters
@@ -311,4 +507,24 @@ func (r *ResponseView) GetResponseTime() string {
 // GetResponseSize returns the response size
 func (r *ResponseView) GetResponseSize() string {
 	return r.size
+}
+
+// SetLoading sets the loading state
+func (r *ResponseView) SetLoading(loading bool) {
+	r.isLoading = loading
+	if loading {
+		r.loaderFrame = 0
+	}
+}
+
+// IsLoading returns whether a request is in progress
+func (r *ResponseView) IsLoading() bool {
+	return r.isLoading
+}
+
+// TickLoader advances the loader animation frame
+func (r *ResponseView) TickLoader() {
+	if r.isLoading {
+		r.loaderFrame++
+	}
 }

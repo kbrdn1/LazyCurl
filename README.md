@@ -19,6 +19,13 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/kbrdn1/LazyCurl/actions/workflows/ci.yml"><img src="https://github.com/kbrdn1/LazyCurl/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/kbrdn1/LazyCurl/releases"><img src="https://img.shields.io/github/v/release/kbrdn1/LazyCurl?style=flat-square" alt="Release" /></a>
+  <a href="https://codecov.io/gh/kbrdn1/LazyCurl"><img src="https://codecov.io/gh/kbrdn1/LazyCurl/branch/main/graph/badge.svg" alt="Coverage" /></a>
+  <a href="https://goreportcard.com/report/github.com/kbrdn1/LazyCurl"><img src="https://goreportcard.com/badge/github.com/kbrdn1/LazyCurl" alt="Go Report Card" /></a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version" />
   <img src="https://img.shields.io/badge/TUI-Bubble_Tea-b4befe?style=for-the-badge" alt="Bubble Tea" />
   <img src="https://img.shields.io/badge/Theme-Catppuccin_Mocha-f5c2e7?style=for-the-badge" alt="Catppuccin" />
@@ -480,15 +487,16 @@ We use **Gitmoji + Conventional Commits**:
 - Configuration system (global + workspace)
 - Collections and environments management
 
-### 🔥 Sprint 1 - MVP (In Progress)
+### 🔥 Sprint 1 - MVP (Complete)
 
 - [x] Collection tree view with folders
 - [x] Environment management with variables
 - [x] Request builder UI
 - [x] Search functionality
 - [x] WhichKey keybinding hints
-- [ ] HTTP request execution
-- [ ] Response formatting
+- [x] HTTP request execution
+- [x] Response formatting
+- [x] CI/CD pipeline
 
 ### 📋 Future
 

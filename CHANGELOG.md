@@ -16,11 +16,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Customizable themes with Lipgloss
 - Environment variables system (local + global)
 - Collections panel for browsing requests
-- Request builder panel (placeholder)
-- Response viewer panel (placeholder)
+- Request builder panel with full HTTP request editing
+  - URL editor with variable highlighting
+  - Query and Path parameters management
+  - Headers editor with enable/disable toggle
+  - Body editor (JSON, XML, Form, Raw, None)
+  - Authorization (Bearer, Basic, API Key)
+  - Pre/Post request scripts
+- Response viewer panel with HTTP response display
+  - Animated loading indicator during requests
+  - Status badge with color coding (2xx/3xx/4xx/5xx)
+  - Time and Size metrics with icons
+  - Body tab with JSON auto-formatting
+  - Headers and Cookies tabs with vim navigation
+  - Horizontal scrolling for long lines
 - Environments panel with toggle ('e' key)
 - Configuration loading from `~/.config/lazycurl/config.yaml`
 - Workspace configuration from `.lazycurl/config.yaml`
+- CI/CD pipeline with GitHub Actions
+  - Automated testing on push/PR
+  - Multi-platform builds (Linux, macOS, Windows)
+  - golangci-lint integration
+  - Security scanning with gosec
+  - Automated releases with GoReleaser
+- Pre-commit hooks for code quality
 
 ### Changed
 - **BREAKING**: Removed all Git-related functionality

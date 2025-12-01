@@ -1,4 +1,4 @@
-.PHONY: build run clean test install dev help
+.PHONY: build run clean test install dev help lint fmt pre-commit setup-hooks
 
 # Variables
 BINARY_NAME=lazycurl
@@ -106,3 +106,23 @@ build-all:
 ## version: Affiche la version de Go
 version:
 	@$(GO) version
+
+## setup-hooks: Install pre-commit hooks
+setup-hooks:
+	@echo "🔧 Installing pre-commit hooks..."
+	@if command -v pre-commit > /dev/null; then \
+		pre-commit install; \
+		pre-commit install --hook-type commit-msg; \
+		echo "✅ Pre-commit hooks installed"; \
+	else \
+		echo "❌ pre-commit not installed. Install with: pip install pre-commit"; \
+	fi
+
+## pre-commit: Run pre-commit on all files
+pre-commit:
+	@echo "🔍 Running pre-commit checks..."
+	@pre-commit run --all-files
+
+## ci: Run all CI checks locally
+ci: fmt lint test
+	@echo "✅ All CI checks passed"

@@ -1,0 +1,64 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# LazyCurl specific
+.lazycurl/
+*.lazycurl.json
+
+# Config files (user specific)
+config.json
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Compiled binary
+lazycurl
+
+# Editor specific
+.zed/
+
+# Claude specific
+.claude/
+
+# Specification files
+.specify/
+
+# Documentation tools
+documenter.md
+
+# Coverage reports
+coverage.html

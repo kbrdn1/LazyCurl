@@ -499,14 +499,25 @@ We use **Gitmoji + Conventional Commits**:
 - [x] Response formatting
 - [x] CI/CD pipeline
 
-### 📋 Future
+### 📋 Sprint 2 - UX Improvements
+
+- [ ] Responsive panel layout (horizontal on 80x24 terminals)
+- [ ] Fullscreen panel toggle (`F` in NORMAL mode)
+- [ ] Console tab in Response Panel (`Ctrl+R`: Response, `Ctrl+C`: Console)
+- [ ] Improved statusbar rendering and display
+- [ ] Session persistence (`.lazycurl/session.yml`)
+- [ ] Theme system refactoring
+- [ ] Theme management and custom themes
+
+### 🔮 Future
 
 - Import/export Postman collections
 - Request history
-- Pre/post-request scripts
-- Authentication helpers
+- Pre/post-request scripts execution
+- Authentication helpers (OAuth2, AWS Sig)
 - GraphQL support
 - WebSocket testing
+- gRPC support
 
 ---
 

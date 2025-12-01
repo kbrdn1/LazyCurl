@@ -2025,6 +2025,19 @@ func (r *RequestView) GetCurrentRequestID() string {
 	return r.currentRequestID
 }
 
+// GetHeadersTable returns the headers table for HTTP request building
+func (r *RequestView) GetHeadersTable() *components.Table {
+	return r.headersTable
+}
+
+// GetBodyContent returns the body content from the body editor
+func (r *RequestView) GetBodyContent() string {
+	if r.bodyType == NoneBody {
+		return ""
+	}
+	return r.bodyEditor.GetContent()
+}
+
 // LoadCollectionRequest loads a full CollectionRequest with all its data
 func (r *RequestView) LoadCollectionRequest(req *api.CollectionRequest) {
 	if req == nil {

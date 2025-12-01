@@ -35,6 +35,7 @@ type Editor struct {
 	cursorRow  int        // Current row
 	cursorCol  int        // Current column
 	scrollY    int        // Vertical scroll offset
+	scrollX    int        // Horizontal scroll offset
 	height     int        // Available height
 	width      int        // Available width
 	readOnly   bool       // Whether the editor is read-only
@@ -142,10 +143,12 @@ func (e *Editor) Update(msg tea.Msg, allowInput bool) (*Editor, tea.Cmd) {
 			case "h", "left":
 				if e.cursorCol > 0 {
 					e.cursorCol--
+					e.scrollIntoView()
 				}
 			case "l", "right":
 				if e.cursorCol < len(e.content[e.cursorRow]) {
 					e.cursorCol++
+					e.scrollIntoView()
 				}
 			case "g":
 				e.cursorRow = 0
@@ -157,14 +160,18 @@ func (e *Editor) Update(msg tea.Msg, allowInput bool) (*Editor, tea.Cmd) {
 				e.scrollIntoView()
 			case "0":
 				e.cursorCol = 0
+				e.scrollIntoView()
 			case "$":
 				e.cursorCol = len(e.content[e.cursorRow])
+				e.scrollIntoView()
 			case "w":
 				// Move to next word
 				e.moveToNextWord()
+				e.scrollIntoView()
 			case "b":
 				// Move to previous word
 				e.moveToPrevWord()
+				e.scrollIntoView()
 			}
 		}
 		return e, nil
@@ -220,10 +227,12 @@ func (e *Editor) handleNormalMode(msg tea.KeyMsg) (*Editor, tea.Cmd) {
 	case "h", "left":
 		if e.cursorCol > 0 {
 			e.cursorCol--
+			e.scrollIntoView()
 		}
 	case "l", "right":
 		if e.cursorCol < len(e.content[e.cursorRow]) {
 			e.cursorCol++
+			e.scrollIntoView()
 		}
 	case "j", "down":
 		if e.cursorRow < len(e.content)-1 {
@@ -239,8 +248,10 @@ func (e *Editor) handleNormalMode(msg tea.KeyMsg) (*Editor, tea.Cmd) {
 		}
 	case "0":
 		e.cursorCol = 0
+		e.scrollIntoView()
 	case "$":
 		e.cursorCol = len(e.content[e.cursorRow])
+		e.scrollIntoView()
 	case "g":
 		e.cursorRow = 0
 		e.cursorCol = 0
@@ -315,10 +326,12 @@ func (e *Editor) handleInsertMode(msg tea.KeyMsg) (*Editor, tea.Cmd) {
 	case tea.KeyLeft:
 		if e.cursorCol > 0 {
 			e.cursorCol--
+			e.scrollIntoView()
 		}
 	case tea.KeyRight:
 		if e.cursorCol < len(e.content[e.cursorRow]) {
 			e.cursorCol++
+			e.scrollIntoView()
 		}
 	case tea.KeyUp:
 		if e.cursorRow > 0 {
@@ -396,12 +409,14 @@ func (e *Editor) handleInsertMode(msg tea.KeyMsg) (*Editor, tea.Cmd) {
 		line := e.content[e.cursorRow]
 		e.content[e.cursorRow] = line[:e.cursorCol] + char + line[e.cursorCol:]
 		e.cursorCol += len(char)
+		e.scrollIntoView()
 
 	case tea.KeySpace:
 		// Insert space
 		line := e.content[e.cursorRow]
 		e.content[e.cursorRow] = line[:e.cursorCol] + " " + line[e.cursorCol:]
 		e.cursorCol++
+		e.scrollIntoView()
 	}
 
 	return e, nil
@@ -493,13 +508,40 @@ func (e *Editor) ensureCursorInBounds() {
 	}
 }
 
-// scrollIntoView ensures cursor is visible
+// scrollIntoView ensures cursor is visible (vertical and horizontal)
 func (e *Editor) scrollIntoView() {
+	// Vertical scrolling
 	if e.cursorRow < e.scrollY {
 		e.scrollY = e.cursorRow
 	}
 	if e.height > 0 && e.cursorRow >= e.scrollY+e.height {
 		e.scrollY = e.cursorRow - e.height + 1
+	}
+
+	// Horizontal scrolling
+	lineNumWidth := 3
+	separatorWidth := 3
+	contentWidth := e.width - lineNumWidth - separatorWidth - 2
+	if contentWidth < 10 {
+		contentWidth = 10
+	}
+
+	margin := 5
+	if margin > contentWidth/4 {
+		margin = contentWidth / 4
+	}
+
+	if e.cursorCol < e.scrollX {
+		e.scrollX = e.cursorCol - margin
+		if e.scrollX < 0 {
+			e.scrollX = 0
+		}
+	}
+	if e.cursorCol >= e.scrollX+contentWidth-margin {
+		e.scrollX = e.cursorCol - contentWidth + margin + 1
+		if e.scrollX < 0 {
+			e.scrollX = 0
+		}
 	}
 }
 
@@ -538,30 +580,57 @@ func (e *Editor) View(width, height int, active bool) string {
 		end = len(e.content)
 	}
 
+	// Calculate content width for horizontal scrolling
+	lineNumWidthCalc := 3
+	separatorWidthCalc := 3
+	contentWidth := width - lineNumWidthCalc - separatorWidthCalc - 2
+
 	for i := start; i < end; i++ {
 		lineNum := lineNumStyle.Render(string(rune('0'+((i+1)/10%10))) + string(rune('0'+((i+1)%10))))
 		rawContent := e.content[i]
+
+		// Apply horizontal scrolling
+		displayContent := rawContent
+		if e.scrollX > 0 && e.scrollX < len(rawContent) {
+			displayContent = rawContent[e.scrollX:]
+		} else if e.scrollX >= len(rawContent) {
+			displayContent = ""
+		}
+
+		// Truncate to fit
+		if len(displayContent) > contentWidth && contentWidth > 0 {
+			displayContent = displayContent[:contentWidth]
+		}
+
+		adjustedCursorCol := e.cursorCol - e.scrollX
 
 		var content string
 
 		// Handle cursor rendering on the current line
 		if active && i == e.cursorRow {
-			// Render content with cursor
-			content = e.renderLineWithCursor(rawContent, normalCursorStyle, insertCursorStyle)
+			content = e.renderLineWithCursorAtPos(displayContent, adjustedCursorCol, normalCursorStyle, insertCursorStyle)
 		} else {
-			// Apply syntax highlighting
 			if e.syntaxType == "json" {
-				content = e.highlightJSON(rawContent)
+				content = e.highlightJSON(displayContent)
 			} else if e.syntaxType == "javascript" {
-				content = e.highlightJS(rawContent)
+				content = e.highlightJS(displayContent)
 			} else {
-				content = textStyle.Render(rawContent)
+				content = textStyle.Render(displayContent)
 			}
 		}
 
-		line := lineNum + " │ " + content
+		// Scroll indicators
+		leftInd := ""
+		if e.scrollX > 0 {
+			leftInd = "◀"
+		}
+		rightInd := ""
+		if len(rawContent) > e.scrollX+contentWidth {
+			rightInd = "▶"
+		}
 
-		// Highlight cursor line when active
+		line := leftInd + lineNum + " │ " + content + rightInd
+
 		if active && i == e.cursorRow {
 			line = cursorLineStyle.Width(width).Render(line)
 		}
@@ -582,8 +651,8 @@ func (e *Editor) View(width, height int, active bool) string {
 	return strings.Join(lines, "\n")
 }
 
-// renderLineWithCursor renders a line with the cursor visible
-func (e *Editor) renderLineWithCursor(line string, normalStyle, insertStyle lipgloss.Style) string {
+// renderLineWithCursorAtPos renders a line with the cursor at a specific position
+func (e *Editor) renderLineWithCursorAtPos(line string, cursorPos int, normalStyle, insertStyle lipgloss.Style) string {
 	var result strings.Builder
 
 	cursorStyle := normalStyle
@@ -591,22 +660,15 @@ func (e *Editor) renderLineWithCursor(line string, normalStyle, insertStyle lipg
 		cursorStyle = insertStyle
 	}
 
-	// Ensure cursor is within bounds
-	cursorCol := e.cursorCol
-	if cursorCol > len(line) {
-		cursorCol = len(line)
+	if cursorPos < 0 {
+		cursorPos = 0
 	}
 
-	// We need to apply syntax highlighting while also showing cursor
-	// For simplicity, render with cursor position marked
-
 	if e.syntaxType == "json" {
-		// For JSON, apply highlighting then insert cursor
-		// This is simplified - render before cursor, cursor char, after cursor
-		if cursorCol < len(line) {
-			before := line[:cursorCol]
-			cursorChar := string(line[cursorCol])
-			after := line[cursorCol+1:]
+		if cursorPos < len(line) {
+			before := line[:cursorPos]
+			cursorChar := string(line[cursorPos])
+			after := line[cursorPos+1:]
 
 			result.WriteString(e.highlightJSON(before))
 			result.WriteString(cursorStyle.Render(cursorChar))
@@ -614,17 +676,15 @@ func (e *Editor) renderLineWithCursor(line string, normalStyle, insertStyle lipg
 				result.WriteString(e.highlightJSON(after))
 			}
 		} else {
-			// Cursor at end
 			result.WriteString(e.highlightJSON(line))
 			result.WriteString(cursorStyle.Render(" "))
 		}
 	} else {
-		// Plain text
-		if cursorCol < len(line) {
-			result.WriteString(line[:cursorCol])
-			result.WriteString(cursorStyle.Render(string(line[cursorCol])))
-			if cursorCol+1 < len(line) {
-				result.WriteString(line[cursorCol+1:])
+		if cursorPos < len(line) {
+			result.WriteString(line[:cursorPos])
+			result.WriteString(cursorStyle.Render(string(line[cursorPos])))
+			if cursorPos+1 < len(line) {
+				result.WriteString(line[cursorPos+1:])
 			}
 		} else {
 			result.WriteString(line)

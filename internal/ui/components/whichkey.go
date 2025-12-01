@@ -199,8 +199,24 @@ func (w *WhichKey) initBindings() {
 		{
 			Name: "Navigation",
 			Bindings: []KeyBinding{
-				{Key: "j/k", Desc: "Scroll"},
-				{Key: "v", Desc: "View mode"},
+				{Key: "j/k", Desc: "Up/Down"},
+				{Key: "g/G", Desc: "Top/Bottom"},
+				{Key: "h/l", Desc: "Switch panel"},
+				{Key: "w/b", Desc: "Next/Prev word"},
+			},
+		},
+		{
+			Name: "Clipboard",
+			Bindings: []KeyBinding{
+				{Key: "y", Desc: "Yank line"},
+				{Key: "Y", Desc: "Yank all"},
+				{Key: "Ctrl+C", Desc: "Copy all"},
+			},
+		},
+		{
+			Name: "Actions",
+			Bindings: []KeyBinding{
+				{Key: "Ctrl+S", Desc: "Send request"},
 			},
 		},
 		{

@@ -1,15 +1,48 @@
 package ui
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
+
+// HTTPResponseMsg is sent when an HTTP request completes
+type HTTPResponseMsg struct {
+	Response *api.Response
+	Error    error
+}
+
+// HTTPSendingMsg is sent when an HTTP request starts
+type HTTPSendingMsg struct{}
+
+// LoaderTickMsg is sent to animate the loader
+type LoaderTickMsg struct{}
+
+// loaderTickCmd returns a command that sends a tick for loader animation
+func loaderTickCmd() tea.Cmd {
+	return tea.Tick(80*time.Millisecond, func(t time.Time) tea.Msg {
+		return LoaderTickMsg{}
+	})
+}
+
+// SendHTTPRequestCmd creates a command to send an HTTP request
+func SendHTTPRequestCmd(req *api.Request) tea.Cmd {
+	return func() tea.Msg {
+		client := api.NewClient()
+		resp, err := client.Send(req)
+		return HTTPResponseMsg{Response: resp, Error: err}
+	}
+}
 
 // PanelType represents the type of panel
 type PanelType int
@@ -54,6 +87,10 @@ type Model struct {
 	// Dialog and WhichKey
 	dialog   *components.Dialog
 	whichKey *components.WhichKey
+
+	// HTTP client
+	httpClient  *api.Client
+	isSending   bool
 }
 
 // NewModel creates a new application model
@@ -74,6 +111,8 @@ func NewModel(globalConfig *config.GlobalConfig, workspaceConfig *config.Workspa
 		commandInput:    NewCommandInput(),
 		dialog:          components.NewDialog(),
 		whichKey:        components.NewWhichKey(),
+		httpClient:      api.NewClient(),
+		isSending:       false,
 	}
 }
 
@@ -139,6 +178,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// CTRL+C always quits
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
+		}
+
+		// CTRL+S sends HTTP request from ANY context (global handler)
+		if msg.String() == "ctrl+s" {
+			return m.sendHTTPRequest()
 		}
 
 		// Handle COMMAND mode input first (forward all keys except escape)
@@ -507,6 +551,88 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err := m.leftPanel.GetCollections().UpdateRequestAuthByID(requestID, msg.Auth); err != nil {
 				m.statusBar.Error(err)
 			}
+		}
+		return m, nil
+
+	case HTTPSendingMsg:
+		// HTTP request is being sent
+		m.isSending = true
+		m.statusBar.Info("Sending request...")
+		m.responsePanel.ClearResponse()
+		m.responsePanel.SetLoading(true)
+		return m, loaderTickCmd()
+
+	case LoaderTickMsg:
+		// Animate the loader if still loading
+		if m.responsePanel.IsLoading() {
+			m.responsePanel.TickLoader()
+			return m, loaderTickCmd()
+		}
+		return m, nil
+
+	case HTTPResponseMsg:
+		// HTTP response received
+		m.isSending = false
+		m.responsePanel.SetLoading(false)
+		if msg.Error != nil {
+			m.statusBar.Error(msg.Error)
+			return m, nil
+		}
+		if msg.Response != nil {
+			// Parse headers into simple map
+			headers := make(map[string]string)
+			for key, values := range msg.Response.Headers {
+				if len(values) > 0 {
+					headers[key] = strings.Join(values, ", ")
+				}
+			}
+
+			// Parse cookies from Set-Cookie headers
+			cookies := make(map[string]string)
+			if cookieHeaders, ok := msg.Response.Headers["Set-Cookie"]; ok {
+				for _, cookie := range cookieHeaders {
+					// Parse "name=value; attributes" format
+					parts := strings.SplitN(cookie, "=", 2)
+					if len(parts) == 2 {
+						name := parts[0]
+						valueParts := strings.SplitN(parts[1], ";", 2)
+						cookies[name] = valueParts[0]
+					}
+				}
+			}
+
+			// Format time and size
+			timeStr := formatDuration(msg.Response.Time)
+			sizeStr := formatBytes(msg.Response.Size)
+
+			// Update response panel
+			m.responsePanel.SetResponse(
+				msg.Response.StatusCode,
+				msg.Response.Status,
+				headers,
+				cookies,
+				msg.Response.Body,
+				timeStr,
+				sizeStr,
+			)
+
+			// Update status bar with HTTP status
+			statusText := ""
+			switch {
+			case msg.Response.StatusCode >= 200 && msg.Response.StatusCode < 300:
+				statusText = "OK"
+			case msg.Response.StatusCode >= 300 && msg.Response.StatusCode < 400:
+				statusText = "Redirect"
+			case msg.Response.StatusCode >= 400 && msg.Response.StatusCode < 500:
+				statusText = "Client Error"
+			case msg.Response.StatusCode >= 500:
+				statusText = "Server Error"
+			}
+			m.statusBar.SetHTTPStatus(msg.Response.StatusCode, statusText)
+
+			// Focus response panel
+			m.activePanel = ResponsePanel
+			m.statusBar.Success("Response", fmt.Sprintf("%d %s in %s", msg.Response.StatusCode, statusText, timeStr))
 		}
 		return m, nil
 
@@ -1276,4 +1402,150 @@ func (m *Model) updateWhichKeyContext() {
 // GetWhichKeyHints returns the current WhichKey hints for the statusbar
 func (m *Model) GetWhichKeyHints() string {
 	return m.whichKey.GetHintsForStatusBar(m.whichKey.GetContext())
+}
+
+// sendHTTPRequest builds and sends an HTTP request from the current request panel state
+func (m Model) sendHTTPRequest() (tea.Model, tea.Cmd) {
+	// Check if a request is loaded
+	url := m.requestPanel.GetURL()
+	if url == "" {
+		m.statusBar.Info("No URL to send")
+		return m, nil
+	}
+
+	// Check if already sending
+	if m.isSending {
+		m.statusBar.Info("Request already in progress...")
+		return m, nil
+	}
+
+	// Build the HTTP request
+	req := m.buildHTTPRequest()
+	if req == nil {
+		m.statusBar.Info("Could not build request")
+		return m, nil
+	}
+
+	// Update state to sending
+	m.isSending = true
+	m.responsePanel.ClearResponse()
+	m.responsePanel.SetLoading(true)
+	m.statusBar.Info("Sending request...")
+
+	// Send the request asynchronously with loader tick
+	return m, tea.Batch(SendHTTPRequestCmd(req), loaderTickCmd())
+}
+
+// buildHTTPRequest constructs an API Request from the current RequestView state
+func (m *Model) buildHTTPRequest() *api.Request {
+	method := m.requestPanel.GetMethod()
+	url := m.requestPanel.GetURL()
+
+	// Replace environment variables in URL
+	envVars := m.leftPanel.GetEnvironments().GetActiveEnvironmentVariables()
+	url = replaceVariables(url, envVars)
+
+	// Build headers map from headers table
+	headers := make(map[string]string)
+	headersTable := m.requestPanel.GetHeadersTable()
+	if headersTable != nil {
+		for _, row := range headersTable.Rows {
+			if row.Enabled && row.Key != "" {
+				value := replaceVariables(row.Value, envVars)
+				headers[row.Key] = value
+			}
+		}
+	}
+
+	// Add auth headers
+	authConfig := m.requestPanel.GetAuthConfig()
+	if authConfig != nil {
+		switch authConfig.Type {
+		case "bearer":
+			prefix := authConfig.Prefix
+			if prefix == "" {
+				prefix = "Bearer"
+			}
+			token := replaceVariables(authConfig.Token, envVars)
+			headers["Authorization"] = prefix + " " + token
+		case "basic":
+			username := replaceVariables(authConfig.Username, envVars)
+			password := replaceVariables(authConfig.Password, envVars)
+			credentials := base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+			headers["Authorization"] = "Basic " + credentials
+		case "api_key":
+			keyName := replaceVariables(authConfig.APIKeyName, envVars)
+			keyValue := replaceVariables(authConfig.APIKeyValue, envVars)
+			if authConfig.APIKeyLocation == "header" || authConfig.APIKeyLocation == "" {
+				headers[keyName] = keyValue
+			} else if authConfig.APIKeyLocation == "query" {
+				// Append to URL as query param
+				if strings.Contains(url, "?") {
+					url += "&" + keyName + "=" + keyValue
+				} else {
+					url += "?" + keyName + "=" + keyValue
+				}
+			}
+		}
+	}
+
+	// Get body content
+	var body interface{}
+	bodyContent := m.requestPanel.GetBodyContent()
+	if bodyContent != "" {
+		bodyContent = replaceVariables(bodyContent, envVars)
+		// Try to parse as JSON for proper serialization
+		var jsonBody interface{}
+		if err := json.Unmarshal([]byte(bodyContent), &jsonBody); err == nil {
+			body = jsonBody
+		} else {
+			// Use raw string as body
+			body = bodyContent
+		}
+	}
+
+	return &api.Request{
+		Method:  api.HTTPMethod(method),
+		URL:     url,
+		Headers: headers,
+		Body:    body,
+		Timeout: 30 * time.Second,
+	}
+}
+
+// replaceVariables replaces {{variable}} patterns with environment values
+func replaceVariables(input string, vars map[string]string) string {
+	result := input
+	for key, value := range vars {
+		placeholder := "{{" + key + "}}"
+		result = strings.ReplaceAll(result, placeholder, value)
+	}
+	return result
+}
+
+// formatDuration formats a duration for display
+func formatDuration(d time.Duration) string {
+	if d < time.Millisecond {
+		return fmt.Sprintf("%dμs", d.Microseconds())
+	}
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	return fmt.Sprintf("%.2fs", d.Seconds())
+}
+
+// formatBytes formats bytes for display
+func formatBytes(bytes int64) string {
+	const (
+		KB = 1024
+		MB = KB * 1024
+	)
+	switch {
+	case bytes < KB:
+		return fmt.Sprintf("%dB", bytes)
+	case bytes < MB:
+		return fmt.Sprintf("%.1fKB", float64(bytes)/KB)
+	default:
+		return fmt.Sprintf("%.1fMB", float64(bytes)/MB)
+	}
 }

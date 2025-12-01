@@ -1008,25 +1008,21 @@ func (e *EnvironmentsView) renderNode(node *EnvTreeNode, width int, selected boo
 			keyWidth = 5
 		}
 
-		// Truncate key if needed
-		if keyWidth > 1 && len(key) > keyWidth {
-			key = key[:keyWidth-1] + "…"
+		// Truncate key to fit (no ellipsis - just cut)
+		if len(key) > keyWidth {
+			key = key[:keyWidth]
 		}
+		// Pad key to align values
+		keyPadded := key + strings.Repeat(" ", keyWidth-len(key))
 
-		// Pad key
-		padding := keyWidth - len(key)
-		if padding < 0 {
-			padding = 0
-		}
-		keyPadded := key + strings.Repeat(" ", padding)
-
-		// Truncate value if needed
+		// Calculate remaining width for value
 		valueWidth := availableWidth - keyWidth
 		if valueWidth < 3 {
 			valueWidth = 3
 		}
-		if len(value) > valueWidth && valueWidth > 3 {
-			value = value[:valueWidth-3] + "..."
+		// Truncate value to fit (no ellipsis - just cut)
+		if len(value) > valueWidth {
+			value = value[:valueWidth]
 		}
 
 		content = linePrefix + checkStyle.Render(checkbox) + " " + keyStyle.Render(keyPadded) + "   " + valueStyle.Render(value)

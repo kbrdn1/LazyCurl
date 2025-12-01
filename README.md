@@ -397,7 +397,8 @@ Full documentation is available in the `docs/` directory:
 
 | Document | Description |
 |----------|-------------|
-| [Getting Started](docs/getting-started.md) | Installation and first steps |
+| [Installation](docs/installation.md) | Complete installation guide |
+| [Getting Started](docs/getting-started.md) | First steps with LazyCurl |
 | [Keybindings](docs/keybindings.md) | Complete keyboard reference |
 | [Configuration](docs/configuration.md) | Config files and options |
 | [Collections](docs/collections.md) | Managing request collections |

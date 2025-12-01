@@ -96,6 +96,11 @@ var (
 	SearchMatch    = lipgloss.Color("#c884e0") // Purple/pink for search matches
 	SearchDimmed   = lipgloss.Color("#45475a") // Dark gray for non-matching items
 
+	// URL syntax highlighting colors
+	URLVariable    = lipgloss.Color("#fa827c") // Coral/red for {{variables}}
+	URLParam       = lipgloss.Color("#6798da") // Blue for :params
+	URLBase        = lipgloss.Color("#cdd6f4") // Text color for base URL
+
 	// Base styles
 	TitleStyle = lipgloss.NewStyle().
 			Bold(true).

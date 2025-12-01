@@ -9,6 +9,39 @@ import (
 	"time"
 )
 
+// KeyValueEntry represents a key-value pair with enabled state (for params, headers)
+type KeyValueEntry struct {
+	Key     string `json:"key"`
+	Value   string `json:"value"`
+	Enabled bool   `json:"enabled"`
+}
+
+// AuthConfig represents authentication configuration
+type AuthConfig struct {
+	Type   string `json:"type"`            // "none", "bearer", "basic", "api_key"
+	Token  string `json:"token,omitempty"` // For bearer token
+	Prefix string `json:"prefix,omitempty"` // For bearer prefix (default: "Bearer")
+	// Basic auth
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	// API Key
+	APIKeyName     string `json:"api_key_name,omitempty"`
+	APIKeyValue    string `json:"api_key_value,omitempty"`
+	APIKeyLocation string `json:"api_key_location,omitempty"` // "header" or "query"
+}
+
+// BodyConfig represents request body configuration
+type BodyConfig struct {
+	Type    string      `json:"type"`              // "none", "json", "form-data", "raw", "binary"
+	Content interface{} `json:"content,omitempty"` // JSON object, string, or form data
+}
+
+// ScriptConfig represents pre/post request scripts
+type ScriptConfig struct {
+	PreRequest  string `json:"pre_request,omitempty"`
+	PostRequest string `json:"post_request,omitempty"`
+}
+
 // CollectionRequest represents a saved request in a collection
 type CollectionRequest struct {
 	ID          string            `json:"id"`
@@ -16,8 +49,12 @@ type CollectionRequest struct {
 	Description string            `json:"description,omitempty"`
 	Method      HTTPMethod        `json:"method"`
 	URL         string            `json:"url"`
-	Headers     map[string]string `json:"headers,omitempty"`
-	Body        interface{}       `json:"body,omitempty"`
+	Params      []KeyValueEntry   `json:"params,omitempty"`      // Query parameters
+	Headers     []KeyValueEntry   `json:"headers,omitempty"`     // Request headers (new format)
+	HeadersMap  map[string]string `json:"headers_map,omitempty"` // Legacy headers format
+	Auth        *AuthConfig       `json:"auth,omitempty"`        // Authentication config
+	Body        *BodyConfig       `json:"body,omitempty"`        // Request body config
+	Scripts     *ScriptConfig     `json:"scripts,omitempty"`     // Pre/post scripts
 	Tests       []Test            `json:"tests,omitempty"`
 }
 
@@ -42,6 +79,74 @@ type CollectionFile struct {
 type Test struct {
 	Name   string `json:"name"`
 	Assert string `json:"assert"`
+}
+
+// UnmarshalJSON implements custom unmarshaling to handle both old (map) and new (array) header/param formats
+func (cr *CollectionRequest) UnmarshalJSON(data []byte) error {
+	// Alias to avoid infinite recursion
+	type Alias CollectionRequest
+
+	// Temporary struct to handle both formats
+	type TempRequest struct {
+		Alias
+		HeadersRaw json.RawMessage `json:"headers,omitempty"`
+		BodyRaw    json.RawMessage `json:"body,omitempty"`
+	}
+
+	var temp TempRequest
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	// Copy all the basic fields
+	*cr = CollectionRequest(temp.Alias)
+
+	// Handle headers - try array format first, then map format
+	if len(temp.HeadersRaw) > 0 {
+		// Try new array format first
+		var headersArray []KeyValueEntry
+		if err := json.Unmarshal(temp.HeadersRaw, &headersArray); err == nil {
+			cr.Headers = headersArray
+		} else {
+			// Try old map format
+			var headersMap map[string]string
+			if err := json.Unmarshal(temp.HeadersRaw, &headersMap); err == nil {
+				cr.Headers = make([]KeyValueEntry, 0, len(headersMap))
+				for k, v := range headersMap {
+					cr.Headers = append(cr.Headers, KeyValueEntry{Key: k, Value: v, Enabled: true})
+				}
+			}
+		}
+	}
+
+	// Handle body - try new BodyConfig format first, then raw content
+	if len(temp.BodyRaw) > 0 {
+		// Try new BodyConfig format first
+		var bodyConfig BodyConfig
+		if err := json.Unmarshal(temp.BodyRaw, &bodyConfig); err == nil && bodyConfig.Type != "" {
+			cr.Body = &bodyConfig
+		} else {
+			// Old format - body is raw content (string or object)
+			var bodyContent interface{}
+			if err := json.Unmarshal(temp.BodyRaw, &bodyContent); err == nil {
+				// Determine type based on content
+				switch v := bodyContent.(type) {
+				case string:
+					if v != "" {
+						cr.Body = &BodyConfig{Type: "raw", Content: v}
+					}
+				case map[string]interface{}:
+					cr.Body = &BodyConfig{Type: "json", Content: v}
+				default:
+					if v != nil {
+						cr.Body = &BodyConfig{Type: "raw", Content: v}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // LoadCollection loads a collection from a JSON file
@@ -114,23 +219,52 @@ func LoadAllCollections(dir string) ([]*CollectionFile, error) {
 
 // ToRequest converts a CollectionRequest to a Request
 func (cr *CollectionRequest) ToRequest() *Request {
+	// Convert []KeyValueEntry to map[string]string for HTTP request
+	headers := make(map[string]string)
+	for _, h := range cr.Headers {
+		if h.Enabled {
+			headers[h.Key] = h.Value
+		}
+	}
+
+	// Convert body config to interface{}
+	var body interface{}
+	if cr.Body != nil {
+		body = cr.Body.Content
+	}
+
 	return &Request{
 		Method:  cr.Method,
 		URL:     cr.URL,
-		Headers: cr.Headers,
-		Body:    cr.Body,
+		Headers: headers,
+		Body:    body,
 	}
 }
 
 // FromRequest creates a CollectionRequest from a Request
 func FromRequest(req *Request, name string) *CollectionRequest {
+	// Convert map[string]string to []KeyValueEntry
+	headers := make([]KeyValueEntry, 0, len(req.Headers))
+	for k, v := range req.Headers {
+		headers = append(headers, KeyValueEntry{Key: k, Value: v, Enabled: true})
+	}
+
+	// Convert body to BodyConfig
+	var body *BodyConfig
+	if req.Body != nil {
+		body = &BodyConfig{
+			Type:    "raw",
+			Content: req.Body,
+		}
+	}
+
 	return &CollectionRequest{
 		ID:      GenerateID(),
 		Name:    name,
 		Method:  req.Method,
 		URL:     req.URL,
-		Headers: req.Headers,
-		Body:    req.Body,
+		Headers: headers,
+		Body:    body,
 	}
 }
 
@@ -149,22 +283,23 @@ func (c *CollectionFile) FindRequest(id string) *CollectionRequest {
 		}
 	}
 
-	// Search in folders
-	return c.findRequestInFolders(c.Folders, id)
+	// Search in folders (pass pointer to allow modifications)
+	return c.findRequestInFolders(&c.Folders, id)
 }
 
 // findRequestInFolders recursively searches for a request in folders
-func (c *CollectionFile) findRequestInFolders(folders []Folder, id string) *CollectionRequest {
-	for _, folder := range folders {
+// Uses pointer to slice to ensure modifications persist
+func (c *CollectionFile) findRequestInFolders(folders *[]Folder, id string) *CollectionRequest {
+	for fi := range *folders {
 		// Search in folder requests
-		for i := range folder.Requests {
-			if folder.Requests[i].ID == id {
-				return &folder.Requests[i]
+		for ri := range (*folders)[fi].Requests {
+			if (*folders)[fi].Requests[ri].ID == id {
+				return &(*folders)[fi].Requests[ri]
 			}
 		}
 
 		// Search in subfolders
-		if result := c.findRequestInFolders(folder.Folders, id); result != nil {
+		if result := c.findRequestInFolders(&(*folders)[fi].Folders, id); result != nil {
 			return result
 		}
 	}
@@ -394,6 +529,70 @@ func (c *CollectionFile) UpdateRequest(id, newName string, method HTTPMethod, ur
 	return false
 }
 
+// UpdateRequestURL updates only the URL of a request by ID
+func (c *CollectionFile) UpdateRequestURL(id, url string) bool {
+	req := c.FindRequest(id)
+	if req != nil {
+		req.URL = url
+		return true
+	}
+	return false
+}
+
+// UpdateRequestBody updates the body of a request by ID
+func (c *CollectionFile) UpdateRequestBody(id, bodyType, content string) bool {
+	req := c.FindRequest(id)
+	if req != nil {
+		if bodyType == "none" || content == "" {
+			req.Body = nil
+		} else {
+			// For JSON body, try to parse as JSON object
+			if bodyType == "json" {
+				var parsed interface{}
+				if err := json.Unmarshal([]byte(content), &parsed); err == nil {
+					req.Body = &BodyConfig{Type: bodyType, Content: parsed}
+					return true
+				}
+			}
+			// Fallback to raw string content
+			req.Body = &BodyConfig{Type: bodyType, Content: content}
+		}
+		return true
+	}
+	return false
+}
+
+// UpdateRequestScripts updates the scripts of a request by ID
+func (c *CollectionFile) UpdateRequestScripts(id, preRequest, postRequest string) bool {
+	req := c.FindRequest(id)
+	if req != nil {
+		if preRequest == "" && postRequest == "" {
+			req.Scripts = nil
+		} else {
+			req.Scripts = &ScriptConfig{
+				PreRequest:  preRequest,
+				PostRequest: postRequest,
+			}
+		}
+		return true
+	}
+	return false
+}
+
+// UpdateRequestAuth updates the auth configuration of a request by ID
+func (c *CollectionFile) UpdateRequestAuth(id string, auth *AuthConfig) bool {
+	req := c.FindRequest(id)
+	if req != nil {
+		if auth == nil || auth.Type == "none" || auth.Type == "" {
+			req.Auth = nil
+		} else {
+			req.Auth = auth
+		}
+		return true
+	}
+	return false
+}
+
 // RenameFolder renames a folder at the specified path
 func (c *CollectionFile) RenameFolder(folderPath []string, oldName, newName string) bool {
 	if len(folderPath) == 0 {
@@ -435,8 +634,11 @@ func (c *CollectionFile) DuplicateRequest(id string) *CollectionRequest {
 		Description: original.Description,
 		Method:      original.Method,
 		URL:         original.URL,
+		Params:      copyParams(original.Params),
 		Headers:     copyHeaders(original.Headers),
-		Body:        original.Body,
+		Auth:        copyAuthConfig(original.Auth),
+		Body:        copyBodyConfig(original.Body),
+		Scripts:     copyScriptConfig(original.Scripts),
 	}
 
 	// Add duplicate next to original - find where and add
@@ -444,16 +646,63 @@ func (c *CollectionFile) DuplicateRequest(id string) *CollectionRequest {
 	return duplicate
 }
 
-// copyHeaders creates a copy of headers map
-func copyHeaders(h map[string]string) map[string]string {
+// copyHeaders creates a copy of headers slice
+func copyHeaders(h []KeyValueEntry) []KeyValueEntry {
 	if h == nil {
 		return nil
 	}
-	copy := make(map[string]string)
-	for k, v := range h {
-		copy[k] = v
+	result := make([]KeyValueEntry, len(h))
+	copy(result, h)
+	return result
+}
+
+// copyParams creates a copy of params slice
+func copyParams(p []KeyValueEntry) []KeyValueEntry {
+	if p == nil {
+		return nil
 	}
-	return copy
+	result := make([]KeyValueEntry, len(p))
+	copy(result, p)
+	return result
+}
+
+// copyBodyConfig creates a copy of body config
+func copyBodyConfig(b *BodyConfig) *BodyConfig {
+	if b == nil {
+		return nil
+	}
+	return &BodyConfig{
+		Type:    b.Type,
+		Content: b.Content,
+	}
+}
+
+// copyAuthConfig creates a copy of auth config
+func copyAuthConfig(a *AuthConfig) *AuthConfig {
+	if a == nil {
+		return nil
+	}
+	return &AuthConfig{
+		Type:           a.Type,
+		Token:          a.Token,
+		Prefix:         a.Prefix,
+		Username:       a.Username,
+		Password:       a.Password,
+		APIKeyName:     a.APIKeyName,
+		APIKeyValue:    a.APIKeyValue,
+		APIKeyLocation: a.APIKeyLocation,
+	}
+}
+
+// copyScriptConfig creates a copy of script config
+func copyScriptConfig(s *ScriptConfig) *ScriptConfig {
+	if s == nil {
+		return nil
+	}
+	return &ScriptConfig{
+		PreRequest:  s.PreRequest,
+		PostRequest: s.PostRequest,
+	}
 }
 
 // addRequestAfter adds a request after another request with given ID
@@ -544,8 +793,11 @@ func copyFolder(f *Folder) *Folder {
 			Description: req.Description,
 			Method:      req.Method,
 			URL:         req.URL,
+			Params:      copyParams(req.Params),
 			Headers:     copyHeaders(req.Headers),
-			Body:        req.Body,
+			Auth:        copyAuthConfig(req.Auth),
+			Body:        copyBodyConfig(req.Body),
+			Scripts:     copyScriptConfig(req.Scripts),
 		}
 	}
 
@@ -595,8 +847,11 @@ func (c *CollectionFile) CopyRequestToFolder(requestID string, targetFolderPath 
 		Description: original.Description,
 		Method:      original.Method,
 		URL:         original.URL,
+		Params:      copyParams(original.Params),
 		Headers:     copyHeaders(original.Headers),
-		Body:        original.Body,
+		Auth:        copyAuthConfig(original.Auth),
+		Body:        copyBodyConfig(original.Body),
+		Scripts:     copyScriptConfig(original.Scripts),
 	}
 
 	// Add to target folder

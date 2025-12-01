@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -149,11 +150,12 @@ func TestCollectionRequestToRequest(t *testing.T) {
 		Name:   "Test Request",
 		Method: POST,
 		URL:    "https://api.example.com/test",
-		Headers: map[string]string{
-			"Content-Type": "application/json",
+		Headers: []KeyValueEntry{
+			{Key: "Content-Type", Value: "application/json", Enabled: true},
 		},
-		Body: map[string]interface{}{
-			"key": "value",
+		Body: &BodyConfig{
+			Type:    "json",
+			Content: map[string]interface{}{"key": "value"},
 		},
 	}
 
@@ -187,6 +189,95 @@ func TestFromRequest(t *testing.T) {
 	}
 	if cr.ID == "" {
 		t.Error("Expected ID to be generated")
+	}
+}
+
+func TestUnmarshalJSONBackwardCompatibility(t *testing.T) {
+	// Test old format with headers as map and body as string
+	oldFormatJSON := `{
+		"id": "req_1",
+		"name": "Test Request",
+		"method": "POST",
+		"url": "https://api.example.com/test",
+		"headers": {
+			"Content-Type": "application/json",
+			"Authorization": "Bearer token"
+		},
+		"body": "{\"key\": \"value\"}"
+	}`
+
+	var cr CollectionRequest
+	err := json.Unmarshal([]byte(oldFormatJSON), &cr)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal old format: %v", err)
+	}
+
+	if cr.ID != "req_1" {
+		t.Errorf("Expected ID 'req_1', got '%s'", cr.ID)
+	}
+	if cr.Name != "Test Request" {
+		t.Errorf("Expected Name 'Test Request', got '%s'", cr.Name)
+	}
+	if len(cr.Headers) != 2 {
+		t.Errorf("Expected 2 headers, got %d", len(cr.Headers))
+	}
+
+	// Check headers are all enabled
+	for _, h := range cr.Headers {
+		if !h.Enabled {
+			t.Errorf("Expected header '%s' to be enabled", h.Key)
+		}
+	}
+
+	// Check body was converted
+	if cr.Body == nil {
+		t.Error("Expected body to be set")
+	} else if cr.Body.Type != "raw" {
+		t.Errorf("Expected body type 'raw', got '%s'", cr.Body.Type)
+	}
+}
+
+func TestUnmarshalJSONNewFormat(t *testing.T) {
+	// Test new format with headers as array
+	newFormatJSON := `{
+		"id": "req_2",
+		"name": "New Format Request",
+		"method": "GET",
+		"url": "https://api.example.com/users",
+		"headers": [
+			{"key": "Authorization", "value": "Bearer token", "enabled": true},
+			{"key": "X-Custom", "value": "disabled", "enabled": false}
+		],
+		"body": {
+			"type": "json",
+			"content": {"key": "value"}
+		}
+	}`
+
+	var cr CollectionRequest
+	err := json.Unmarshal([]byte(newFormatJSON), &cr)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal new format: %v", err)
+	}
+
+	if len(cr.Headers) != 2 {
+		t.Errorf("Expected 2 headers, got %d", len(cr.Headers))
+	}
+
+	// Check first header is enabled
+	if !cr.Headers[0].Enabled {
+		t.Error("Expected first header to be enabled")
+	}
+	// Check second header is disabled
+	if cr.Headers[1].Enabled {
+		t.Error("Expected second header to be disabled")
+	}
+
+	// Check body
+	if cr.Body == nil {
+		t.Error("Expected body to be set")
+	} else if cr.Body.Type != "json" {
+		t.Errorf("Expected body type 'json', got '%s'", cr.Body.Type)
 	}
 }
 
@@ -265,6 +356,72 @@ func TestCreateFolder(t *testing.T) {
 	}
 	if collection.Folders[0].Name != "New Folder" {
 		t.Errorf("Expected 'New Folder', got '%s'", collection.Folders[0].Name)
+	}
+}
+
+func TestUpdateRequestURL(t *testing.T) {
+	// Test updating URL of a request in a folder
+	collection := &CollectionFile{
+		Name: "Test",
+		Folders: []Folder{
+			{
+				Name: "Folder 1",
+				Requests: []CollectionRequest{
+					{ID: "req1", Name: "Request 1", Method: GET, URL: "http://old.com"},
+				},
+			},
+		},
+	}
+
+	// Update URL
+	result := collection.UpdateRequestURL("req1", "http://new.com")
+	if !result {
+		t.Error("Expected UpdateRequestURL to return true")
+	}
+
+	// Verify the URL was updated
+	req := collection.FindRequest("req1")
+	if req == nil {
+		t.Fatal("Expected to find request req1")
+	}
+	if req.URL != "http://new.com" {
+		t.Errorf("Expected URL 'http://new.com', got '%s'", req.URL)
+	}
+
+	// Also verify in the original structure
+	if collection.Folders[0].Requests[0].URL != "http://new.com" {
+		t.Errorf("Expected URL in folder to be 'http://new.com', got '%s'", collection.Folders[0].Requests[0].URL)
+	}
+}
+
+func TestUpdateRequestURLNested(t *testing.T) {
+	// Test updating URL of a request in a nested folder
+	collection := &CollectionFile{
+		Name: "Test",
+		Folders: []Folder{
+			{
+				Name: "Folder 1",
+				Folders: []Folder{
+					{
+						Name: "Subfolder",
+						Requests: []CollectionRequest{
+							{ID: "nested_req", Name: "Nested Request", Method: POST, URL: "http://nested-old.com"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Update URL
+	result := collection.UpdateRequestURL("nested_req", "http://nested-new.com")
+	if !result {
+		t.Error("Expected UpdateRequestURL to return true for nested request")
+	}
+
+	// Verify the URL was updated
+	if collection.Folders[0].Folders[0].Requests[0].URL != "http://nested-new.com" {
+		t.Errorf("Expected URL in nested folder to be 'http://nested-new.com', got '%s'", collection.Folders[0].Folders[0].Requests[0].URL)
 	}
 }
 

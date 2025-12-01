@@ -7,10 +7,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// KeyValuePair represents a key-value pair
+// KeyValuePair represents a key-value pair with enabled state
 type KeyValuePair struct {
-	Key   string
-	Value string
+	Key     string
+	Value   string
+	Enabled bool
 }
 
 // Table represents an editable table component
@@ -33,9 +34,26 @@ func NewTable(headers []string) *Table {
 	}
 }
 
-// AddRow adds a new row to the table
+// AddRow adds a new row to the table (enabled by default)
 func (t *Table) AddRow(key, value string) {
-	t.Rows = append(t.Rows, KeyValuePair{Key: key, Value: value})
+	t.Rows = append(t.Rows, KeyValuePair{Key: key, Value: value, Enabled: true})
+}
+
+// AddRowWithState adds a new row with specific enabled state
+func (t *Table) AddRowWithState(key, value string, enabled bool) {
+	t.Rows = append(t.Rows, KeyValuePair{Key: key, Value: value, Enabled: enabled})
+}
+
+// ToggleEnabled toggles the enabled state of a row
+func (t *Table) ToggleEnabled(index int) {
+	if index >= 0 && index < len(t.Rows) {
+		t.Rows[index].Enabled = !t.Rows[index].Enabled
+	}
+}
+
+// ToggleCurrentEnabled toggles the enabled state of the current row
+func (t *Table) ToggleCurrentEnabled() {
+	t.ToggleEnabled(t.Cursor)
 }
 
 // DeleteRow removes a row from the table
@@ -150,4 +168,23 @@ func (t *Table) FromMap(data map[string]string) {
 	for key, value := range data {
 		t.Rows = append(t.Rows, KeyValuePair{Key: key, Value: value})
 	}
+}
+
+// RowCount returns the number of rows in the table
+func (t *Table) RowCount() int {
+	return len(t.Rows)
+}
+
+// GetRows returns all rows as a slice of string slices [key, value]
+func (t *Table) GetRows() [][]string {
+	result := make([][]string, len(t.Rows))
+	for i, row := range t.Rows {
+		result[i] = []string{row.Key, row.Value}
+	}
+	return result
+}
+
+// GetSelectedIndex returns the current cursor position
+func (t *Table) GetSelectedIndex() int {
+	return t.Cursor
 }

@@ -157,11 +157,15 @@ func (c *CollectionsView) AddRequestToCollection(name, method, url string, paren
 	}
 
 	req := &api.CollectionRequest{
-		ID:      api.GenerateID(),
-		Name:    name,
-		Method:  api.HTTPMethod(method),
-		URL:     url,
-		Headers: make(map[string]string),
+		ID:     api.GenerateID(),
+		Name:   name,
+		Method: api.HTTPMethod(method),
+		URL:    url,
+		Headers: []api.KeyValueEntry{
+			{Key: "Content-Type", Value: "application/json", Enabled: true},
+			{Key: "Accept", Value: "*/*", Enabled: true},
+			{Key: "User-Agent", Value: "LazyCurl/1.0", Enabled: true},
+		},
 	}
 
 	// Get folder path
@@ -189,11 +193,15 @@ func (c *CollectionsView) createDefaultCollectionWithRequest(name, method, url s
 	}
 
 	req := &api.CollectionRequest{
-		ID:      api.GenerateID(),
-		Name:    name,
-		Method:  api.HTTPMethod(method),
-		URL:     url,
-		Headers: make(map[string]string),
+		ID:     api.GenerateID(),
+		Name:   name,
+		Method: api.HTTPMethod(method),
+		URL:    url,
+		Headers: []api.KeyValueEntry{
+			{Key: "Content-Type", Value: "application/json", Enabled: true},
+			{Key: "Accept", Value: "*/*", Enabled: true},
+			{Key: "User-Agent", Value: "LazyCurl/1.0", Enabled: true},
+		},
 	}
 
 	col.AddRequest(req)
@@ -269,6 +277,70 @@ func (c *CollectionsView) UpdateRequest(node *components.TreeNode, name, method,
 
 	col.UpdateRequest(node.ID, name, api.HTTPMethod(method), url)
 	return col.Save()
+}
+
+// UpdateRequestURLByID finds a request by ID across all collections and updates its URL
+func (c *CollectionsView) UpdateRequestURLByID(requestID, newURL string) error {
+	if requestID == "" {
+		return nil
+	}
+
+	// Search through all collections
+	for _, col := range c.collections {
+		if col.UpdateRequestURL(requestID, newURL) {
+			return col.Save()
+		}
+	}
+
+	return nil
+}
+
+// UpdateRequestBodyByID finds a request by ID across all collections and updates its body
+func (c *CollectionsView) UpdateRequestBodyByID(requestID, bodyType, content string) error {
+	if requestID == "" {
+		return nil
+	}
+
+	// Search through all collections
+	for _, col := range c.collections {
+		if col.UpdateRequestBody(requestID, bodyType, content) {
+			return col.Save()
+		}
+	}
+
+	return nil
+}
+
+// UpdateRequestScriptsByID finds a request by ID across all collections and updates its scripts
+func (c *CollectionsView) UpdateRequestScriptsByID(requestID, preRequest, postRequest string) error {
+	if requestID == "" {
+		return nil
+	}
+
+	// Search through all collections
+	for _, col := range c.collections {
+		if col.UpdateRequestScripts(requestID, preRequest, postRequest) {
+			return col.Save()
+		}
+	}
+
+	return nil
+}
+
+// UpdateRequestAuthByID finds a request by ID across all collections and updates its auth
+func (c *CollectionsView) UpdateRequestAuthByID(requestID string, auth *api.AuthConfig) error {
+	if requestID == "" {
+		return nil
+	}
+
+	// Search through all collections
+	for _, col := range c.collections {
+		if col.UpdateRequestAuth(requestID, auth) {
+			return col.Save()
+		}
+	}
+
+	return nil
 }
 
 // DeleteNode deletes a tree node (request or folder)

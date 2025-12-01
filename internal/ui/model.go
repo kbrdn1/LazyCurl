@@ -14,6 +14,14 @@ import (
 // PanelType represents the type of panel
 type PanelType int
 
+// requestDialogContext holds context for Request panel dialogs
+type requestDialogContext struct {
+	Tab   string
+	Index int
+	Key   string
+	Value string
+}
+
 const (
 	CollectionsPanel PanelType = iota
 	RequestPanel
@@ -162,6 +170,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Check if request panel is editing URL - if so, forward all keys to it
+		if m.activePanel == RequestPanel && m.requestPanel.IsEditingURL() {
+			var cmd tea.Cmd
+			*m.requestPanel, cmd = m.requestPanel.Update(msg, m.globalConfig)
+			return m, cmd
+		}
+
+		// Check if request panel Body or Scripts tab is active - forward ALL keys to editor
+		// The editor has its own vim-like modes (NORMAL/INSERT) and handles q, h, l, etc.
+		// This MUST return to prevent quit handler from catching 'q'
+		if m.activePanel == RequestPanel && m.requestPanel.IsEditorActive() {
+			var cmd tea.Cmd
+			*m.requestPanel, cmd = m.requestPanel.Update(msg, m.globalConfig)
+			return m, cmd
+		}
+
 		// Handle mode transitions from NORMAL mode
 		if m.mode == NormalMode {
 			switch msg.String() {
@@ -223,6 +247,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Panel navigation with h/l only in NORMAL mode
 			// Skip navigation if search is active in the left panel
+			// Note: Body tab is handled earlier and returns before reaching here
 			if m.mode.AllowsNavigation() && !m.leftPanel.IsSearching() {
 				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateLeft) {
 					if m.activePanel > CollectionsPanel {
@@ -267,6 +292,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Node != nil && msg.Node.Type == components.RequestNode {
 			// Load the selected request into the request panel
 			m.requestPanel.LoadRequest(msg.Node.ID, msg.Node.Name, msg.Node.HTTPMethod, msg.Node.URL)
+
+			// Focus the Request Panel
+			m.activePanel = RequestPanel
 
 			// Update status bar with method and breadcrumb
 			m.statusBar.SetMethod(msg.Node.HTTPMethod)
@@ -362,6 +390,124 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.statusBar.Success("Pasted", clipboard.Name)
 		m.leftPanel.GetCollections().ReloadCollections()
+		return m, nil
+
+	// === REQUEST PANEL MESSAGES ===
+
+	case RequestRenameMsg:
+		// Handle rename key - show input dialog
+		m.dialog.ShowInput(
+			"Rename Key",
+			"Enter new key name:",
+			msg.Key,
+			"request_rename",
+			&requestDialogContext{Tab: msg.Tab, Index: msg.Index, Key: msg.Key, Value: msg.Value},
+		)
+		return m, nil
+
+	case RequestDeleteMsg:
+		// Handle delete - show confirmation dialog
+		m.dialog.ShowConfirm(
+			"Delete Entry",
+			"Are you sure you want to delete '"+msg.Key+"'?",
+			"request_delete",
+			&requestDialogContext{Tab: msg.Tab, Index: msg.Index, Key: msg.Key},
+		)
+		return m, nil
+
+	case RequestEditMsg:
+		// Handle edit - show key-value input dialog
+		m.dialog.ShowKeyValue(
+			"Edit Entry",
+			msg.Key,
+			msg.Value,
+			"request_edit",
+			&requestDialogContext{Tab: msg.Tab, Index: msg.Index},
+		)
+		return m, nil
+
+	case RequestNewMsg:
+		// Handle new entry - show key-value input dialog
+		m.dialog.ShowKeyValue(
+			"New Entry",
+			"",
+			"",
+			"request_new",
+			&requestDialogContext{Tab: msg.Tab},
+		)
+		return m, nil
+
+	case RequestDuplicateMsg:
+		// Handle duplicate - directly duplicate without dialog
+		m.requestPanel.DuplicateRow(msg.Index)
+		m.statusBar.Success("Duplicated", "entry")
+		return m, nil
+
+	case RequestYankMsg:
+		// Handle yank (copy) to clipboard
+		m.requestPanel.SetClipboard(msg.Key, msg.Value)
+		m.statusBar.Success("Yanked", msg.Key)
+		return m, nil
+
+	case RequestPasteMsg:
+		// Handle paste from clipboard
+		clipboard := m.requestPanel.GetClipboard()
+		if clipboard == nil {
+			m.statusBar.Info("Nothing to paste")
+			return m, nil
+		}
+		m.requestPanel.AddRow(clipboard.Key+"_copy", clipboard.Value)
+		m.statusBar.Success("Pasted", clipboard.Key)
+		return m, nil
+
+	case RequestURLChangedMsg:
+		// Handle URL change from request panel
+		requestID := m.requestPanel.GetCurrentRequestID()
+		if requestID != "" {
+			if err := m.leftPanel.GetCollections().UpdateRequestURLByID(requestID, msg.URL); err != nil {
+				m.statusBar.Error(err)
+			} else {
+				m.statusBar.Success("URL saved", "")
+				m.leftPanel.GetCollections().ReloadCollections()
+			}
+		}
+		return m, nil
+
+	case RequestParamToggleMsg:
+		// Handle param toggle - sync URL and save
+		if msg.Tab == "Params" {
+			m.syncParamsAndSave()
+		}
+		return m, nil
+
+	case RequestBodyChangedMsg:
+		// Handle body content change - save to collection
+		requestID := m.requestPanel.GetCurrentRequestID()
+		if requestID != "" {
+			if err := m.leftPanel.GetCollections().UpdateRequestBodyByID(requestID, msg.BodyType, msg.Content); err != nil {
+				m.statusBar.Error(err)
+			}
+		}
+		return m, nil
+
+	case RequestScriptsChangedMsg:
+		// Handle scripts content change - save to collection
+		requestID := m.requestPanel.GetCurrentRequestID()
+		if requestID != "" {
+			if err := m.leftPanel.GetCollections().UpdateRequestScriptsByID(requestID, msg.PreRequest, msg.PostRequest); err != nil {
+				m.statusBar.Error(err)
+			}
+		}
+		return m, nil
+
+	case RequestAuthChangedMsg:
+		// Handle auth configuration change - save to collection
+		requestID := m.requestPanel.GetCurrentRequestID()
+		if requestID != "" {
+			if err := m.leftPanel.GetCollections().UpdateRequestAuthByID(requestID, msg.Auth); err != nil {
+				m.statusBar.Error(err)
+			}
+		}
 		return m, nil
 
 	case CommandExecuteMsg:
@@ -812,6 +958,59 @@ func (m Model) handleDialogResult(msg components.DialogResultMsg) (tea.Model, te
 		if msg.Node != nil && msg.Value != "" {
 			m.performEditRequest(msg.Node, msg.Value, msg.Method, msg.URL)
 		}
+
+	// === REQUEST PANEL ACTIONS ===
+	case "request_rename":
+		if ctx, ok := msg.Context.(*requestDialogContext); ok && msg.Value != "" {
+			m.requestPanel.RenameRow(ctx.Index, msg.Value)
+			m.statusBar.Success("Renamed", msg.Value)
+			// Sync params to URL and save if Params or PathParams tab
+			if ctx.Tab == "Params" {
+				m.syncParamsAndSave()
+			} else if ctx.Tab == "PathParams" {
+				m.syncPathParamsAndSave(ctx.Index, msg.Value)
+			}
+		}
+	case "request_delete":
+		if ctx, ok := msg.Context.(*requestDialogContext); ok {
+			m.requestPanel.DeleteRow(ctx.Index)
+			m.statusBar.Success("Deleted", ctx.Key)
+			// Sync params to URL and save if Params tab
+			if ctx.Tab == "Params" {
+				m.syncParamsAndSave()
+			} else if ctx.Tab == "PathParams" {
+				// Remove path param from URL
+				m.removePathParamFromURL(ctx.Key)
+			}
+		}
+	case "request_edit":
+		if ctx, ok := msg.Context.(*requestDialogContext); ok && msg.Value != "" {
+			// msg.Value = key, msg.URL = value (from key-value dialog)
+			m.requestPanel.UpdateRow(ctx.Index, msg.Value, msg.URL)
+			m.statusBar.Success("Updated", msg.Value)
+			// Sync params to URL and save if Params tab
+			if ctx.Tab == "Params" {
+				m.syncParamsAndSave()
+			}
+			// Note: PathParams edit updates the value, not the key (which is in URL)
+		}
+	case "request_new":
+		if ctx, ok := msg.Context.(*requestDialogContext); ok && msg.Value != "" {
+			if ctx.Tab == "PathParams" {
+				// For path params, add to URL and reload
+				m.requestPanel.AddPathParamToURL(msg.Value)
+				m.saveURLToCollection()
+				m.statusBar.Success("Added path param", ":"+msg.Value)
+			} else {
+				// msg.Value = key, msg.URL = value (from key-value dialog)
+				m.requestPanel.AddRow(msg.Value, msg.URL)
+				m.statusBar.Success("Added", msg.Value)
+				// Sync params to URL and save if Params tab
+				if ctx.Tab == "Params" {
+					m.syncParamsAndSave()
+				}
+			}
+		}
 	}
 
 	return m, nil
@@ -897,6 +1096,67 @@ func (m *Model) performDuplicate(node *components.TreeNode) {
 
 	m.statusBar.Success("Duplicated", node.Name)
 	m.leftPanel.GetCollections().ReloadCollections()
+}
+
+// syncParamsAndSave syncs the params table to URL and saves to collection
+func (m *Model) syncParamsAndSave() {
+	// Update URL from params
+	newURL := m.requestPanel.SyncURLFromParams()
+
+	// Save to collection
+	requestID := m.requestPanel.GetCurrentRequestID()
+	if requestID != "" {
+		if err := m.leftPanel.GetCollections().UpdateRequestURLByID(requestID, newURL); err != nil {
+			m.statusBar.Error(err)
+			return
+		}
+		m.leftPanel.GetCollections().ReloadCollections()
+	}
+}
+
+// syncPathParamsAndSave syncs a renamed path param to the URL and saves
+func (m *Model) syncPathParamsAndSave(index int, newKey string) {
+	// Get old key from path params table before rename
+	pathParams := m.requestPanel.GetPathParamsTable()
+	if pathParams == nil || index < 0 || index >= pathParams.RowCount() {
+		return
+	}
+
+	// The row was already renamed, so we need to save the URL to collection
+	m.saveURLToCollection()
+}
+
+// removePathParamFromURL removes a path param placeholder from the URL
+func (m *Model) removePathParamFromURL(paramKey string) {
+	url := m.requestPanel.GetURL()
+	// Remove /:paramKey from URL
+	newURL := strings.Replace(url, "/:"+paramKey, "", 1)
+	// Also try removing just :paramKey (in case it's not prefixed with /)
+	if newURL == url {
+		newURL = strings.Replace(url, ":"+paramKey, "", 1)
+	}
+
+	// Update internal URL and save
+	m.requestPanel.LoadRequest(
+		m.requestPanel.GetCurrentRequestID(),
+		"",   // name doesn't change
+		m.requestPanel.GetMethod(),
+		newURL,
+	)
+	m.saveURLToCollection()
+}
+
+// saveURLToCollection saves the current URL to the collection file
+func (m *Model) saveURLToCollection() {
+	requestID := m.requestPanel.GetCurrentRequestID()
+	if requestID != "" {
+		url := m.requestPanel.GetURL()
+		if err := m.leftPanel.GetCollections().UpdateRequestURLByID(requestID, url); err != nil {
+			m.statusBar.Error(err)
+			return
+		}
+		m.leftPanel.GetCollections().ReloadCollections()
+	}
 }
 
 // overlayDialog overlays a dialog centered on the background content
@@ -988,7 +1248,21 @@ func (m *Model) updateWhichKeyContext() {
 				m.whichKey.SetContext(components.ContextNormalCollections)
 			}
 		case RequestPanel:
-			m.whichKey.SetContext(components.ContextNormalRequest)
+			// Set context based on active tab
+			switch m.requestPanel.GetActiveTab() {
+			case "Params":
+				m.whichKey.SetContext(components.ContextRequestParams)
+			case "Authorization":
+				m.whichKey.SetContext(components.ContextRequestAuth)
+			case "Headers":
+				m.whichKey.SetContext(components.ContextRequestHeaders)
+			case "Body":
+				m.whichKey.SetContext(components.ContextRequestBody)
+			case "Scripts":
+				m.whichKey.SetContext(components.ContextRequestScripts)
+			default:
+				m.whichKey.SetContext(components.ContextNormalRequest)
+			}
 		case ResponsePanel:
 			m.whichKey.SetContext(components.ContextNormalResponse)
 		default:

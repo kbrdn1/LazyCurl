@@ -45,8 +45,8 @@ config.json
 tmp/
 temp/
 
-# Compiled binary
-lazycurl
+# Compiled binary (at root only)
+/lazycurl
 
 # Editor specific
 .zed/

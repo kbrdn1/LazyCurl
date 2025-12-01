@@ -1,6 +1,7 @@
 package components
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -13,9 +14,16 @@ type Tab struct {
 	Active bool
 }
 
+// TabItem represents a tab with optional shortcut
+type TabItem struct {
+	Name     string
+	Shortcut string // e.g., "Shift+1"
+}
+
 // Tabs represents a tab bar component
 type Tabs struct {
 	Items       []string
+	Shortcuts   []string // Keyboard shortcuts for each tab
 	ActiveIndex int
 }
 
@@ -23,6 +31,22 @@ type Tabs struct {
 func NewTabs(items []string) *Tabs {
 	return &Tabs{
 		Items:       items,
+		Shortcuts:   make([]string, len(items)),
+		ActiveIndex: 0,
+	}
+}
+
+// NewTabsWithShortcuts creates a new tabs component with keyboard shortcuts
+func NewTabsWithShortcuts(items []TabItem) *Tabs {
+	names := make([]string, len(items))
+	shortcuts := make([]string, len(items))
+	for i, item := range items {
+		names[i] = item.Name
+		shortcuts[i] = item.Shortcut
+	}
+	return &Tabs{
+		Items:       names,
+		Shortcuts:   shortcuts,
 		ActiveIndex: 0,
 	}
 }
@@ -76,6 +100,89 @@ func (t *Tabs) View(width int) string {
 			tabs = append(tabs, activeTabStyle.Render(item))
 		} else {
 			tabs = append(tabs, inactiveTabStyle.Render(item))
+		}
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
+}
+
+// ViewWithShortcuts renders tabs with keyboard shortcuts displayed
+func (t *Tabs) ViewWithShortcuts(width int) string {
+	var tabs []string
+
+	activeNameStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(styles.Lavender)
+
+	inactiveNameStyle := lipgloss.NewStyle().
+		Foreground(styles.Subtext0)
+
+	shortcutStyle := lipgloss.NewStyle().
+		Foreground(styles.Subtext0).
+		Italic(true)
+
+	activeShortcutStyle := lipgloss.NewStyle().
+		Foreground(styles.Lavender).
+		Italic(true)
+
+	separatorStyle := lipgloss.NewStyle().
+		Foreground(styles.Surface0)
+
+	for i, item := range t.Items {
+		var tabContent string
+		shortcut := ""
+		if i < len(t.Shortcuts) && t.Shortcuts[i] != "" {
+			shortcut = t.Shortcuts[i]
+		}
+
+		if i == t.ActiveIndex {
+			if shortcut != "" {
+				tabContent = activeNameStyle.Render(item) + " " + activeShortcutStyle.Render(shortcut)
+			} else {
+				tabContent = activeNameStyle.Render(item)
+			}
+		} else {
+			if shortcut != "" {
+				tabContent = inactiveNameStyle.Render(item) + " " + shortcutStyle.Render(shortcut)
+			} else {
+				tabContent = inactiveNameStyle.Render(item)
+			}
+		}
+
+		tabs = append(tabs, tabContent)
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Top,
+		strings.Join(tabs, separatorStyle.Render("  │  ")),
+	)
+}
+
+// ViewCompact renders tabs in a compact format with shortcuts
+func (t *Tabs) ViewCompact(width int) string {
+	var tabs []string
+
+	activeStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(styles.Lavender).
+		Background(styles.Surface0).
+		Padding(0, 1)
+
+	inactiveStyle := lipgloss.NewStyle().
+		Foreground(styles.Subtext0).
+		Padding(0, 1)
+
+	for i, item := range t.Items {
+		// Create tab label with shortcut number
+		label := item
+		if i < len(t.Shortcuts) && t.Shortcuts[i] != "" {
+			// Extract just the number from shortcut (e.g., "!" from "Shift+1")
+			label = fmt.Sprintf("%s %s", item, t.Shortcuts[i])
+		}
+
+		if i == t.ActiveIndex {
+			tabs = append(tabs, activeStyle.Render(label))
+		} else {
+			tabs = append(tabs, inactiveStyle.Render(label))
 		}
 	}
 

@@ -36,6 +36,12 @@ const (
 	ContextCommand           KeyContext = "command"
 	ContextDialog            KeyContext = "dialog"
 	ContextModal             KeyContext = "modal"
+	// Request panel tab contexts
+	ContextRequestParams  KeyContext = "request_params"
+	ContextRequestAuth    KeyContext = "request_auth"
+	ContextRequestHeaders KeyContext = "request_headers"
+	ContextRequestBody    KeyContext = "request_body"
+	ContextRequestScripts KeyContext = "request_scripts"
 )
 
 // WhichKey manages keybinding hints display
@@ -304,6 +310,74 @@ func (w *WhichKey) initBindings() {
 				{Key: "tab/j", Desc: "Next"},
 				{Key: "enter", Desc: "Confirm"},
 				{Key: "esc", Desc: "Cancel"},
+			},
+		},
+	}
+
+	// Request panel tab contexts
+	w.bindings[ContextRequestParams] = []KeyGroup{
+		{
+			Name: "Params",
+			Bindings: []KeyBinding{
+				{Key: "j/k", Desc: "Up/Down"},
+				{Key: "h/l", Desc: "Section"},
+				{Key: "n", Desc: "New param"},
+				{Key: "c/i", Desc: "Edit"},
+				{Key: "d", Desc: "Delete"},
+				{Key: "space", Desc: "Toggle"},
+				{Key: "tab", Desc: "Next tab"},
+			},
+		},
+	}
+
+	w.bindings[ContextRequestAuth] = []KeyGroup{
+		{
+			Name: "Authorization",
+			Bindings: []KeyBinding{
+				{Key: "j/k", Desc: "Navigate"},
+				{Key: "h/l", Desc: "Change type"},
+				{Key: "i/c/Enter", Desc: "Edit"},
+				{Key: "tab", Desc: "Next tab"},
+				{Key: "ctrl+s", Desc: "Send"},
+			},
+		},
+	}
+
+	w.bindings[ContextRequestHeaders] = []KeyGroup{
+		{
+			Name: "Headers",
+			Bindings: []KeyBinding{
+				{Key: "j/k", Desc: "Up/Down"},
+				{Key: "n", Desc: "New header"},
+				{Key: "c/i", Desc: "Edit"},
+				{Key: "d", Desc: "Delete"},
+				{Key: "space", Desc: "Toggle"},
+				{Key: "tab", Desc: "Next tab"},
+			},
+		},
+	}
+
+	w.bindings[ContextRequestBody] = []KeyGroup{
+		{
+			Name: "Body",
+			Bindings: []KeyBinding{
+				{Key: "i", Desc: "Insert mode"},
+				{Key: "h/l", Desc: "Body type"},
+				{Key: "ctrl+f", Desc: "Format"},
+				{Key: "tab", Desc: "Next tab"},
+				{Key: "ctrl+s", Desc: "Send"},
+			},
+		},
+	}
+
+	w.bindings[ContextRequestScripts] = []KeyGroup{
+		{
+			Name: "Scripts",
+			Bindings: []KeyBinding{
+				{Key: "i", Desc: "Insert mode"},
+				{Key: "h/l", Desc: "Section"},
+				{Key: "tab", Desc: "Next tab"},
+				{Key: "ctrl+s", Desc: "Send"},
 			},
 		},
 	}

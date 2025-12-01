@@ -16,6 +16,7 @@ const (
 	DialogConfirm
 	DialogNewRequest
 	DialogEditRequest
+	DialogKeyValue // For key-value input (Request panel)
 )
 
 // HTTP methods for request creation
@@ -33,11 +34,12 @@ type Dialog struct {
 	cancelText  string
 	action      string // Action identifier for the callback
 	targetNode  *TreeNode
+	context     interface{} // Generic context for callbacks
 
 	// For new request dialog
 	methodIndex int    // Selected HTTP method index
-	urlValue    string // URL endpoint
-	focusField  int    // 0=name, 1=method, 2=url
+	urlValue    string // URL endpoint (also used as "value" for key-value dialogs)
+	focusField  int    // 0=name/key, 1=method, 2=url/value
 }
 
 // DialogResultMsg is sent when a dialog is completed
@@ -45,9 +47,10 @@ type DialogResultMsg struct {
 	Action    string
 	Confirmed bool
 	Value     string
-	Method    string // HTTP method for new request
-	URL       string // URL endpoint for new request
+	Method    string      // HTTP method for new request
+	URL       string      // URL endpoint for new request / Value for key-value dialogs
 	Node      *TreeNode
+	Context   interface{} // Generic context for callbacks
 }
 
 // NewDialog creates a new dialog component
@@ -60,7 +63,7 @@ func NewDialog() *Dialog {
 }
 
 // ShowInput shows an input dialog
-func (d *Dialog) ShowInput(title, message, defaultValue, action string, node *TreeNode) {
+func (d *Dialog) ShowInput(title, message, defaultValue, action string, ctx interface{}) {
 	d.visible = true
 	d.dialogType = DialogInput
 	d.title = title
@@ -68,8 +71,29 @@ func (d *Dialog) ShowInput(title, message, defaultValue, action string, node *Tr
 	d.inputValue = defaultValue
 	d.cursorPos = len(defaultValue)
 	d.action = action
-	d.targetNode = node
+	d.context = ctx
+	// Try to extract TreeNode from context if available
+	if node, ok := ctx.(*TreeNode); ok {
+		d.targetNode = node
+	} else {
+		d.targetNode = nil
+	}
 	d.focusField = 0
+}
+
+// ShowKeyValue shows a key-value input dialog
+func (d *Dialog) ShowKeyValue(title, defaultKey, defaultValue, action string, ctx interface{}) {
+	d.visible = true
+	d.dialogType = DialogKeyValue
+	d.title = title
+	d.message = ""
+	d.inputValue = defaultKey   // Key in inputValue
+	d.urlValue = defaultValue   // Value in urlValue
+	d.cursorPos = len(defaultKey)
+	d.action = action
+	d.context = ctx
+	d.targetNode = nil
+	d.focusField = 0 // Start on key field
 }
 
 // ShowNewRequest shows a new request dialog with method selector and URL
@@ -88,14 +112,20 @@ func (d *Dialog) ShowNewRequest(action string, node *TreeNode) {
 }
 
 // ShowConfirm shows a confirmation dialog
-func (d *Dialog) ShowConfirm(title, message, action string, node *TreeNode) {
+func (d *Dialog) ShowConfirm(title, message, action string, ctx interface{}) {
 	d.visible = true
 	d.dialogType = DialogConfirm
 	d.title = title
 	d.message = message
 	d.inputValue = ""
 	d.action = action
-	d.targetNode = node
+	d.context = ctx
+	// Try to extract TreeNode from context if available
+	if node, ok := ctx.(*TreeNode); ok {
+		d.targetNode = node
+	} else {
+		d.targetNode = nil
+	}
 }
 
 // ShowEditRequest shows an edit request dialog with existing values
@@ -148,6 +178,7 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 					Confirmed: false,
 					Value:     "",
 					Node:      d.targetNode,
+					Context:   d.context,
 				}
 			}
 
@@ -159,6 +190,9 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 			if d.dialogType == DialogNewRequest || d.dialogType == DialogEditRequest {
 				method = httpMethods[d.methodIndex]
 				url = d.urlValue
+			} else if d.dialogType == DialogKeyValue {
+				// For key-value dialogs, URL field holds the value
+				url = d.urlValue
 			}
 			return d, func() tea.Msg {
 				return DialogResultMsg{
@@ -168,6 +202,7 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 					Method:    method,
 					URL:       url,
 					Node:      d.targetNode,
+					Context:   d.context,
 				}
 			}
 
@@ -181,6 +216,14 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 				} else if d.focusField == 0 {
 					d.cursorPos = len(d.inputValue)
 				}
+			} else if d.dialogType == DialogKeyValue {
+				// Key-value dialog has 2 fields (key=0, value=1)
+				d.focusField = (d.focusField + 1) % 2
+				if d.focusField == 1 {
+					d.cursorPos = len(d.urlValue)
+				} else {
+					d.cursorPos = len(d.inputValue)
+				}
 			}
 
 		case "shift+tab", "up":
@@ -190,6 +233,14 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 				if d.focusField == 2 {
 					d.cursorPos = len(d.urlValue)
 				} else if d.focusField == 0 {
+					d.cursorPos = len(d.inputValue)
+				}
+			} else if d.dialogType == DialogKeyValue {
+				// Key-value dialog has 2 fields
+				d.focusField = (d.focusField + 1) % 2
+				if d.focusField == 1 {
+					d.cursorPos = len(d.urlValue)
+				} else {
 					d.cursorPos = len(d.inputValue)
 				}
 			}
@@ -224,6 +275,14 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 					d.urlValue = d.urlValue[:d.cursorPos-1] + d.urlValue[d.cursorPos:]
 					d.cursorPos--
 				}
+			} else if d.dialogType == DialogKeyValue {
+				if d.focusField == 0 && len(d.inputValue) > 0 && d.cursorPos > 0 {
+					d.inputValue = d.inputValue[:d.cursorPos-1] + d.inputValue[d.cursorPos:]
+					d.cursorPos--
+				} else if d.focusField == 1 && len(d.urlValue) > 0 && d.cursorPos > 0 {
+					d.urlValue = d.urlValue[:d.cursorPos-1] + d.urlValue[d.cursorPos:]
+					d.cursorPos--
+				}
 			} else if d.dialogType == DialogInput && len(d.inputValue) > 0 && d.cursorPos > 0 {
 				d.inputValue = d.inputValue[:d.cursorPos-1] + d.inputValue[d.cursorPos:]
 				d.cursorPos--
@@ -247,6 +306,14 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 						d.urlValue = d.urlValue[:d.cursorPos] + char + d.urlValue[d.cursorPos:]
 						d.cursorPos++
 					}
+				} else if d.dialogType == DialogKeyValue {
+					if d.focusField == 0 {
+						d.inputValue = d.inputValue[:d.cursorPos] + char + d.inputValue[d.cursorPos:]
+						d.cursorPos++
+					} else if d.focusField == 1 {
+						d.urlValue = d.urlValue[:d.cursorPos] + char + d.urlValue[d.cursorPos:]
+						d.cursorPos++
+					}
 				} else if d.dialogType == DialogInput {
 					d.inputValue = d.inputValue[:d.cursorPos] + char + d.inputValue[d.cursorPos:]
 					d.cursorPos++
@@ -262,6 +329,10 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 func (d *Dialog) getCurrentValue() string {
 	if d.dialogType == DialogNewRequest || d.dialogType == DialogEditRequest {
 		if d.focusField == 2 {
+			return d.urlValue
+		}
+	} else if d.dialogType == DialogKeyValue {
+		if d.focusField == 1 {
 			return d.urlValue
 		}
 	}
@@ -294,6 +365,8 @@ func (d *Dialog) View(screenWidth, screenHeight int) string {
 
 	if d.dialogType == DialogNewRequest || d.dialogType == DialogEditRequest {
 		content.WriteString(d.renderNewRequestForm(dialogWidth - 4))
+	} else if d.dialogType == DialogKeyValue {
+		content.WriteString(d.renderKeyValueForm(dialogWidth - 4))
 	} else if d.dialogType == DialogInput {
 		content.WriteString(d.renderInputForm(dialogWidth - 4))
 	} else if d.dialogType == DialogConfirm {
@@ -500,6 +573,60 @@ func (d *Dialog) getMethodColors(method string) (lipgloss.Color, lipgloss.Color)
 	default:
 		return styles.Surface1, styles.Text
 	}
+}
+
+// renderKeyValueForm renders a key-value input form
+func (d *Dialog) renderKeyValueForm(width int) string {
+	var content strings.Builder
+
+	labelStyle := lipgloss.NewStyle().
+		Foreground(styles.Subtext1)
+
+	inputStyle := lipgloss.NewStyle().
+		Foreground(styles.Text).
+		Background(styles.Surface0).
+		Width(width).
+		Padding(0, 1)
+
+	activeInputStyle := lipgloss.NewStyle().
+		Foreground(styles.Text).
+		Background(styles.Surface1).
+		Width(width).
+		Padding(0, 1)
+
+	// Key field
+	content.WriteString("\n")
+	content.WriteString(labelStyle.Render("Key: "))
+	keyInput := d.inputValue
+	if d.focusField == 0 {
+		keyInput = d.renderWithCursor(d.inputValue, d.cursorPos)
+		content.WriteString(activeInputStyle.Render(keyInput))
+	} else {
+		content.WriteString(inputStyle.Render(keyInput))
+	}
+
+	// Value field
+	content.WriteString("\n")
+	content.WriteString(labelStyle.Render("Value: "))
+	valueInput := d.urlValue
+	if d.focusField == 1 {
+		valueInput = d.renderWithCursor(d.urlValue, d.cursorPos)
+		content.WriteString(activeInputStyle.Render(valueInput))
+	} else {
+		content.WriteString(inputStyle.Render(valueInput))
+	}
+
+	content.WriteString("\n")
+
+	// Help text
+	helpStyle := lipgloss.NewStyle().
+		Foreground(styles.Subtext0).
+		Italic(true).
+		Width(width).
+		Align(lipgloss.Center)
+	content.WriteString(helpStyle.Render("Tab: switch field"))
+
+	return content.String()
 }
 
 // renderWithCursor renders text with a cursor at the specified position

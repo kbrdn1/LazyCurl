@@ -732,7 +732,15 @@ func (t *Tree) renderNode(node *TreeNode, width int, selected bool, panelActive 
 				nameStyle = nameStyle.Foreground(styles.SearchDimmed)
 			}
 		}
-		content = fmt.Sprintf("%s %s %s", prefix, methodBadge, nameStyle.Render(node.Name))
+		// Calculate available width for name: width - prefix - method badge - spaces
+		prefixLen := lipgloss.Width(prefix)
+		methodLen := lipgloss.Width(methodBadge)
+		availableNameWidth := width - prefixLen - methodLen - 2 // 2 spaces
+		name := node.Name
+		if availableNameWidth > 0 && len(name) > availableNameWidth {
+			name = name[:availableNameWidth] // Truncate without ellipsis
+		}
+		content = fmt.Sprintf("%s %s %s", prefix, methodBadge, nameStyle.Render(name))
 	} else {
 		iconStyle := lipgloss.NewStyle()
 		nameStyle := lipgloss.NewStyle()
@@ -745,7 +753,15 @@ func (t *Tree) renderNode(node *TreeNode, width int, selected bool, panelActive 
 				nameStyle = nameStyle.Foreground(styles.SearchDimmed)
 			}
 		}
-		content = fmt.Sprintf("%s%s%s", prefix, iconStyle.Render(icon), nameStyle.Render(node.Name))
+		// Calculate available width for name: width - prefix - icon
+		prefixLen := lipgloss.Width(prefix)
+		iconLen := lipgloss.Width(icon)
+		availableNameWidth := width - prefixLen - iconLen
+		name := node.Name
+		if availableNameWidth > 0 && len(name) > availableNameWidth {
+			name = name[:availableNameWidth] // Truncate without ellipsis
+		}
+		content = fmt.Sprintf("%s%s%s", prefix, iconStyle.Render(icon), nameStyle.Render(name))
 	}
 
 	// Apply selection styling based on node type and selection state

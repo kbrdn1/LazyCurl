@@ -1082,6 +1082,22 @@ func (e *EnvironmentsView) GetActiveEnvironmentName() string {
 	return e.activeEnvName
 }
 
+// GetActiveEnvironmentVariables returns the variables of the active environment
+func (e *EnvironmentsView) GetActiveEnvironmentVariables() map[string]string {
+	env := e.GetActiveEnvironment()
+	if env == nil {
+		return make(map[string]string)
+	}
+	// Convert active variables to map
+	vars := make(map[string]string)
+	for key, v := range env.Variables {
+		if v.Active {
+			vars[key] = v.Value
+		}
+	}
+	return vars
+}
+
 // GetBreadcrumb returns the breadcrumb path for the current cursor position
 func (e *EnvironmentsView) GetBreadcrumb() []string {
 	node := e.getCurrentNode()

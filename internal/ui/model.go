@@ -683,7 +683,7 @@ func (m Model) View() string {
 
 	// Calculate panel dimensions
 	// Reserve 1 line for status bar
-	contentHeight := m.height - 4
+	contentHeight := m.height - 1
 
 	// Lazygit-style layout:
 	// +------------------+------------------+

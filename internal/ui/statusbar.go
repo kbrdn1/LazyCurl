@@ -25,6 +25,7 @@ type StatusBar struct {
 	messageEnd  time.Time // When to clear the message
 	environment string    // Active environment name
 	hints       string    // Dynamic keybinding hints
+	isFullscreen bool     // Whether fullscreen mode is active
 }
 
 // NewStatusBar creates a new status bar
@@ -73,6 +74,11 @@ func (s *StatusBar) SetHints(hints string) {
 	s.hints = hints
 }
 
+// SetFullscreen sets the fullscreen mode indicator
+func (s *StatusBar) SetFullscreen(fullscreen bool) {
+	s.isFullscreen = fullscreen
+}
+
 // ShowMessage displays a temporary status message
 func (s *StatusBar) ShowMessage(msg string, duration time.Duration) {
 	s.message = msg
@@ -111,6 +117,19 @@ func (s *StatusBar) View(width int) string {
 	// Mode badge
 	modeBadge := s.mode.Color().Render(s.mode.String())
 	modeWidth := lipgloss.Width(modeBadge)
+
+	// Fullscreen badge (if active)
+	var fullscreenBadge string
+	fullscreenWidth := 0
+	if s.isFullscreen {
+		fullscreenStyle := lipgloss.NewStyle().
+			Foreground(styles.Crust).
+			Background(styles.Mauve).
+			Bold(true).
+			Padding(0, 1)
+		fullscreenBadge = fullscreenStyle.Render("FULLSCREEN")
+		fullscreenWidth = lipgloss.Width(fullscreenBadge)
+	}
 
 	// Environment badge
 	var envBadge string
@@ -154,7 +173,7 @@ func (s *StatusBar) View(width int) string {
 	versionWidth := lipgloss.Width(versionBadge)
 
 	// Calculate middle content width
-	usedWidth := modeWidth + envWidth + statusWidth + methodWidth + versionWidth
+	usedWidth := modeWidth + fullscreenWidth + envWidth + statusWidth + methodWidth + versionWidth
 	middleWidth := width - usedWidth
 	if middleWidth < 0 {
 		middleWidth = 0
@@ -203,6 +222,9 @@ func (s *StatusBar) View(width int) string {
 	// Join all parts on single line
 	var parts []string
 	parts = append(parts, modeBadge)
+	if fullscreenBadge != "" {
+		parts = append(parts, fullscreenBadge)
+	}
 	parts = append(parts, envBadge)
 	if statusBadge != "" {
 		parts = append(parts, " "+statusBadge)

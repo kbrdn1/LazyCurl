@@ -313,12 +313,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateLeft) {
 					if m.activePanel > CollectionsPanel {
 						m.activePanel--
+						// Update fullscreen panel if in fullscreen mode
+						if m.isFullscreen {
+							m.fullscreenPanel = m.activePanel
+						}
 					}
 					return m, nil
 				}
 				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateRight) {
 					if m.activePanel < ResponsePanel {
 						m.activePanel++
+						// Update fullscreen panel if in fullscreen mode
+						if m.isFullscreen {
+							m.fullscreenPanel = m.activePanel
+						}
 					}
 					return m, nil
 				}
@@ -331,12 +339,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateLeft) {
 					if m.activePanel > CollectionsPanel {
 						m.activePanel--
+						// Update fullscreen panel if in fullscreen mode
+						if m.isFullscreen {
+							m.fullscreenPanel = m.activePanel
+						}
 					}
 					return m, nil
 				}
 				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateRight) {
 					if m.activePanel < ResponsePanel {
 						m.activePanel++
+						// Update fullscreen panel if in fullscreen mode
+						if m.isFullscreen {
+							m.fullscreenPanel = m.activePanel
+						}
 					}
 					return m, nil
 				}

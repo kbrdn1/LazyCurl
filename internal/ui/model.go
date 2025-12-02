@@ -92,6 +92,10 @@ type Model struct {
 	// HTTP client
 	httpClient  *api.Client
 	isSending   bool
+
+	// Fullscreen mode
+	isFullscreen    bool
+	fullscreenPanel PanelType
 }
 
 // NewModel creates a new application model
@@ -203,8 +207,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// Handle Escape key - return to NORMAL mode from any mode
+		// Handle Escape key - exit fullscreen or return to NORMAL mode
 		if msg.String() == "esc" {
+			// Exit fullscreen mode first if active
+			if m.isFullscreen {
+				m.isFullscreen = false
+				return m, nil
+			}
+			// Then handle mode changes
 			if m.mode != NormalMode {
 				oldMode := m.mode
 				m.mode = NormalMode
@@ -275,6 +285,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// ? to show WhichKey modal
 			if msg.String() == "?" {
 				m.whichKey.Show()
+				return m, nil
+			}
+
+			// F to toggle fullscreen for current panel
+			if msg.String() == "F" {
+				m.toggleFullscreen()
 				return m, nil
 			}
 
@@ -809,6 +825,65 @@ func (m Model) renderHorizontalLayout() string {
 	return collectionsPanel + "\n" + requestPanel + "\n" + responsePanel
 }
 
+// toggleFullscreen toggles fullscreen mode for the current active panel
+func (m *Model) toggleFullscreen() {
+	if m.isFullscreen {
+		// Exit fullscreen
+		m.isFullscreen = false
+	} else {
+		// Enter fullscreen with current panel
+		m.isFullscreen = true
+		m.fullscreenPanel = m.activePanel
+	}
+}
+
+// renderFullscreenLayout renders the active panel in fullscreen mode
+func (m Model) renderFullscreenLayout() string {
+	// Reserve 1 line for status bar
+	contentHeight := m.height - 1
+	panelWidth := m.width
+
+	var panelContent string
+	var panelTitle string
+
+	switch m.fullscreenPanel {
+	case CollectionsPanel:
+		content := m.leftPanel.View(
+			panelWidth-4,
+			contentHeight-2,
+			true, // Always active in fullscreen
+		)
+		return m.renderPanelWithTabs(m.leftPanel, content, panelWidth, contentHeight, true)
+
+	case RequestPanel:
+		panelTitle = "Request"
+		panelContent = m.requestPanel.View(
+			panelWidth-4,
+			contentHeight-2,
+			true,
+		)
+
+	case ResponsePanel:
+		panelTitle = "Response"
+		panelContent = m.responsePanel.View(
+			panelWidth-4,
+			contentHeight-2,
+			true,
+		)
+
+	default:
+		// Fallback to collections
+		content := m.leftPanel.View(
+			panelWidth-4,
+			contentHeight-2,
+			true,
+		)
+		return m.renderPanelWithTabs(m.leftPanel, content, panelWidth, contentHeight, true)
+	}
+
+	return m.renderPanel(panelTitle, panelContent, panelWidth, contentHeight, true)
+}
+
 // View renders the model
 func (m Model) View() string {
 	if !m.ready {
@@ -825,7 +900,10 @@ func (m Model) View() string {
 
 	// Render main content based on layout mode
 	var mainContent string
-	if m.layoutMode == HorizontalLayout {
+	if m.isFullscreen {
+		// Fullscreen mode - render only the active panel
+		mainContent = m.renderFullscreenLayout()
+	} else if m.layoutMode == HorizontalLayout {
 		mainContent = m.renderHorizontalLayout()
 	} else {
 		mainContent = m.renderVerticalLayout()
@@ -991,6 +1069,9 @@ func (m Model) renderPanel(title string, content string, width, height int, acti
 func (m Model) renderStatusBar() string {
 	// Update environment display
 	m.statusBar.SetEnvironment(m.leftPanel.GetEnvironments().GetActiveEnvironmentName())
+
+	// Update fullscreen state
+	m.statusBar.SetFullscreen(m.isFullscreen)
 
 	// Update breadcrumb based on active tab
 	if m.leftPanel.GetActiveTab() == EnvironmentsTab && m.activePanel == CollectionsPanel {

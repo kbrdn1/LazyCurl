@@ -501,8 +501,10 @@ We use **Gitmoji + Conventional Commits**:
 
 ### 📋 Sprint 2 - UX Improvements
 
-- [ ] Responsive panel layout (horizontal on 80x24 terminals)
-- [ ] Fullscreen panel toggle (`F` in NORMAL mode)
+- [x] Responsive panel layout (horizontal on 80x24 terminals)
+- [x] Fullscreen panel toggle (`F` in NORMAL mode, `h/l` to navigate)
+- [ ] Find in editors (`/` in NORMAL mode)
+- [ ] Settings Panel (`Ctrl+;` fullscreen with Global/Workspace tabs)
 - [ ] Console tab in Response Panel (`Ctrl+R`: Response, `Ctrl+C`: Console)
 - [ ] Improved statusbar rendering and display
 - [ ] Session persistence (`.lazycurl/session.yml`)

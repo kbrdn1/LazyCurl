@@ -73,6 +73,7 @@ type Model struct {
 	activePanel  PanelType
 	ready        bool
 	zoneManager  *zone.Manager
+	layoutMode   LayoutMode
 
 	// Panels
 	leftPanel     *LeftPanel
@@ -644,6 +645,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.ready = true
+		// Update layout mode based on terminal size
+		m.layoutMode = m.detectLayoutMode()
 		return m, nil
 	}
 
@@ -667,20 +670,34 @@ const (
 	MinTerminalHeight = 24
 )
 
-// View renders the model
-func (m Model) View() string {
-	if !m.ready {
-		return "Initializing LazyCurl..."
-	}
+// LayoutMode represents the panel arrangement mode
+type LayoutMode int
 
-	// Check minimum terminal size
-	if m.width < MinTerminalWidth || m.height < MinTerminalHeight {
-		warningStyle := lipgloss.NewStyle().
-			Foreground(styles.Yellow).
-			Bold(true)
-		return warningStyle.Render("Terminal too small. Please resize to at least 80x24.")
-	}
+const (
+	// VerticalLayout is the default 3-panel Lazygit-style layout (side-by-side)
+	VerticalLayout LayoutMode = iota
+	// HorizontalLayout stacks panels vertically for small terminals
+	HorizontalLayout
+)
 
+// Responsive breakpoints for layout switching
+const (
+	// ResponsiveWidthThreshold - below this width, switch to horizontal layout
+	ResponsiveWidthThreshold = 100
+	// ResponsiveHeightThreshold - below this height, switch to horizontal layout
+	ResponsiveHeightThreshold = 30
+)
+
+// detectLayoutMode determines the layout mode based on terminal size
+func (m Model) detectLayoutMode() LayoutMode {
+	if m.width < ResponsiveWidthThreshold || m.height < ResponsiveHeightThreshold {
+		return HorizontalLayout
+	}
+	return VerticalLayout
+}
+
+// renderVerticalLayout renders the default Lazygit-style 3-panel layout (side-by-side)
+func (m Model) renderVerticalLayout() string {
 	// Calculate panel dimensions
 	// Reserve 1 line for status bar
 	contentHeight := m.height - 1
@@ -731,11 +748,88 @@ func (m Model) View() string {
 	rightSide := requestPanel + "\n" + responsePanel
 
 	// Combine left and right horizontally
-	mainContent := lipgloss.JoinHorizontal(
+	return lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		leftPanelRendered,
 		rightSide,
 	)
+}
+
+// renderHorizontalLayout renders panels stacked vertically for small terminals
+func (m Model) renderHorizontalLayout() string {
+	// Calculate panel dimensions
+	// Reserve 1 line for status bar
+	contentHeight := m.height - 1
+
+	// Horizontal (stacked) layout:
+	// +-------------------------------------+
+	// |         Collections                 |
+	// +-------------------------------------+
+	// |           Request                   |
+	// +-------------------------------------+
+	// |           Response                  |
+	// +-------------------------------------+
+	// |         Status Bar                  |
+	// +-------------------------------------+
+
+	// Full width for all panels
+	panelWidth := m.width
+
+	// Distribute height equally among 3 panels
+	// Each panel gets 1/3 of the available content height
+	collectionsHeight := contentHeight / 3
+	requestHeight := contentHeight / 3
+	responseHeight := contentHeight - collectionsHeight - requestHeight
+
+	// Collections panel (top)
+	collectionsContent := m.leftPanel.View(
+		panelWidth-4,
+		collectionsHeight-2,
+		m.activePanel == CollectionsPanel,
+	)
+	collectionsPanel := m.renderPanelWithTabs(m.leftPanel, collectionsContent, panelWidth, collectionsHeight, m.activePanel == CollectionsPanel)
+
+	// Request panel (middle)
+	requestContent := m.requestPanel.View(
+		panelWidth-4,
+		requestHeight-2,
+		m.activePanel == RequestPanel,
+	)
+	requestPanel := m.renderPanel("Request", requestContent, panelWidth, requestHeight, m.activePanel == RequestPanel)
+
+	// Response panel (bottom)
+	responseContent := m.responsePanel.View(
+		panelWidth-4,
+		responseHeight-2,
+		m.activePanel == ResponsePanel,
+	)
+	responsePanel := m.renderPanel("Response", responseContent, panelWidth, responseHeight, m.activePanel == ResponsePanel)
+
+	// Stack panels vertically
+	return collectionsPanel + "\n" + requestPanel + "\n" + responsePanel
+}
+
+// View renders the model
+func (m Model) View() string {
+	if !m.ready {
+		return "Initializing LazyCurl..."
+	}
+
+	// Check minimum terminal size
+	if m.width < MinTerminalWidth || m.height < MinTerminalHeight {
+		warningStyle := lipgloss.NewStyle().
+			Foreground(styles.Yellow).
+			Bold(true)
+		return warningStyle.Render("Terminal too small. Please resize to at least 80x24.")
+	}
+
+	// Render main content based on layout mode
+	var mainContent string
+	if m.layoutMode == HorizontalLayout {
+		mainContent = m.renderHorizontalLayout()
+	} else {
+		mainContent = m.renderVerticalLayout()
+	}
 
 	// Status bar or command input
 	var bottomBar string

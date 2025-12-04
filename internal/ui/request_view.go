@@ -488,6 +488,25 @@ func (r *RequestView) GetActiveScriptsEditor() *components.Editor {
 // Update handles messages for the request view
 func (r RequestView) Update(msg tea.Msg, cfg *config.GlobalConfig) (RequestView, tea.Cmd) {
 	switch msg := msg.(type) {
+	case components.SearchUpdateMsg, components.SearchCloseMsg:
+		// Forward search messages to the active editor
+		if r.tabs.GetActive() == "Body" && r.bodyType == JSONBody {
+			editor, cmd := r.bodyEditor.Update(msg, true)
+			r.bodyEditor = editor
+			return r, cmd
+		}
+		if r.tabs.GetActive() == "Scripts" {
+			activeEditor := r.GetActiveScriptsEditor()
+			editor, cmd := activeEditor.Update(msg, true)
+			if r.scriptsSection == PreRequestSection {
+				r.preRequestEditor = editor
+			} else {
+				r.postRequestEditor = editor
+			}
+			return r, cmd
+		}
+		return r, nil
+
 	case components.EditorFormatMsg:
 		// Handle format result from editor - also emit body changed
 		if msg.Success && r.tabs.GetActive() == "Body" {
@@ -526,15 +545,15 @@ func (r RequestView) Update(msg tea.Msg, cfg *config.GlobalConfig) (RequestView,
 
 		// If in Body tab with JSON body type, forward to editor
 		if r.tabs.GetActive() == "Body" && r.bodyType == JSONBody {
-			// Only intercept tab switching and send request when in NORMAL mode
-			if r.bodyEditor.GetMode() == components.EditorInsertMode {
-				// In INSERT mode, forward everything except Esc to editor
+			// Only intercept tab switching and send request when in NORMAL mode and not searching
+			if r.bodyEditor.GetMode() == components.EditorInsertMode || r.bodyEditor.IsSearching() {
+				// In INSERT mode or searching, forward everything to editor
 				editor, cmd := r.bodyEditor.Update(msg, true)
 				r.bodyEditor = editor
 				return r, cmd
 			}
 
-			// In NORMAL mode, check for tab switching first
+			// In NORMAL mode (not searching), check for tab switching first
 			switch msg.String() {
 			case "tab":
 				r.tabs.Next()
@@ -572,8 +591,8 @@ func (r RequestView) Update(msg tea.Msg, cfg *config.GlobalConfig) (RequestView,
 		if r.tabs.GetActive() == "Scripts" {
 			activeEditor := r.GetActiveScriptsEditor()
 
-			// In INSERT mode, forward everything except Esc to editor
-			if activeEditor.GetMode() == components.EditorInsertMode {
+			// In INSERT mode or searching, forward everything to editor
+			if activeEditor.GetMode() == components.EditorInsertMode || activeEditor.IsSearching() {
 				editor, cmd := activeEditor.Update(msg, true)
 				if r.scriptsSection == PreRequestSection {
 					r.preRequestEditor = editor
@@ -583,7 +602,7 @@ func (r RequestView) Update(msg tea.Msg, cfg *config.GlobalConfig) (RequestView,
 				return r, cmd
 			}
 
-			// In NORMAL mode, check for special keys first
+			// In NORMAL mode (not searching), check for special keys first
 			switch msg.String() {
 			case "tab":
 				r.tabs.Next()

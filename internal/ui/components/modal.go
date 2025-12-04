@@ -34,9 +34,10 @@ type FormField struct {
 	Name        string
 	Label       string
 	Value       string
-	Type        string // "text", "checkbox", "radio"
+	Type        string   // "text", "checkbox", "radio"
 	Options     []string // For radio buttons
 	Placeholder string
+	CursorPos   int // Cursor position for text fields
 }
 
 // Modal represents a modal dialog
@@ -125,6 +126,7 @@ func (m *Modal) SetFieldValue(name, value string) {
 	for i := range m.Fields {
 		if m.Fields[i].Name == name {
 			m.Fields[i].Value = value
+			m.Fields[i].CursorPos = len(value) // Position cursor at end
 			return
 		}
 	}
@@ -179,7 +181,7 @@ func (m *Modal) Update(msg tea.Msg) (*Modal, tea.Cmd) {
 				return ModalCloseMsg{Result: ModalResult{Confirmed: confirmed, Values: values}, Tag: m.Tag}
 			}
 
-		case "tab", "down", "j":
+		case "tab", "down":
 			if m.Type == ModalConfirm {
 				m.FocusIndex = (m.FocusIndex + 1) % 2
 			} else {
@@ -187,7 +189,17 @@ func (m *Modal) Update(msg tea.Msg) (*Modal, tea.Cmd) {
 				m.FocusIndex = (m.FocusIndex + 1) % (len(m.Fields) + 2)
 			}
 
-		case "shift+tab", "up", "k":
+		case "j":
+			// When on buttons or confirm modal, navigate down; when on text field, type 'j'
+			if m.Type == ModalConfirm {
+				m.FocusIndex = (m.FocusIndex + 1) % 2
+			} else if m.FocusIndex >= len(m.Fields) {
+				m.FocusIndex = (m.FocusIndex + 1) % (len(m.Fields) + 2)
+			} else if m.FocusIndex < len(m.Fields) && m.Fields[m.FocusIndex].Type == "text" {
+				m.insertCharAtCursor(m.FocusIndex, "j")
+			}
+
+		case "shift+tab", "up":
 			if m.Type == ModalConfirm {
 				m.FocusIndex = (m.FocusIndex + 1) % 2
 			} else {
@@ -197,20 +209,66 @@ func (m *Modal) Update(msg tea.Msg) (*Modal, tea.Cmd) {
 				}
 			}
 
-		case "left", "h":
-			if m.Type == ModalConfirm || m.FocusIndex >= len(m.Fields) {
+		case "k":
+			// When on buttons or confirm modal, navigate up; when on text field, type 'k'
+			if m.Type == ModalConfirm {
+				m.FocusIndex = (m.FocusIndex + 1) % 2
+			} else if m.FocusIndex >= len(m.Fields) {
+				m.FocusIndex--
+				if m.FocusIndex < 0 {
+					m.FocusIndex = len(m.Fields) + 1
+				}
+			} else if m.FocusIndex < len(m.Fields) && m.Fields[m.FocusIndex].Type == "text" {
+				m.insertCharAtCursor(m.FocusIndex, "k")
+			}
+
+		case "left":
+			// Arrow left moves cursor in text field
+			if m.FocusIndex < len(m.Fields) && m.Fields[m.FocusIndex].Type == "text" {
+				if m.Fields[m.FocusIndex].CursorPos > 0 {
+					m.Fields[m.FocusIndex].CursorPos--
+				}
+			} else if m.Type == ModalConfirm || m.FocusIndex >= len(m.Fields) {
+				// Navigate buttons only with arrows when on buttons
 				if m.FocusIndex > 0 {
 					m.FocusIndex--
 				}
 			}
 
-		case "right", "l":
+		case "h":
+			// When on buttons, navigate left; when on text field, type 'h'
+			if m.Type == ModalConfirm || m.FocusIndex >= len(m.Fields) {
+				if m.FocusIndex > 0 {
+					m.FocusIndex--
+				}
+			} else if m.FocusIndex < len(m.Fields) && m.Fields[m.FocusIndex].Type == "text" {
+				m.insertCharAtCursor(m.FocusIndex, "h")
+			}
+
+		case "right":
+			// Arrow right moves cursor in text field
+			if m.FocusIndex < len(m.Fields) && m.Fields[m.FocusIndex].Type == "text" {
+				if m.Fields[m.FocusIndex].CursorPos < len(m.Fields[m.FocusIndex].Value) {
+					m.Fields[m.FocusIndex].CursorPos++
+				}
+			} else if m.Type == ModalConfirm {
+				m.FocusIndex = (m.FocusIndex + 1) % 2
+			} else if m.FocusIndex >= len(m.Fields) {
+				if m.FocusIndex < len(m.Fields)+1 {
+					m.FocusIndex++
+				}
+			}
+
+		case "l":
+			// When on buttons, navigate right; when on text field, type 'l'
 			if m.Type == ModalConfirm {
 				m.FocusIndex = (m.FocusIndex + 1) % 2
 			} else if m.FocusIndex >= len(m.Fields) {
 				if m.FocusIndex < len(m.Fields)+1 {
 					m.FocusIndex++
 				}
+			} else if m.FocusIndex < len(m.Fields) && m.Fields[m.FocusIndex].Type == "text" {
+				m.insertCharAtCursor(m.FocusIndex, "l")
 			}
 
 		case " ":
@@ -226,8 +284,10 @@ func (m *Modal) Update(msg tea.Msg) (*Modal, tea.Cmd) {
 		case "backspace":
 			if m.FocusIndex < len(m.Fields) && m.Fields[m.FocusIndex].Type == "text" {
 				v := m.Fields[m.FocusIndex].Value
-				if len(v) > 0 {
-					m.Fields[m.FocusIndex].Value = v[:len(v)-1]
+				pos := m.Fields[m.FocusIndex].CursorPos
+				if pos > 0 && len(v) > 0 {
+					m.Fields[m.FocusIndex].Value = v[:pos-1] + v[pos:]
+					m.Fields[m.FocusIndex].CursorPos--
 				}
 			}
 
@@ -235,13 +295,24 @@ func (m *Modal) Update(msg tea.Msg) (*Modal, tea.Cmd) {
 			// Text input
 			if m.FocusIndex < len(m.Fields) && m.Fields[m.FocusIndex].Type == "text" {
 				if len(msg.String()) == 1 {
-					m.Fields[m.FocusIndex].Value += msg.String()
+					m.insertCharAtCursor(m.FocusIndex, msg.String())
 				}
 			}
 		}
 	}
 
 	return m, nil
+}
+
+// insertCharAtCursor inserts a character at the cursor position in the specified field
+func (m *Modal) insertCharAtCursor(fieldIndex int, char string) {
+	if fieldIndex >= len(m.Fields) {
+		return
+	}
+	field := &m.Fields[fieldIndex]
+	pos := field.CursorPos
+	field.Value = field.Value[:pos] + char + field.Value[pos:]
+	field.CursorPos++
 }
 
 // View renders the modal
@@ -298,9 +369,20 @@ func (m *Modal) View(screenWidth, screenHeight int) string {
 			if displayVal == "" && field.Placeholder != "" {
 				displayVal = field.Placeholder
 				inputStyle = inputStyle.Foreground(styles.Subtext0)
-			}
-			if focused {
-				displayVal += "▌"
+				if focused {
+					displayVal = "▌" + displayVal[1:] // Cursor at start for placeholder
+					if len(field.Placeholder) == 0 {
+						displayVal = "▌"
+					}
+				}
+			} else if focused {
+				// Insert cursor at cursor position
+				pos := m.Fields[i].CursorPos
+				if pos >= len(displayVal) {
+					displayVal += "▌"
+				} else {
+					displayVal = displayVal[:pos] + "▌" + displayVal[pos+1:]
+				}
 			}
 			content.WriteString(inputStyle.Render(displayVal))
 

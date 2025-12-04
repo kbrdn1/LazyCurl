@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/kbrdn1/LazyCurl#readme
+    about: Check the README for usage information and getting started guide
+  - name: Discussions
+    url: https://github.com/kbrdn1/LazyCurl/discussions
+    about: Ask questions and discuss ideas with the community

@@ -1,0 +1,59 @@
+name: "Documentation"
+description: "Report missing, incorrect, or unclear documentation"
+title: "[Docs]: "
+labels: ["docs"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve LazyCurl's documentation! Please describe what needs to be added, updated, or clarified.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation issue is this?
+      options:
+        - Missing documentation
+        - Incorrect information
+        - Unclear explanation
+        - Typo/Grammar
+        - Code example needed
+        - Translation
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Where is the documentation issue? (file path, URL, or section name)
+      placeholder: "README.md, CONTRIBUTING.md, etc."
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe what needs to be improved
+      placeholder: The current documentation says X but should say Y...
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Improvement
+      description: How would you improve this documentation?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to contribute?
+      options:
+        - label: I'm willing to submit a PR to improve this documentation
+          required: false

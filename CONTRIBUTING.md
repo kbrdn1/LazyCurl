@@ -444,6 +444,8 @@ Update CHANGELOG.md following [Keep a Changelog](https://keepachangelog.com/) fo
 
 ## GitHub Labels
 
+> **Note**: For complete label documentation including organization-level labels and implementation instructions, see [`.github/LABELS.md`](.github/LABELS.md).
+
 ### Type Labels
 
 | Label | Color | Description |

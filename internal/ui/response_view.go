@@ -117,34 +117,46 @@ func NewResponseView() *ResponseView {
 // Update handles messages for the response view
 func (r ResponseView) Update(msg tea.Msg, cfg *config.GlobalConfig) (ResponseView, tea.Cmd) {
 	switch msg := msg.(type) {
+	case components.SearchUpdateMsg, components.SearchCloseMsg:
+		// Forward search messages to body editor
+		if r.tabs.GetActive() == "Body" {
+			editor, cmd := r.bodyEditor.Update(msg, false)
+			r.bodyEditor = editor
+			return r, cmd
+		}
+		return r, nil
+
 	case tea.KeyMsg:
 		activeTab := r.tabs.GetActive()
 
-		// Tab navigation with Tab key
-		switch msg.String() {
-		case "tab":
-			r.tabs.Next()
-			return r, nil
-		case "shift+tab":
-			r.tabs.Previous()
-			return r, nil
-		case "1":
-			r.tabs.SetActive(0) // Body
-			return r, nil
-		case "2":
-			r.tabs.SetActive(1) // Cookies
-			return r, nil
-		case "3":
-			r.tabs.SetActive(2) // Headers
-			return r, nil
+		// Tab navigation with Tab key - but not when searching
+		if !r.bodyEditor.IsSearching() {
+			switch msg.String() {
+			case "tab":
+				r.tabs.Next()
+				return r, nil
+			case "shift+tab":
+				r.tabs.Previous()
+				return r, nil
+			case "1":
+				r.tabs.SetActive(0) // Body
+				return r, nil
+			case "2":
+				r.tabs.SetActive(1) // Cookies
+				return r, nil
+			case "3":
+				r.tabs.SetActive(2) // Headers
+				return r, nil
+			}
 		}
 
 		// Tab-specific navigation
 		switch activeTab {
 		case "Body":
 			// Forward all keys to body editor for vim-like navigation
-			editor, _ := r.bodyEditor.Update(msg, false) // Read-only navigation
+			editor, cmd := r.bodyEditor.Update(msg, false) // Read-only navigation
 			r.bodyEditor = editor
+			return r, cmd
 
 		case "Cookies":
 			// Vim-like navigation in cookies list

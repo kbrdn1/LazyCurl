@@ -226,6 +226,10 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 				}
 			}
 
+		case "j":
+			// Type 'j' in text field (don't navigate)
+			d.insertChar("j")
+
 		case "shift+tab", "up":
 			// Move to previous field in request dialogs
 			if d.dialogType == DialogNewRequest || d.dialogType == DialogEditRequest {
@@ -245,25 +249,39 @@ func (d *Dialog) Update(msg tea.Msg) (*Dialog, tea.Cmd) {
 				}
 			}
 
-		case "left", "h":
-			if (d.dialogType == DialogNewRequest || d.dialogType == DialogEditRequest) && d.focusField == 1 {
-				// Change method
-				d.methodIndex = (d.methodIndex + len(httpMethods) - 1) % len(httpMethods)
-			} else if msg.String() == "left" {
-				if d.cursorPos > 0 {
-					d.cursorPos--
-				}
+		case "k":
+			// Type 'k' in text field (don't navigate)
+			d.insertChar("k")
+
+		case "left":
+			// Arrow left always moves cursor in text field
+			if d.cursorPos > 0 {
+				d.cursorPos--
 			}
 
-		case "right", "l":
+		case "h":
 			if (d.dialogType == DialogNewRequest || d.dialogType == DialogEditRequest) && d.focusField == 1 {
-				// Change method
+				// Change method with h/l on method selector
+				d.methodIndex = (d.methodIndex + len(httpMethods) - 1) % len(httpMethods)
+			} else {
+				// Type 'h' in text field
+				d.insertChar("h")
+			}
+
+		case "right":
+			// Arrow right always moves cursor in text field
+			currentValue := d.getCurrentValue()
+			if d.cursorPos < len(currentValue) {
+				d.cursorPos++
+			}
+
+		case "l":
+			if (d.dialogType == DialogNewRequest || d.dialogType == DialogEditRequest) && d.focusField == 1 {
+				// Change method with h/l on method selector
 				d.methodIndex = (d.methodIndex + 1) % len(httpMethods)
-			} else if msg.String() == "right" {
-				currentValue := d.getCurrentValue()
-				if d.cursorPos < len(currentValue) {
-					d.cursorPos++
-				}
+			} else {
+				// Type 'l' in text field
+				d.insertChar("l")
 			}
 
 		case "backspace":
@@ -337,6 +355,31 @@ func (d *Dialog) getCurrentValue() string {
 		}
 	}
 	return d.inputValue
+}
+
+// insertChar inserts a character at cursor position in the current field
+func (d *Dialog) insertChar(char string) {
+	if d.dialogType == DialogNewRequest || d.dialogType == DialogEditRequest {
+		if d.focusField == 0 {
+			d.inputValue = d.inputValue[:d.cursorPos] + char + d.inputValue[d.cursorPos:]
+			d.cursorPos++
+		} else if d.focusField == 2 {
+			d.urlValue = d.urlValue[:d.cursorPos] + char + d.urlValue[d.cursorPos:]
+			d.cursorPos++
+		}
+		// focusField == 1 is method selector, no text input
+	} else if d.dialogType == DialogKeyValue {
+		if d.focusField == 0 {
+			d.inputValue = d.inputValue[:d.cursorPos] + char + d.inputValue[d.cursorPos:]
+			d.cursorPos++
+		} else if d.focusField == 1 {
+			d.urlValue = d.urlValue[:d.cursorPos] + char + d.urlValue[d.cursorPos:]
+			d.cursorPos++
+		}
+	} else if d.dialogType == DialogInput {
+		d.inputValue = d.inputValue[:d.cursorPos] + char + d.inputValue[d.cursorPos:]
+		d.cursorPos++
+	}
 }
 
 // View renders the dialog

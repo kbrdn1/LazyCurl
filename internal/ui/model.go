@@ -171,10 +171,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case components.SearchUpdateMsg, components.SearchCloseMsg:
-		// Forward search messages to left panel
+		// Forward search messages to the appropriate panel
 		var cmd tea.Cmd
-		*m.leftPanel, cmd = m.leftPanel.Update(msg, m.globalConfig)
+		switch m.activePanel {
+		case ResponsePanel:
+			*m.responsePanel, cmd = m.responsePanel.Update(msg, m.globalConfig)
+		case RequestPanel:
+			*m.requestPanel, cmd = m.requestPanel.Update(msg, m.globalConfig)
+		default:
+			*m.leftPanel, cmd = m.leftPanel.Update(msg, m.globalConfig)
+		}
 		return m, cmd
+
+	case components.EditorQuitMsg:
+		// Editor requested to quit the application (Q key in NORMAL mode)
+		return m, tea.Quit
 
 	case components.DialogResultMsg:
 		return m.handleDialogResult(msg)

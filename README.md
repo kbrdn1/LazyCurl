@@ -501,25 +501,26 @@ We use **Gitmoji + Conventional Commits**:
 
 ### 📋 Sprint 2 - UX Improvements
 
-- [x] Responsive panel layout (horizontal on 80x24 terminals)
-- [x] Fullscreen panel toggle (`F` in NORMAL mode, `h/l` to navigate)
-- [ ] Find in editors (`/` in NORMAL mode)
-- [ ] Settings Panel (`Ctrl+;` fullscreen with Global/Workspace tabs)
-- [ ] Console tab in Response Panel (`Ctrl+R`: Response, `Ctrl+C`: Console)
-- [ ] Improved statusbar rendering and display
-- [ ] Session persistence (`.lazycurl/session.yml`)
-- [ ] Theme system refactoring
-- [ ] Theme management and custom themes
+- [x] Responsive panel layout (horizontal on 80x24 terminals) [#7](https://github.com/kbrdn1/LazyCurl/issues/7)
+- [x] Fullscreen panel toggle (`F` in NORMAL mode, `h/l` to navigate) [#8](https://github.com/kbrdn1/LazyCurl/issues/8)
+- [x] Find in editors (`/` in NORMAL mode) [#24](https://github.com/kbrdn1/LazyCurl/issues/24)
+- [ ] Settings Panel (`Ctrl+;` fullscreen with Global/Workspace tabs) [#25](https://github.com/kbrdn1/LazyCurl/issues/25)
+- [ ] Console tab in Response Panel (`Ctrl+R`: Response, `Ctrl+C`: Console) [#9](https://github.com/kbrdn1/LazyCurl/issues/9)
+- [ ] Improved statusbar rendering and display [#10](https://github.com/kbrdn1/LazyCurl/issues/10)
+- [ ] Session persistence (`.lazycurl/session.yml`) [#11](https://github.com/kbrdn1/LazyCurl/issues/11)
+- [ ] Theme system refactoring [#12](https://github.com/kbrdn1/LazyCurl/issues/12)
+- [ ] Theme management and custom themes [#13](https://github.com/kbrdn1/LazyCurl/issues/13)
 
 ### 🔮 Future
 
-- Import/export Postman collections
-- Request history
-- Pre/post-request scripts execution
-- Authentication helpers (OAuth2, AWS Sig)
-- GraphQL support
-- WebSocket testing
-- gRPC support
+- Import/export Postman collections [#14](https://github.com/kbrdn1/LazyCurl/issues/14)
+- Request history [#15](https://github.com/kbrdn1/LazyCurl/issues/15)
+- Pre/post-request scripts execution [#16](https://github.com/kbrdn1/LazyCurl/issues/16)
+- Authentication helpers (OAuth2, AWS Sig) [#17](https://github.com/kbrdn1/LazyCurl/issues/17)
+- GraphQL support [#18](https://github.com/kbrdn1/LazyCurl/issues/18)
+- WebSocket testing [#19](https://github.com/kbrdn1/LazyCurl/issues/19)
+- gRPC support [#20](https://github.com/kbrdn1/LazyCurl/issues/20)
+- CLI commands architecture [#26](https://github.com/kbrdn1/LazyCurl/issues/26)
 
 ---
 

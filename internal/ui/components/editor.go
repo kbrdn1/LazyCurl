@@ -381,13 +381,11 @@ func (e *Editor) handleNormalMode(msg tea.KeyMsg) (*Editor, tea.Cmd) {
 		if e.undo() {
 			contentModified = true
 		}
-		return e, nil
 	case "ctrl+r":
 		// Redo
 		if e.redo() {
 			contentModified = true
 		}
-		return e, nil
 
 	// Quit application
 	case "Q":
@@ -1089,7 +1087,7 @@ func (e *Editor) renderModeIndicator(width int, active bool) string {
 		if e.HasSearchQuery() {
 			helpText = " n:next  N:prev  esc:clear  /:search "
 		} else {
-			helpText = " i:insert  /:search  F:format  hjkl:nav "
+			helpText = " i:insert  /:search  F:format  u:undo  ^R:redo "
 		}
 	} else {
 		helpText = " Esc:normal  Type to insert "

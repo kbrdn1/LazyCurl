@@ -2,17 +2,13 @@ package api
 
 import (
 	"fmt"
-	"math/rand" //nolint:gosec // G404: Used for non-security random data generation (test data, not crypto)
+	"math/rand"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano()) //nolint:staticcheck // SA1019: Seeding for Go < 1.20 compatibility
-}
 
 // Variable patterns
 var (

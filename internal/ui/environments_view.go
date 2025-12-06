@@ -343,7 +343,7 @@ func (e EnvironmentsView) Update(msg tea.Msg, cfg *config.GlobalConfig) (Environ
 		return e, nil
 
 	case components.SearchCloseMsg:
-		if msg.Cancelled {
+		if msg.Canceled {
 			e.searchQuery = ""
 			e.refresh()
 		}

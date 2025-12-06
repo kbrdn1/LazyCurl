@@ -165,7 +165,7 @@ func (e *Editor) Update(msg tea.Msg, allowInput bool) (*Editor, tea.Cmd) {
 		return e, nil
 
 	case SearchCloseMsg:
-		if msg.Cancelled {
+		if msg.Canceled {
 			e.clearSearch()
 		}
 		// Keep matches for n/N navigation when not cancelled

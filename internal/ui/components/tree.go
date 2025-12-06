@@ -410,7 +410,7 @@ func (t *Tree) Update(msg tea.Msg, allowNavigation bool) (*Tree, tea.Cmd) {
 		return t, nil
 
 	case SearchCloseMsg:
-		if msg.Cancelled {
+		if msg.Canceled {
 			t.searchQuery = ""
 			t.Refresh()
 		} else {

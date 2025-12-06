@@ -1261,7 +1261,7 @@ func (m Model) handleWorkspaceCommand(args []string) (tea.Model, tea.Cmd) {
 // handleDialogResult processes dialog results
 func (m Model) handleDialogResult(msg components.DialogResultMsg) (tea.Model, tea.Cmd) {
 	if !msg.Confirmed {
-		m.statusBar.Info("Cancelled")
+		m.statusBar.Info("Canceled")
 		return m, nil
 	}
 

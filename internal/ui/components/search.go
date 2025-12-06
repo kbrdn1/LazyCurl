@@ -23,7 +23,7 @@ type SearchUpdateMsg struct {
 
 // SearchCloseMsg is sent when search is closed
 type SearchCloseMsg struct {
-	Cancelled bool
+	Canceled bool
 }
 
 // NewSearchInput creates a new search input
@@ -72,13 +72,13 @@ func (s *SearchInput) Update(msg tea.Msg) (*SearchInput, tea.Cmd) {
 			s.Hide()
 			s.Clear()
 			return s, func() tea.Msg {
-				return SearchCloseMsg{Cancelled: true}
+				return SearchCloseMsg{Canceled: true}
 			}
 
 		case "enter":
 			s.Hide()
 			return s, func() tea.Msg {
-				return SearchCloseMsg{Cancelled: false}
+				return SearchCloseMsg{Canceled: false}
 			}
 
 		case "backspace":

@@ -5,31 +5,31 @@ import "github.com/charmbracelet/lipgloss"
 var (
 	// Catppuccin Mocha Colors
 	// Base colors
-	Base       = lipgloss.Color("#1e1e2e") // background
-	Mantle     = lipgloss.Color("#181825") // darker background
-	Crust      = lipgloss.Color("#11111b") // darkest background
+	Base   = lipgloss.Color("#1e1e2e") // background
+	Mantle = lipgloss.Color("#181825") // darker background
+	Crust  = lipgloss.Color("#11111b") // darkest background
 
 	// Text colors
-	Text       = lipgloss.Color("#cdd6f4") // main text
-	Subtext1   = lipgloss.Color("#bac2de") // dimmed text
-	Subtext0   = lipgloss.Color("#a6adc8") // more dimmed
+	Text     = lipgloss.Color("#cdd6f4") // main text
+	Subtext1 = lipgloss.Color("#bac2de") // dimmed text
+	Subtext0 = lipgloss.Color("#a6adc8") // more dimmed
 
 	// Overlay colors
-	Surface0   = lipgloss.Color("#313244") // borders
-	Surface1   = lipgloss.Color("#45475a") // lighter borders
+	Surface0 = lipgloss.Color("#313244") // borders
+	Surface1 = lipgloss.Color("#45475a") // lighter borders
 
 	// Accent colors
-	Lavender   = lipgloss.Color("#b4befe") // primary accent
-	Mauve      = lipgloss.Color("#cba6f7") // secondary accent
-	Pink       = lipgloss.Color("#f5c2e7") // tertiary accent
-	Red        = lipgloss.Color("#f38ba8") // errors
-	Peach      = lipgloss.Color("#fab387") // warnings
-	Yellow     = lipgloss.Color("#f9e2af") // highlights
-	Green      = lipgloss.Color("#a6e3a1") // success/active
-	Teal       = lipgloss.Color("#94e2d5") // info
-	Sky        = lipgloss.Color("#89dceb") // links
-	Sapphire   = lipgloss.Color("#74c7ec") // special
-	Blue       = lipgloss.Color("#89b4fa") // primary actions
+	Lavender = lipgloss.Color("#b4befe") // primary accent
+	Mauve    = lipgloss.Color("#cba6f7") // secondary accent
+	Pink     = lipgloss.Color("#f5c2e7") // tertiary accent
+	Red      = lipgloss.Color("#f38ba8") // errors
+	Peach    = lipgloss.Color("#fab387") // warnings
+	Yellow   = lipgloss.Color("#f9e2af") // highlights
+	Green    = lipgloss.Color("#a6e3a1") // success/active
+	Teal     = lipgloss.Color("#94e2d5") // info
+	Sky      = lipgloss.Color("#89dceb") // links
+	Sapphire = lipgloss.Color("#74c7ec") // special
+	Blue     = lipgloss.Color("#89b4fa") // primary actions
 
 	// Legacy color names for compatibility
 	PrimaryColor   = Lavender
@@ -93,13 +93,13 @@ var (
 	CheckboxOff   = lipgloss.Color("#6f747a") // Gray checkbox empty
 
 	// Search colors
-	SearchMatch    = lipgloss.Color("#c884e0") // Purple/pink for search matches
-	SearchDimmed   = lipgloss.Color("#45475a") // Dark gray for non-matching items
+	SearchMatch  = lipgloss.Color("#c884e0") // Purple/pink for search matches
+	SearchDimmed = lipgloss.Color("#45475a") // Dark gray for non-matching items
 
 	// URL syntax highlighting colors
-	URLVariable    = lipgloss.Color("#fa827c") // Coral/red for {{variables}}
-	URLParam       = lipgloss.Color("#6798da") // Blue for :params
-	URLBase        = lipgloss.Color("#cdd6f4") // Text color for base URL
+	URLVariable = lipgloss.Color("#fa827c") // Coral/red for {{variables}}
+	URLParam    = lipgloss.Color("#6798da") // Blue for :params
+	URLBase     = lipgloss.Color("#cdd6f4") // Text color for base URL
 
 	// Base styles
 	TitleStyle = lipgloss.NewStyle().

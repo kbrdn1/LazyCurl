@@ -253,6 +253,8 @@ URLs, headers, and body fields support `{{variable_name}}` interpolation from ac
 ## Active Technologies
 - Go 1.21+ + Bubble Tea (TUI), Lipgloss (styling), Bubble Zone (mouse), yaml.v3 (config) (001-vim-mode-workspace)
 - File-based (YAML for config, JSON for collections/environments) in `.lazycurl/` workspace (001-vim-mode-workspace)
+- Go 1.21+ + Bubble Tea (TUI framework), Lipgloss (styling) (028-editor-refinements)
+- Storage: N/A (undo/redo uses in-memory state only) (028-editor-refinements)
 
 ## Recent Changes
 - 001-vim-mode-workspace: Added Go 1.21+ + Bubble Tea (TUI), Lipgloss (styling), Bubble Zone (mouse), yaml.v3 (config)

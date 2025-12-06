@@ -370,8 +370,10 @@ func (m *Modal) View(screenWidth, screenHeight int) string {
 				displayVal = field.Placeholder
 				inputStyle = inputStyle.Foreground(styles.Subtext0)
 				if focused {
-					displayVal = "▌" + displayVal[1:] // Cursor at start for placeholder
-					if len(field.Placeholder) == 0 {
+					// Show cursor at start of placeholder text
+					if len(displayVal) > 1 {
+						displayVal = "▌" + displayVal[1:]
+					} else {
 						displayVal = "▌"
 					}
 				}
@@ -380,6 +382,9 @@ func (m *Modal) View(screenWidth, screenHeight int) string {
 				pos := m.Fields[i].CursorPos
 				if pos >= len(displayVal) {
 					displayVal += "▌"
+				} else if pos+1 >= len(displayVal) {
+					// Cursor at last character - show cursor replacing last char
+					displayVal = displayVal[:pos] + "▌"
 				} else {
 					displayVal = displayVal[:pos] + "▌" + displayVal[pos+1:]
 				}

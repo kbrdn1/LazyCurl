@@ -12,12 +12,12 @@ import (
 type HTTPMethod string
 
 const (
-	GET    HTTPMethod = "GET"
-	POST   HTTPMethod = "POST"
-	PUT    HTTPMethod = "PUT"
-	PATCH  HTTPMethod = "PATCH"
-	DELETE HTTPMethod = "DELETE"
-	HEAD   HTTPMethod = "HEAD"
+	GET     HTTPMethod = "GET"
+	POST    HTTPMethod = "POST"
+	PUT     HTTPMethod = "PUT"
+	PATCH   HTTPMethod = "PATCH"
+	DELETE  HTTPMethod = "DELETE"
+	HEAD    HTTPMethod = "HEAD"
 	OPTIONS HTTPMethod = "OPTIONS"
 )
 

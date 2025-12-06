@@ -18,8 +18,8 @@ type KeyValueEntry struct {
 
 // AuthConfig represents authentication configuration
 type AuthConfig struct {
-	Type   string `json:"type"`            // "none", "bearer", "basic", "api_key"
-	Token  string `json:"token,omitempty"` // For bearer token
+	Type   string `json:"type"`             // "none", "bearer", "basic", "api_key"
+	Token  string `json:"token,omitempty"`  // For bearer token
 	Prefix string `json:"prefix,omitempty"` // For bearer prefix (default: "Bearer")
 	// Basic auth
 	Username string `json:"username,omitempty"`
@@ -60,10 +60,10 @@ type CollectionRequest struct {
 
 // Folder represents a folder in a collection
 type Folder struct {
-	Name        string               `json:"name"`
-	Description string               `json:"description,omitempty"`
-	Folders     []Folder             `json:"folders,omitempty"`
-	Requests    []CollectionRequest  `json:"requests,omitempty"`
+	Name        string              `json:"name"`
+	Description string              `json:"description,omitempty"`
+	Folders     []Folder            `json:"folders,omitempty"`
+	Requests    []CollectionRequest `json:"requests,omitempty"`
 }
 
 // CollectionFile represents a collection file structure

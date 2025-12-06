@@ -10,9 +10,9 @@ import (
 
 // EnvironmentVariable represents a variable with metadata
 type EnvironmentVariable struct {
-	Value    string `json:"value"`
-	Secret   bool   `json:"secret,omitempty"`
-	Active   bool   `json:"active"`
+	Value  string `json:"value"`
+	Secret bool   `json:"secret,omitempty"`
+	Active bool   `json:"active"`
 }
 
 // EnvironmentFile represents an environment configuration file

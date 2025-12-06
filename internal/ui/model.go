@@ -9,11 +9,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	zone "github.com/lrstanley/bubblezone"
 	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 // HTTPResponseMsg is sent when an HTTP request completes
@@ -68,12 +68,12 @@ type Model struct {
 	workspaceConfig *config.WorkspaceConfig
 	workspacePath   string
 
-	width        int
-	height       int
-	activePanel  PanelType
-	ready        bool
-	zoneManager  *zone.Manager
-	layoutMode   LayoutMode
+	width       int
+	height      int
+	activePanel PanelType
+	ready       bool
+	zoneManager *zone.Manager
+	layoutMode  LayoutMode
 
 	// Panels
 	leftPanel     *LeftPanel
@@ -90,8 +90,8 @@ type Model struct {
 	whichKey *components.WhichKey
 
 	// HTTP client
-	httpClient  *api.Client
-	isSending   bool
+	httpClient *api.Client
+	isSending  bool
 
 	// Fullscreen mode
 	isFullscreen    bool
@@ -1467,7 +1467,7 @@ func (m *Model) removePathParamFromURL(paramKey string) {
 	// Update internal URL and save
 	m.requestPanel.LoadRequest(
 		m.requestPanel.GetCurrentRequestID(),
-		"",   // name doesn't change
+		"", // name doesn't change
 		m.requestPanel.GetMethod(),
 		newURL,
 	)

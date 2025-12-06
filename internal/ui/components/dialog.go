@@ -47,8 +47,8 @@ type DialogResultMsg struct {
 	Action    string
 	Confirmed bool
 	Value     string
-	Method    string      // HTTP method for new request
-	URL       string      // URL endpoint for new request / Value for key-value dialogs
+	Method    string // HTTP method for new request
+	URL       string // URL endpoint for new request / Value for key-value dialogs
 	Node      *TreeNode
 	Context   interface{} // Generic context for callbacks
 }
@@ -87,8 +87,8 @@ func (d *Dialog) ShowKeyValue(title, defaultKey, defaultValue, action string, ct
 	d.dialogType = DialogKeyValue
 	d.title = title
 	d.message = ""
-	d.inputValue = defaultKey   // Key in inputValue
-	d.urlValue = defaultValue   // Value in urlValue
+	d.inputValue = defaultKey // Key in inputValue
+	d.urlValue = defaultValue // Value in urlValue
 	d.cursorPos = len(defaultKey)
 	d.action = action
 	d.context = ctx

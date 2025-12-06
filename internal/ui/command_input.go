@@ -238,17 +238,17 @@ func parseCommand(input string) (string, []string) {
 
 // Common command constants
 const (
-	CmdQuit            = "q"
-	CmdQuitLong        = "quit"
-	CmdWrite           = "w"
-	CmdWriteLong       = "write"
-	CmdWriteQuit       = "wq"
-	CmdWorkspace       = "workspace"
-	CmdWorkspaceShort  = "ws"
-	CmdHelp            = "help"
-	CmdSet             = "set"
-	CmdEnv             = "env"
-	CmdCollections     = "collections"
+	CmdQuit             = "q"
+	CmdQuitLong         = "quit"
+	CmdWrite            = "w"
+	CmdWriteLong        = "write"
+	CmdWriteQuit        = "wq"
+	CmdWorkspace        = "workspace"
+	CmdWorkspaceShort   = "ws"
+	CmdHelp             = "help"
+	CmdSet              = "set"
+	CmdEnv              = "env"
+	CmdCollections      = "collections"
 	CmdCollectionsShort = "col"
 )
 

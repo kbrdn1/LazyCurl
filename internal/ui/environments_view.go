@@ -59,12 +59,12 @@ type EnvironmentsView struct {
 	searchQuery string
 
 	// Modals
-	deleteModal   *components.Modal
-	newVarModal   *components.Modal
-	newEnvModal   *components.Modal
-	editModal     *components.Modal
-	renameModal   *components.Modal
-	pendingNode   *EnvTreeNode // Node being acted upon
+	deleteModal *components.Modal
+	newVarModal *components.Modal
+	newEnvModal *components.Modal
+	editModal   *components.Modal
+	renameModal *components.Modal
+	pendingNode *EnvTreeNode // Node being acted upon
 }
 
 // NewEnvironmentsView creates a new environments view
@@ -876,7 +876,7 @@ func (e EnvironmentsView) View(width, height int, active bool) string {
 func (e *EnvironmentsView) countAllNodes() int {
 	count := 0
 	for _, node := range e.tree {
-		count++ // env node
+		count++                     // env node
 		count += len(node.Children) // variable nodes
 	}
 	return count

@@ -14,18 +14,18 @@ const MessageDuration = 2 * time.Second
 
 // StatusBar renders the bottom status bar with full context
 type StatusBar struct {
-	mode        Mode      // Current mode
-	version     string    // Application version
-	width       int       // Available width
-	httpStatus  int       // HTTP status code (0 = no response)
-	httpText    string    // HTTP status text
-	httpMethod  string    // Current HTTP method
-	breadcrumb  []string  // Navigation breadcrumb parts
-	message     string    // Temporary status message
-	messageEnd  time.Time // When to clear the message
-	environment string    // Active environment name
-	hints       string    // Dynamic keybinding hints
-	isFullscreen bool     // Whether fullscreen mode is active
+	mode         Mode      // Current mode
+	version      string    // Application version
+	width        int       // Available width
+	httpStatus   int       // HTTP status code (0 = no response)
+	httpText     string    // HTTP status text
+	httpMethod   string    // Current HTTP method
+	breadcrumb   []string  // Navigation breadcrumb parts
+	message      string    // Temporary status message
+	messageEnd   time.Time // When to clear the message
+	environment  string    // Active environment name
+	hints        string    // Dynamic keybinding hints
+	isFullscreen bool      // Whether fullscreen mode is active
 }
 
 // NewStatusBar creates a new status bar

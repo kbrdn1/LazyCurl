@@ -9,11 +9,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
+
 	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
-	zone "github.com/lrstanley/bubblezone"
 )
 
 // HTTPResponseMsg is sent when an HTTP request completes

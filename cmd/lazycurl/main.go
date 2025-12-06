@@ -5,6 +5,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/kbrdn1/LazyCurl/internal/config"
 	"github.com/kbrdn1/LazyCurl/internal/ui"
 )

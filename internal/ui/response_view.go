@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/kbrdn1/LazyCurl/internal/config"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"

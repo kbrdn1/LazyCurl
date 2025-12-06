@@ -173,9 +173,9 @@ func (c *WorkspaceConfig) Save(workspacePath string) error {
 		return err
 	}
 
-	// Create subdirectories
-	os.MkdirAll(filepath.Join(lazycurlPath, "collections"), 0755)
-	os.MkdirAll(filepath.Join(lazycurlPath, "envs"), 0755)
+	// Create subdirectories (errors intentionally ignored - these are optional)
+	_ = os.MkdirAll(filepath.Join(lazycurlPath, "collections"), 0755)
+	_ = os.MkdirAll(filepath.Join(lazycurlPath, "envs"), 0755)
 
 	configPath := filepath.Join(lazycurlPath, "config.yaml")
 

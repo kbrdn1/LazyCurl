@@ -48,14 +48,19 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Run tests (with coverage)
+        if: matrix.os == 'ubuntu-latest'
+        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+      - name: Run tests (without coverage)
+        if: matrix.os != 'ubuntu-latest'
+        run: go test -v -race ./...
 
       - name: Upload coverage
         if: matrix.os == 'ubuntu-latest' && matrix.go-version == '1.21'
         uses: codecov/codecov-action@v4
         with:
-          files: coverage.out
+          files: coverage.txt
           fail_ci_if_error: false
 
   build:
@@ -95,4 +100,9 @@ jobs:
       - name: Run Gosec
         uses: securego/gosec@master
         with:
-          args: -exclude-dir=testdata ./...
+          # Exclude rules:
+          # G301: Directory permissions 0755 - acceptable for user config directories
+          # G304: File inclusion via variable - necessary for config/collection loading
+          # G306: WriteFile permissions 0644 - acceptable for user config files
+          # G404: math/rand is fine for non-crypto purposes (random IDs, test data)
+          args: -exclude=G301,G304,G306,G404 -exclude-dir=testdata ./...

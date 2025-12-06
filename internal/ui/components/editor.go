@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
 
@@ -165,10 +166,10 @@ func (e *Editor) Update(msg tea.Msg, allowInput bool) (*Editor, tea.Cmd) {
 		return e, nil
 
 	case SearchCloseMsg:
-		if msg.Cancelled {
+		if msg.Canceled {
 			e.clearSearch()
 		}
-		// Keep matches for n/N navigation when not cancelled
+		// Keep matches for n/N navigation when not canceled
 		return e, nil
 	}
 

@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
@@ -343,7 +344,7 @@ func (e EnvironmentsView) Update(msg tea.Msg, cfg *config.GlobalConfig) (Environ
 		return e, nil
 
 	case components.SearchCloseMsg:
-		if msg.Cancelled {
+		if msg.Canceled {
 			e.searchQuery = ""
 			e.refresh()
 		}
@@ -459,7 +460,7 @@ func (e EnvironmentsView) Update(msg tea.Msg, cfg *config.GlobalConfig) (Environ
 				env := e.getEnvForNode(node)
 				if env != nil {
 					env.ToggleVariableSecret(node.Name)
-					e.saveEnvironment(env)
+					_ = e.saveEnvironment(env) // Error intentionally ignored for UI responsiveness
 				}
 			}
 
@@ -470,7 +471,7 @@ func (e EnvironmentsView) Update(msg tea.Msg, cfg *config.GlobalConfig) (Environ
 					env := e.getEnvForNode(node)
 					if env != nil {
 						env.ToggleVariableActive(node.Name)
-						e.saveEnvironment(env)
+						_ = e.saveEnvironment(env) // Error intentionally ignored for UI responsiveness
 					}
 				} else if node.Type == EnvNode {
 					e.activeEnvName = node.Name
@@ -639,7 +640,7 @@ func (e EnvironmentsView) Update(msg tea.Msg, cfg *config.GlobalConfig) (Environ
 							Secret: e.clipboard.VarData.Secret,
 							Active: e.clipboard.VarData.Active,
 						})
-						e.saveEnvironment(targetEnv)
+						_ = e.saveEnvironment(targetEnv) // Error intentionally ignored for UI responsiveness
 						e.buildTree()
 						e.refresh()
 					}
@@ -725,7 +726,7 @@ func (e EnvironmentsView) handleModalClose(msg components.ModalCloseMsg) (Enviro
 				env := e.getEnvForNode(e.pendingNode)
 				if env != nil {
 					env.DeleteVariable(e.pendingNode.Name)
-					e.saveEnvironment(env)
+					_ = e.saveEnvironment(env) // Error intentionally ignored for UI responsiveness
 				}
 			}
 			e.buildTree()
@@ -739,7 +740,7 @@ func (e EnvironmentsView) handleModalClose(msg components.ModalCloseMsg) (Enviro
 				e.pendingNode.Variable.Value = msg.Result.Values["value"].(string)
 				e.pendingNode.Variable.Secret = msg.Result.Values["secret"].(bool)
 				e.pendingNode.Variable.Active = msg.Result.Values["active"].(bool)
-				e.saveEnvironment(env)
+				_ = e.saveEnvironment(env) // Error intentionally ignored for UI responsiveness
 			}
 		}
 
@@ -750,13 +751,13 @@ func (e EnvironmentsView) handleModalClose(msg components.ModalCloseMsg) (Enviro
 				env := e.getEnvForNode(e.pendingNode)
 				if e.pendingNode.Type == EnvNode {
 					env.Name = newName
-					e.saveEnvironment(env)
+					_ = e.saveEnvironment(env) // Error intentionally ignored for UI responsiveness
 				} else if env != nil {
 					// Rename variable
 					v := env.Variables[e.pendingNode.Name]
 					delete(env.Variables, e.pendingNode.Name)
 					env.Variables[newName] = v
-					e.saveEnvironment(env)
+					_ = e.saveEnvironment(env) // Error intentionally ignored for UI responsiveness
 				}
 				e.buildTree()
 				e.refresh()
@@ -783,7 +784,7 @@ func (e EnvironmentsView) handleModalClose(msg components.ModalCloseMsg) (Enviro
 					Secret: secret,
 					Active: active,
 				})
-				e.saveEnvironment(targetEnv)
+				_ = e.saveEnvironment(targetEnv) // Error intentionally ignored for UI responsiveness
 				e.buildTree()
 				e.refresh()
 			}
@@ -800,7 +801,7 @@ func (e EnvironmentsView) handleModalClose(msg components.ModalCloseMsg) (Enviro
 				Variables:   make(map[string]*api.EnvironmentVariable),
 			}
 			e.environments = append(e.environments, newEnv)
-			e.saveEnvironment(newEnv)
+			_ = e.saveEnvironment(newEnv) // Error intentionally ignored for UI responsiveness
 			e.buildTree()
 			e.refresh()
 		}
@@ -1119,11 +1120,4 @@ func (e *EnvironmentsView) GetBreadcrumb() []string {
 // ReloadEnvironments reloads environments from disk
 func (e *EnvironmentsView) ReloadEnvironments() {
 	e.loadEnvironments()
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

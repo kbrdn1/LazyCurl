@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
 
@@ -556,12 +557,4 @@ func (w *WhichKey) View(screenWidth, screenHeight int) string {
 		Width(modalWidth)
 
 	return modalStyle.Render(content.String())
-}
-
-// min returns the minimum of two ints
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

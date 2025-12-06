@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
@@ -410,7 +411,7 @@ func (t *Tree) Update(msg tea.Msg, allowNavigation bool) (*Tree, tea.Cmd) {
 		return t, nil
 
 	case SearchCloseMsg:
-		if msg.Cancelled {
+		if msg.Canceled {
 			t.searchQuery = ""
 			t.Refresh()
 		} else {

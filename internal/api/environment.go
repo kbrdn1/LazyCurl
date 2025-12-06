@@ -31,53 +31,48 @@ func LoadEnvironment(path string) (*EnvironmentFile, error) {
 		return nil, fmt.Errorf("failed to read environment file: %w", err)
 	}
 
-	// First try to parse as new format
-	var env EnvironmentFile
-	if err := json.Unmarshal(data, &env); err != nil {
+	// First, check if this is legacy format by examining the raw JSON structure
+	var rawEnv struct {
+		Name        string                     `json:"name"`
+		Description string                     `json:"description,omitempty"`
+		Variables   map[string]json.RawMessage `json:"variables"`
+	}
+	if err := json.Unmarshal(data, &rawEnv); err != nil {
 		return nil, fmt.Errorf("failed to parse environment JSON: %w", err)
 	}
 
-	// Check if variables need migration from legacy format
-	// Try to detect if it's legacy format by attempting to unmarshal as simple strings
-	var legacyEnv struct {
-		Name        string            `json:"name"`
-		Description string            `json:"description,omitempty"`
-		Variables   map[string]string `json:"variables"`
+	env := &EnvironmentFile{
+		Name:        rawEnv.Name,
+		Description: rawEnv.Description,
+		Variables:   make(map[string]*EnvironmentVariable),
+		FilePath:    path,
 	}
-	if json.Unmarshal(data, &legacyEnv) == nil && len(legacyEnv.Variables) > 0 {
-		// Check if first value is a string (legacy) or object (new)
-		var rawVars map[string]json.RawMessage
-		if err := json.Unmarshal(data, &struct {
-			Variables *map[string]json.RawMessage `json:"variables"`
-		}{&rawVars}); err == nil {
-			for _, v := range rawVars {
-				// If it starts with quote, it's a string (legacy format)
-				if len(v) > 0 && v[0] == '"' {
-					// Migrate to new format
-					env.Variables = make(map[string]*EnvironmentVariable)
-					for name, value := range legacyEnv.Variables {
-						env.Variables[name] = &EnvironmentVariable{
-							Value:  value,
-							Secret: isSecretKey(name),
-							Active: true,
-						}
-					}
-					break
-				}
-				break
-			}
+
+	// Parse each variable, handling both legacy (string) and new (object) formats
+	for name, rawValue := range rawEnv.Variables {
+		// Try to parse as new format (object) first
+		var envVar EnvironmentVariable
+		if err := json.Unmarshal(rawValue, &envVar); err == nil {
+			env.Variables[name] = &envVar
+			continue
 		}
+
+		// Try to parse as legacy format (plain string)
+		var stringValue string
+		if err := json.Unmarshal(rawValue, &stringValue); err == nil {
+			env.Variables[name] = &EnvironmentVariable{
+				Value:  stringValue,
+				Secret: isSecretKey(name),
+				Active: true,
+			}
+			continue
+		}
+
+		// If neither format works, return an error
+		return nil, fmt.Errorf("invalid variable format for '%s'", name)
 	}
 
-	// Initialize variables map if nil
-	if env.Variables == nil {
-		env.Variables = make(map[string]*EnvironmentVariable)
-	}
-
-	// Set file path
-	env.FilePath = path
-
-	return &env, nil
+	return env, nil
 }
 
 // isSecretKey checks if a variable name suggests it should be secret

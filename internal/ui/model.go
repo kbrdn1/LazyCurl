@@ -9,11 +9,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
+
 	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
-	zone "github.com/lrstanley/bubblezone"
 )
 
 // HTTPResponseMsg is sent when an HTTP request completes
@@ -1261,7 +1262,7 @@ func (m Model) handleWorkspaceCommand(args []string) (tea.Model, tea.Cmd) {
 // handleDialogResult processes dialog results
 func (m Model) handleDialogResult(msg components.DialogResultMsg) (tea.Model, tea.Cmd) {
 	if !msg.Confirmed {
-		m.statusBar.Info("Cancelled")
+		m.statusBar.Info("Canceled")
 		return m, nil
 	}
 

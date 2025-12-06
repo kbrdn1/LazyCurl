@@ -314,82 +314,6 @@ func (s *StatusBar) renderMethodBadge() string {
 	return style.Render(s.httpMethod)
 }
 
-// renderBreadcrumb renders the navigation breadcrumb with truncation
-func (s *StatusBar) renderBreadcrumb(width int) string {
-	if len(s.breadcrumb) == 0 {
-		return ""
-	}
-
-	separator := " › "
-	separatorStyle := lipgloss.NewStyle().
-		Foreground(styles.Subtext0)
-	partStyle := lipgloss.NewStyle().
-		Foreground(styles.Text)
-	activeStyle := lipgloss.NewStyle().
-		Foreground(styles.Lavender).
-		Bold(true)
-	bgStyle := lipgloss.NewStyle().
-		Background(styles.Mantle)
-
-	// Build full breadcrumb
-	var parts []string
-	for i, part := range s.breadcrumb {
-		if i == len(s.breadcrumb)-1 {
-			parts = append(parts, activeStyle.Render(part))
-		} else {
-			parts = append(parts, partStyle.Render(part))
-		}
-	}
-
-	fullBreadcrumb := strings.Join(parts, separatorStyle.Render(separator))
-	breadcrumbWidth := lipgloss.Width(fullBreadcrumb)
-
-	// Truncate if needed
-	if breadcrumbWidth > width {
-		// Start with ellipsis
-		ellipsis := "… "
-		remaining := width - len(ellipsis)
-		if remaining <= 0 {
-			return bgStyle.Width(width).Render("")
-		}
-
-		// Show as many parts as possible from the end
-		var truncatedParts []string
-		usedWidth := 0
-		for i := len(s.breadcrumb) - 1; i >= 0; i-- {
-			part := s.breadcrumb[i]
-			var styledPart string
-			if i == len(s.breadcrumb)-1 {
-				styledPart = activeStyle.Render(part)
-			} else {
-				styledPart = partStyle.Render(part)
-			}
-			partWidth := lipgloss.Width(styledPart)
-			separatorWidth := 0
-			if len(truncatedParts) > 0 {
-				separatorWidth = len(separator)
-			}
-
-			if usedWidth+partWidth+separatorWidth+len(ellipsis) <= remaining || len(truncatedParts) == 0 {
-				truncatedParts = append([]string{styledPart}, truncatedParts...)
-				usedWidth += partWidth + separatorWidth
-			} else {
-				break
-			}
-		}
-
-		fullBreadcrumb = ellipsis + strings.Join(truncatedParts, separatorStyle.Render(separator))
-	}
-
-	// Pad to fill width
-	padding := width - lipgloss.Width(fullBreadcrumb)
-	if padding > 0 {
-		fullBreadcrumb = fullBreadcrumb + strings.Repeat(" ", padding)
-	}
-
-	return bgStyle.Width(width).Render(fullBreadcrumb)
-}
-
 // GetMode returns the current mode
 func (s *StatusBar) GetMode() Mode {
 	return s.mode
@@ -449,19 +373,4 @@ func IntPtr(i int) *int {
 // StringPtr creates a string pointer
 func StringPtr(s string) *string {
 	return &s
-}
-
-// renderWidth calculates the visible width of a string (accounting for ANSI codes)
-func renderWidth(s string) int {
-	return lipgloss.Width(s)
-}
-
-// formatStatusBar formats status bar content to fit width
-func formatStatusBar(content string, width int) string {
-	contentWidth := renderWidth(content)
-	if contentWidth >= width {
-		return content[:width]
-	}
-	padding := width - contentWidth
-	return content + fmt.Sprintf("%*s", padding, "")
 }

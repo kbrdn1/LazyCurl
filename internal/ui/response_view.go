@@ -492,20 +492,6 @@ func (r *ResponseView) ClearResponse() {
 	r.cookiesCursor = 0
 }
 
-// truncateString truncates a string to maxLen characters
-func truncateString(s string, maxLen int) string {
-	if maxLen <= 0 {
-		return ""
-	}
-	if len(s) <= maxLen {
-		return s
-	}
-	if maxLen <= 3 {
-		return s[:maxLen]
-	}
-	return s[:maxLen-3] + "..."
-}
-
 // GetStatusCode returns the current status code
 func (r *ResponseView) GetStatusCode() int {
 	return r.statusCode

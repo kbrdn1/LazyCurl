@@ -43,6 +43,8 @@ const (
 	ContextRequestHeaders KeyContext = "request_headers"
 	ContextRequestBody    KeyContext = "request_body"
 	ContextRequestScripts KeyContext = "request_scripts"
+	// Response panel tab contexts
+	ContextConsole KeyContext = "console"
 )
 
 // WhichKey manages keybinding hints display
@@ -395,6 +397,42 @@ func (w *WhichKey) initBindings() {
 				{Key: "h/l", Desc: "Section"},
 				{Key: "tab", Desc: "Next tab"},
 				{Key: "ctrl+s", Desc: "Send"},
+			},
+		},
+	}
+
+	// Console tab context
+	w.bindings[ContextConsole] = []KeyGroup{
+		{
+			Name: "Navigation",
+			Bindings: []KeyBinding{
+				{Key: "j/k", Desc: "Up/Down"},
+				{Key: "g/G", Desc: "Top/Bottom"},
+				{Key: "enter", Desc: "Expand/Collapse"},
+			},
+		},
+		{
+			Name: "Actions",
+			Bindings: []KeyBinding{
+				{Key: "R", Desc: "Resend request"},
+			},
+		},
+		{
+			Name: "Copy",
+			Bindings: []KeyBinding{
+				{Key: "U", Desc: "Copy URL"},
+				{Key: "H", Desc: "Copy headers"},
+				{Key: "B", Desc: "Copy body"},
+				{Key: "C", Desc: "Copy cookies"},
+				{Key: "I", Desc: "Copy info"},
+				{Key: "E", Desc: "Copy error"},
+				{Key: "A", Desc: "Copy all"},
+			},
+		},
+		{
+			Name: "Help",
+			Bindings: []KeyBinding{
+				{Key: "?", Desc: "Show all keys"},
 			},
 		},
 	}

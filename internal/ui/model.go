@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"golang.design/x/clipboard"
 
 	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
@@ -97,6 +98,11 @@ type Model struct {
 	// Fullscreen mode
 	isFullscreen    bool
 	fullscreenPanel PanelType
+
+	// Console history
+	consoleHistory *api.ConsoleHistory
+	lastRequest    *api.Request // Track the last sent request for console logging
+	requestStart   time.Time    // Track when request started for duration calculation
 }
 
 // NewModel creates a new application model
@@ -119,11 +125,14 @@ func NewModel(globalConfig *config.GlobalConfig, workspaceConfig *config.Workspa
 		whichKey:        components.NewWhichKey(),
 		httpClient:      api.NewClient(),
 		isSending:       false,
+		consoleHistory:  api.NewConsoleHistory(1000),
 	}
 }
 
 // Init initializes the model
 func (m Model) Init() tea.Cmd {
+	// Initialize clipboard (ignore error - clipboard may not be available on all systems)
+	_ = clipboard.Init()
 	return nil
 }
 
@@ -599,6 +608,51 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case ResendRequestMsg:
+		// Resend a request from console history
+		if msg.Request != nil {
+			m.isSending = true
+			m.lastRequest = msg.Request
+			m.requestStart = time.Now()
+			m.responsePanel.ClearResponse()
+			m.responsePanel.SetLoading(true)
+			m.statusBar.Info("Resending request...")
+			return m, tea.Batch(SendHTTPRequestCmd(msg.Request), loaderTickCmd())
+		}
+		return m, nil
+
+	case CopyToClipboardMsg:
+		// Copy content to clipboard
+		if msg.Content != "" {
+			clipboard.Write(clipboard.FmtText, []byte(msg.Content))
+			m.statusBar.Success("Copied", msg.Label)
+		} else {
+			m.statusBar.Info("Nothing to copy")
+		}
+		return m, nil
+
+	case ConsoleStatusMsg:
+		// Display status message from console
+		switch msg.Type {
+		case StatusSuccess:
+			m.statusBar.Success("", msg.Message)
+		case StatusError:
+			m.statusBar.Info(msg.Message)
+		default:
+			m.statusBar.Info(msg.Message)
+		}
+		return m, nil
+
+	case SwitchToConsoleTabMsg:
+		// Switch response panel to Console tab
+		m.responsePanel.tabs.SetActive(3) // Console is tab index 3
+		return m, nil
+
+	case SwitchToResponseTabMsg:
+		// Switch response panel to Body tab
+		m.responsePanel.tabs.SetActive(0) // Body is tab index 0
+		return m, nil
+
 	case HTTPSendingMsg:
 		// HTTP request is being sent
 		m.isSending = true
@@ -619,6 +673,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// HTTP response received
 		m.isSending = false
 		m.responsePanel.SetLoading(false)
+		duration := time.Since(m.requestStart)
+
+		// Log to console history
+		if m.lastRequest != nil && m.consoleHistory != nil {
+			entry := api.NewConsoleEntry(m.lastRequest, msg.Response, msg.Error, duration)
+			m.consoleHistory.Add(*entry)
+		}
+
 		if msg.Error != nil {
 			m.statusBar.Error(msg.Error)
 			return m, nil
@@ -702,7 +764,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case RequestPanel:
 		*m.requestPanel, cmd = m.requestPanel.Update(msg, m.globalConfig)
 	case ResponsePanel:
-		*m.responsePanel, cmd = m.responsePanel.Update(msg, m.globalConfig)
+		// Pass console history to response panel for Console tab
+		*m.responsePanel, cmd = m.responsePanel.UpdateWithHistory(msg, m.globalConfig, m.consoleHistory)
 	}
 
 	return m, cmd
@@ -781,10 +844,11 @@ func (m Model) renderVerticalLayout() string {
 	requestPanel := m.renderPanel("Request", requestContent, rightWidth, topRightHeight, m.activePanel == RequestPanel)
 
 	// Response panel (bottom right)
-	responseContent := m.responsePanel.View(
+	responseContent := m.responsePanel.ViewWithHistory(
 		rightWidth-4,
 		bottomRightHeight-2,
 		m.activePanel == ResponsePanel,
+		m.consoleHistory,
 	)
 	responsePanel := m.renderPanel("Response", responseContent, rightWidth, bottomRightHeight, m.activePanel == ResponsePanel)
 
@@ -842,10 +906,11 @@ func (m Model) renderHorizontalLayout() string {
 	requestPanel := m.renderPanel("Request", requestContent, panelWidth, requestHeight, m.activePanel == RequestPanel)
 
 	// Response panel (bottom)
-	responseContent := m.responsePanel.View(
+	responseContent := m.responsePanel.ViewWithHistory(
 		panelWidth-4,
 		responseHeight-2,
 		m.activePanel == ResponsePanel,
+		m.consoleHistory,
 	)
 	responsePanel := m.renderPanel("Response", responseContent, panelWidth, responseHeight, m.activePanel == ResponsePanel)
 
@@ -893,10 +958,11 @@ func (m Model) renderFullscreenLayout() string {
 
 	case ResponsePanel:
 		panelTitle = "Response"
-		panelContent = m.responsePanel.View(
+		panelContent = m.responsePanel.ViewWithHistory(
 			panelWidth-4,
 			contentHeight-2,
 			true,
+			m.consoleHistory,
 		)
 
 	default:
@@ -1593,7 +1659,11 @@ func (m *Model) updateWhichKeyContext() {
 				m.whichKey.SetContext(components.ContextNormalRequest)
 			}
 		case ResponsePanel:
-			m.whichKey.SetContext(components.ContextNormalResponse)
+			if m.responsePanel.GetActiveTab() == "Console" {
+				m.whichKey.SetContext(components.ContextConsole)
+			} else {
+				m.whichKey.SetContext(components.ContextNormalResponse)
+			}
 		default:
 			m.whichKey.SetContext(components.ContextGlobal)
 		}
@@ -1631,6 +1701,8 @@ func (m Model) sendHTTPRequest() (tea.Model, tea.Cmd) {
 
 	// Update state to sending
 	m.isSending = true
+	m.lastRequest = req         // Track request for console logging
+	m.requestStart = time.Now() // Track start time for duration
 	m.responsePanel.ClearResponse()
 	m.responsePanel.SetLoading(true)
 	m.statusBar.Info("Sending request...")

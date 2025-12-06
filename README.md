@@ -257,27 +257,36 @@ LazyCurl automatically creates a `.lazycurl/` directory:
 
 | Key | Action |
 |-----|--------|
-| `1` / `2` / `3` / `4` | Switch tabs (Body/Cookies/Headers/Console) |
+| `1` | Body tab |
+| `2` | Cookies tab |
+| `3` | Headers tab |
+| `4` | Console tab (request history) |
 | `Tab` / `Shift+Tab` | Next/previous tab |
 | `j` / `k` | Scroll content / navigate list |
 | `g` / `G` | Jump to top/bottom |
 
-### Console Tab
+### Console Tab (List View)
 
 | Key | Action |
 |-----|--------|
-| `j` / `k` | Navigate up/down in history list |
+| `j` / `k` | Navigate up/down in history |
 | `g` / `G` | Jump to first/last entry |
-| `Enter` / `l` | Expand selected entry details |
-| `Esc` / `h` / `q` | Collapse back to list view |
+| `Enter` / `l` | Expand selected entry |
 | `R` | Resend selected request |
-| `H` | Copy headers to clipboard |
-| `B` | Copy body to clipboard |
-| `E` | Copy error message to clipboard |
-| `A` | Copy all (full request & response) to clipboard |
 | `U` | Copy URL to clipboard |
-| `C` | Copy cookies to clipboard |
-| `I` | Copy request info to clipboard |
+
+### Console Tab (Expanded View)
+
+| Key | Action |
+|-----|--------|
+| `Esc` / `h` / `q` | Collapse back to list |
+| `R` | Resend request |
+| `H` | Copy headers |
+| `B` | Copy body |
+| `E` | Copy error message |
+| `C` | Copy cookies |
+| `I` | Copy request info |
+| `A` | Copy all (request & response) |
 
 ### Search Mode
 

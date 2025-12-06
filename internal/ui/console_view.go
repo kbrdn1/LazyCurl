@@ -536,24 +536,6 @@ func (c *ConsoleView) renderExpandedView(width, height int, history *api.Console
 	return result.String()
 }
 
-// getStatusDisplay returns the icon and color for a status
-func (c *ConsoleView) getStatusDisplay(status api.ConsoleEntryStatus) (string, lipgloss.Color) {
-	switch status {
-	case api.StatusSuccess:
-		return "✓", styles.Status2xxBg
-	case api.StatusRedirect:
-		return "→", styles.Status3xxBg
-	case api.StatusClientError:
-		return "✗", styles.Status4xxBg
-	case api.StatusServerError:
-		return "✗", styles.Status5xxBg
-	case api.StatusNetworkError:
-		return "⚠", styles.Red
-	default:
-		return "?", styles.Subtext0
-	}
-}
-
 // getMethodColors returns the background and foreground colors for an HTTP method
 func (c *ConsoleView) getMethodColors(method string) (lipgloss.Color, lipgloss.Color) {
 	switch method {

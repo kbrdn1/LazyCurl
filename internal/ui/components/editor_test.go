@@ -255,19 +255,12 @@ func TestRedo_EmitsContentChangedMsg(t *testing.T) {
 	editor.content[0] = "modified"
 	editor.undo()
 
-	// Redo should emit content changed message
-	_, cmd := editor.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}}, true)
-	if cmd != nil {
-		// Check if it's the right message type
-		// Note: Ctrl+R is the redo key, 'r' alone doesn't trigger redo
-	}
-
-	// Test with ctrl+r
+	// Test with ctrl+r (the actual redo keybinding)
 	editor.saveState()
 	editor.content[0] = "modified2"
 	editor.undo()
 
-	editor, cmd = editor.handleNormalMode(tea.KeyMsg{Type: tea.KeyCtrlR})
+	editor, cmd := editor.handleNormalMode(tea.KeyMsg{Type: tea.KeyCtrlR})
 
 	if cmd == nil {
 		t.Error("redo did not return a command, expected EditorContentChangedMsg")

@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
@@ -82,6 +83,9 @@ type ResponseView struct {
 	cookiesCursor int
 	headersKeys   []string // Sorted header keys for stable iteration
 	cookiesKeys   []string // Sorted cookie keys for stable iteration
+
+	// Console view
+	consoleView *ConsoleView
 }
 
 // NewResponseView creates a new response view
@@ -90,6 +94,7 @@ func NewResponseView() *ResponseView {
 		"Body",
 		"Cookies",
 		"Headers",
+		"Console",
 	})
 
 	// Initialize body editor for viewing response
@@ -112,11 +117,17 @@ func NewResponseView() *ResponseView {
 		cookiesCursor: 0,
 		headersKeys:   []string{},
 		cookiesKeys:   []string{},
+		consoleView:   NewConsoleView(),
 	}
 }
 
 // Update handles messages for the response view
 func (r ResponseView) Update(msg tea.Msg, cfg *config.GlobalConfig) (ResponseView, tea.Cmd) {
+	return r.UpdateWithHistory(msg, cfg, nil)
+}
+
+// UpdateWithHistory handles messages for the response view with console history
+func (r ResponseView) UpdateWithHistory(msg tea.Msg, cfg *config.GlobalConfig, history *api.ConsoleHistory) (ResponseView, tea.Cmd) {
 	switch msg := msg.(type) {
 	case components.SearchUpdateMsg, components.SearchCloseMsg:
 		// Forward search messages to body editor
@@ -147,6 +158,9 @@ func (r ResponseView) Update(msg tea.Msg, cfg *config.GlobalConfig) (ResponseVie
 				return r, nil
 			case "3":
 				r.tabs.SetActive(2) // Headers
+				return r, nil
+			case "4":
+				r.tabs.SetActive(3) // Console
 				return r, nil
 			}
 		}
@@ -196,6 +210,14 @@ func (r ResponseView) Update(msg tea.Msg, cfg *config.GlobalConfig) (ResponseVie
 					r.headersCursor = len(r.headersKeys) - 1
 				}
 			}
+
+		case "Console":
+			// Forward keys to console view
+			if history != nil {
+				consoleView, cmd := r.consoleView.Update(msg, history, cfg)
+				r.consoleView = &consoleView
+				return r, cmd
+			}
 		}
 	}
 
@@ -209,6 +231,11 @@ func (r *ResponseView) GetActiveTab() string {
 
 // View renders the response view
 func (r ResponseView) View(width, height int, active bool) string {
+	return r.ViewWithHistory(width, height, active, nil)
+}
+
+// ViewWithHistory renders the response view with console history support
+func (r ResponseView) ViewWithHistory(width, height int, active bool, history *api.ConsoleHistory) string {
 	var result strings.Builder
 
 	// Show loading bar if request is in progress
@@ -217,8 +244,8 @@ func (r ResponseView) View(width, height int, active bool) string {
 		loaderLine := components.HorizontalLoader(width, r.loaderFrame, "Sending request")
 		result.WriteString(loaderLine)
 		result.WriteString("\n")
-	} else if r.statusCode > 0 {
-		// Status bar with badge and icons for time/size aligned to right
+	} else if r.statusCode > 0 && r.tabs.GetActive() != "Console" {
+		// Status bar with badge and icons for time/size aligned to right (not shown for Console tab)
 		statusPart := r.statusBadge.Render()
 
 		// Right-aligned time and size with Nerd Font / Unicode icons
@@ -261,14 +288,19 @@ func (r ResponseView) View(width, height int, active bool) string {
 	var tabContent string
 	// Calculate content height: total height minus tab bar (1), separator (1)
 	contentHeight := height - 2
-	if r.statusCode > 0 || r.isLoading {
+	if (r.statusCode > 0 || r.isLoading) && r.tabs.GetActive() != "Console" {
 		contentHeight-- // Account for status bar or loading bar
 	}
 	if contentHeight < 3 {
 		contentHeight = 3
 	}
 
-	if r.isLoading {
+	activeTab := r.tabs.GetActive()
+
+	// Console tab is always available regardless of response status
+	if activeTab == "Console" {
+		tabContent = r.consoleView.View(width, contentHeight, history, active)
+	} else if r.isLoading {
 		// Show loading message in content area
 		loadingStyle := lipgloss.NewStyle().
 			Foreground(styles.Blue).
@@ -279,7 +311,7 @@ func (r ResponseView) View(width, height int, active bool) string {
 			Foreground(styles.Subtext0).
 			Render("No response yet. Send a request with Ctrl+S")
 	} else {
-		switch r.tabs.GetActive() {
+		switch activeTab {
 		case "Body":
 			tabContent = r.renderBodyTab(width, contentHeight)
 		case "Cookies":

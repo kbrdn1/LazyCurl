@@ -253,8 +253,36 @@ URLs, headers, and body fields support `{{variable_name}}` interpolation from ac
 ## Active Technologies
 - Go 1.21+ + Bubble Tea (TUI), Lipgloss (styling), Bubble Zone (mouse), yaml.v3 (config) (001-vim-mode-workspace)
 - File-based (YAML for config, JSON for collections/environments) in `.lazycurl/` workspace (001-vim-mode-workspace)
-- Go 1.21+ + Bubble Tea (TUI framework), Lipgloss (styling) (028-editor-refinements)
-- Storage: N/A (undo/redo uses in-memory state only) (028-editor-refinements)
 
 ## Recent Changes
 - 001-vim-mode-workspace: Added Go 1.21+ + Bubble Tea (TUI), Lipgloss (styling), Bubble Zone (mouse), yaml.v3 (config)
+
+## Current Feature: Console Tab in Response Panel (Issue #9)
+
+**Branch**: `feat/#9-console-tab-in-response-panel`
+**Spec**: `specs/009-console-tab-in-response-panel/`
+
+### Feature Summary
+Add Console tab to Response Panel for HTTP request/response history logging with keyboard actions.
+
+### Key Implementation Points
+- **Data Layer**: `internal/api/console.go` - ConsoleEntry, ConsoleHistory types
+- **UI Component**: `internal/ui/console_view.go` - Console list view with vim navigation
+- **Integration**: Add "Console" as 4th tab in ResponseView
+- **Clipboard**: Use `golang.design/x/clipboard` package
+
+### Keybindings
+- `4`: Switch to Console tab (tab switching: 1=Body, 2=Cookies, 3=Headers, 4=Console)
+- `j/k`: Navigate up/down in console list
+- `g/G`: Jump to first/last entry
+- `Enter/l`: Expand selected entry
+- `Esc/h/q`: Collapse back to list
+- `R`: Resend selected request
+- `U/H/B/C/I/E/A`: Copy URL/headers/body/cookies/info/error/all to clipboard
+
+### Architecture Pattern
+```text
+Request sent → RequestCompleteMsg → Add to ConsoleHistory → ConsoleView updates
+```
+
+See `specs/009-console-tab-in-response-panel/quickstart.md` for implementation guide.

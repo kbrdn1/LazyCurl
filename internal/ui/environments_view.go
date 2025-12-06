@@ -1120,10 +1120,3 @@ func (e *EnvironmentsView) GetBreadcrumb() []string {
 func (e *EnvironmentsView) ReloadEnvironments() {
 	e.loadEnvironments()
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

@@ -557,11 +557,3 @@ func (w *WhichKey) View(screenWidth, screenHeight int) string {
 
 	return modalStyle.Render(content.String())
 }
-
-// min returns the minimum of two ints
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

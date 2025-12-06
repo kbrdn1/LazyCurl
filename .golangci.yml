@@ -34,7 +34,7 @@ linters:
     # - noctx  # Disabled - Context propagation requires significant refactoring
     # - nolintlint  # Disabled - Causes issues with nolint directives
     - prealloc
-    - predeclared
+    # - predeclared  # Disabled - min/max helper functions shadow built-ins in TUI code
     - revive
     - stylecheck
     - tparallel
@@ -60,6 +60,7 @@ linters-settings:
       - all
       - "-SA4006"  # Disable "this value of X is never used"
       - "-SA1019"  # Disable deprecated warnings
+      - "-SA9003"  # Disable empty branch warning (used for intentional no-ops)
 
   gocyclo:
     # Raised from 15 - TUI event handlers are inherently complex

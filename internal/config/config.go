@@ -9,49 +9,49 @@ import (
 
 // GlobalConfig represents the global configuration
 type GlobalConfig struct {
-	Theme          ThemeConfig              `yaml:"theme"`
-	KeyBindings    KeyBindings              `yaml:"keybindings"`
-	Editor         string                   `yaml:"editor"`
-	Workspaces     []string                 `yaml:"workspaces"` // List of recent workspaces
-	LastWorkspace  string                   `yaml:"last_workspace"`
-	Environments   map[string]*Environment  `yaml:"global_environments,omitempty"`
+	Theme         ThemeConfig             `yaml:"theme"`
+	KeyBindings   KeyBindings             `yaml:"keybindings"`
+	Editor        string                  `yaml:"editor"`
+	Workspaces    []string                `yaml:"workspaces"` // List of recent workspaces
+	LastWorkspace string                  `yaml:"last_workspace"`
+	Environments  map[string]*Environment `yaml:"global_environments,omitempty"`
 }
 
 // WorkspaceConfig represents a workspace configuration (.lazycurl/config.yaml)
 type WorkspaceConfig struct {
-	Name         string   `yaml:"name"`
-	Description  string   `yaml:"description,omitempty"`
-	DefaultEnv   string   `yaml:"default_env,omitempty"`
-	Collections  []string `yaml:"collections,omitempty"`
+	Name        string   `yaml:"name"`
+	Description string   `yaml:"description,omitempty"`
+	DefaultEnv  string   `yaml:"default_env,omitempty"`
+	Collections []string `yaml:"collections,omitempty"`
 }
 
 // ThemeConfig represents theme configuration
 type ThemeConfig struct {
-	Name            string `yaml:"name"`
-	PrimaryColor    string `yaml:"primary_color"`
-	SecondaryColor  string `yaml:"secondary_color"`
-	AccentColor     string `yaml:"accent_color"`
-	BorderColor     string `yaml:"border_color"`
-	ActiveColor     string `yaml:"active_color"`
+	Name           string `yaml:"name"`
+	PrimaryColor   string `yaml:"primary_color"`
+	SecondaryColor string `yaml:"secondary_color"`
+	AccentColor    string `yaml:"accent_color"`
+	BorderColor    string `yaml:"border_color"`
+	ActiveColor    string `yaml:"active_color"`
 }
 
 // KeyBindings represents customizable key bindings
 type KeyBindings struct {
-	Quit              []string `yaml:"quit"`
-	NavigateLeft      []string `yaml:"navigate_left"`
-	NavigateRight     []string `yaml:"navigate_right"`
-	NavigateUp        []string `yaml:"navigate_up"`
-	NavigateDown      []string `yaml:"navigate_down"`
-	Select            []string `yaml:"select"`
-	Back              []string `yaml:"back"`
-	NewRequest        []string `yaml:"new_request"`
-	SendRequest       []string `yaml:"send_request"`
-	SaveRequest       []string `yaml:"save_request"`
-	DeleteRequest     []string `yaml:"delete_request"`
-	FocusCollections  []string `yaml:"focus_collections"`
-	FocusRequest      []string `yaml:"focus_request"`
-	FocusResponse     []string `yaml:"focus_response"`
-	ToggleEnvs        []string `yaml:"toggle_envs"`
+	Quit             []string `yaml:"quit"`
+	NavigateLeft     []string `yaml:"navigate_left"`
+	NavigateRight    []string `yaml:"navigate_right"`
+	NavigateUp       []string `yaml:"navigate_up"`
+	NavigateDown     []string `yaml:"navigate_down"`
+	Select           []string `yaml:"select"`
+	Back             []string `yaml:"back"`
+	NewRequest       []string `yaml:"new_request"`
+	SendRequest      []string `yaml:"send_request"`
+	SaveRequest      []string `yaml:"save_request"`
+	DeleteRequest    []string `yaml:"delete_request"`
+	FocusCollections []string `yaml:"focus_collections"`
+	FocusRequest     []string `yaml:"focus_request"`
+	FocusResponse    []string `yaml:"focus_response"`
+	ToggleEnvs       []string `yaml:"toggle_envs"`
 }
 
 // Environment represents an environment with variables

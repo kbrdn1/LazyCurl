@@ -98,7 +98,14 @@ LazyCurl is designed for developers who live in the terminal. It combines:
 - **Formatted Output**: JSON syntax highlighting
 - **Status Badges**: Color-coded (2xx green, 4xx orange, 5xx red)
 - **Metadata**: Response time, size, headers
-- **Tabs**: Body, Headers, Cookies
+- **Tabs**: Body, Headers, Cookies, Console
+
+### 📟 Console (Request History)
+
+- **Request/Response Logging**: View chronological history of all HTTP requests made during session
+- **Visual Status Indicators**: Color-coded badges for 2xx/3xx/4xx/5xx responses and network errors
+- **Quick Actions**: Resend requests, copy headers/body/error to clipboard
+- **Vim Navigation**: Browse history with j/k, expand entries with Enter/l
 
 ### 🌍 Environment System
 
@@ -245,6 +252,32 @@ LazyCurl automatically creates a `.lazycurl/` directory:
 | `s` | Toggle secret |
 | `S` / `Enter` | Select environment |
 | `/` | Search |
+
+### Response Panel
+
+| Key | Action |
+|-----|--------|
+| `1` / `2` / `3` / `4` | Switch tabs (Body/Cookies/Headers/Console) |
+| `Tab` / `Shift+Tab` | Next/previous tab |
+| `j` / `k` | Scroll content / navigate list |
+| `g` / `G` | Jump to top/bottom |
+
+### Console Tab
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Navigate up/down in history list |
+| `g` / `G` | Jump to first/last entry |
+| `Enter` / `l` | Expand selected entry details |
+| `Esc` / `h` / `q` | Collapse back to list view |
+| `R` | Resend selected request |
+| `H` | Copy headers to clipboard |
+| `B` | Copy body to clipboard |
+| `E` | Copy error message to clipboard |
+| `A` | Copy all (full request & response) to clipboard |
+| `U` | Copy URL to clipboard |
+| `C` | Copy cookies to clipboard |
+| `I` | Copy request info to clipboard |
 
 ### Search Mode
 
@@ -505,7 +538,7 @@ We use **Gitmoji + Conventional Commits**:
 - [x] Fullscreen panel toggle (`F` in NORMAL mode, `h/l` to navigate) [#8](https://github.com/kbrdn1/LazyCurl/issues/8)
 - [x] Find in editors (`/` in NORMAL mode) [#24](https://github.com/kbrdn1/LazyCurl/issues/24)
 - [ ] Settings Panel (`Ctrl+;` fullscreen with Global/Workspace tabs) [#25](https://github.com/kbrdn1/LazyCurl/issues/25)
-- [ ] Console tab in Response Panel (`Ctrl+R`: Response, `Ctrl+C`: Console) [#9](https://github.com/kbrdn1/LazyCurl/issues/9)
+- [x] Console tab in Response Panel (request/response history) [#9](https://github.com/kbrdn1/LazyCurl/issues/9)
 - [ ] Improved statusbar rendering and display [#10](https://github.com/kbrdn1/LazyCurl/issues/10)
 - [ ] Session persistence (`.lazycurl/session.yml`) [#11](https://github.com/kbrdn1/LazyCurl/issues/11)
 - [ ] Theme system refactoring [#12](https://github.com/kbrdn1/LazyCurl/issues/12)

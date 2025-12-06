@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -64,6 +65,7 @@ func (e *ConsoleEntry) computeStatus() ConsoleEntryStatus {
 	case e.Response.StatusCode >= 400 && e.Response.StatusCode < 500:
 		return StatusClientError
 	default:
+		// Treats 5xx and any unexpected codes (< 100 or >= 600) as server errors
 		return StatusServerError
 	}
 }
@@ -166,18 +168,13 @@ func (e *ConsoleEntry) CopyCookies() string {
 		return ""
 	}
 	var sb strings.Builder
-	// Check for Set-Cookie headers (response cookies)
-	if cookies, ok := e.Response.Headers["Set-Cookie"]; ok {
-		for _, cookie := range cookies {
-			sb.WriteString(cookie)
-			sb.WriteString("\n")
-		}
-	}
-	// Also check lowercase variant
-	if cookies, ok := e.Response.Headers["set-cookie"]; ok {
-		for _, cookie := range cookies {
-			sb.WriteString(cookie)
-			sb.WriteString("\n")
+	// HTTP headers are case-insensitive; check all variants
+	for key, cookies := range e.Response.Headers {
+		if strings.EqualFold(key, "Set-Cookie") {
+			for _, cookie := range cookies {
+				sb.WriteString(cookie)
+				sb.WriteString("\n")
+			}
 		}
 	}
 	return strings.TrimSpace(sb.String())
@@ -244,8 +241,9 @@ func (e *ConsoleEntry) CopyAll() string {
 	return sb.String()
 }
 
-// ConsoleHistory manages a collection of console entries
+// ConsoleHistory manages a collection of console entries with thread-safe access
 type ConsoleHistory struct {
+	mu      sync.RWMutex
 	entries []ConsoleEntry
 	maxSize int
 }
@@ -261,8 +259,10 @@ func NewConsoleHistory(maxSize int) *ConsoleHistory {
 	}
 }
 
-// Add appends a new entry to history
+// Add appends a new entry to history (thread-safe)
 func (h *ConsoleHistory) Add(entry ConsoleEntry) string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	if len(h.entries) >= h.maxSize {
 		h.entries = h.entries[1:] // Remove oldest
 	}
@@ -270,25 +270,33 @@ func (h *ConsoleHistory) Add(entry ConsoleEntry) string {
 	return entry.ID
 }
 
-// Get retrieves an entry by ID
+// Get retrieves an entry by ID (thread-safe)
 func (h *ConsoleHistory) Get(id string) (*ConsoleEntry, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	for i := range h.entries {
 		if h.entries[i].ID == id {
-			return &h.entries[i], true
+			// Return a copy to avoid data races
+			entry := h.entries[i]
+			return &entry, true
 		}
 	}
 	return nil, false
 }
 
-// GetAll returns all entries in chronological order (oldest first)
+// GetAll returns all entries in chronological order (oldest first, thread-safe)
 func (h *ConsoleHistory) GetAll() []ConsoleEntry {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	result := make([]ConsoleEntry, len(h.entries))
 	copy(result, h.entries)
 	return result
 }
 
-// GetReversed returns entries in reverse chronological order (newest first)
+// GetReversed returns entries in reverse chronological order (newest first, thread-safe)
 func (h *ConsoleHistory) GetReversed() []ConsoleEntry {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	result := make([]ConsoleEntry, len(h.entries))
 	for i, j := 0, len(h.entries)-1; j >= 0; i, j = i+1, j-1 {
 		result[i] = h.entries[j]
@@ -296,26 +304,37 @@ func (h *ConsoleHistory) GetReversed() []ConsoleEntry {
 	return result
 }
 
-// GetByIndex returns entry at display index (0 = newest)
+// GetByIndex returns entry at display index (0 = newest, thread-safe)
 func (h *ConsoleHistory) GetByIndex(idx int) (*ConsoleEntry, bool) {
-	reversed := h.GetReversed()
-	if idx < 0 || idx >= len(reversed) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if idx < 0 || idx >= len(h.entries) {
 		return nil, false
 	}
-	return &reversed[idx], true
+	// Convert display index (0 = newest) to internal index
+	internalIdx := len(h.entries) - 1 - idx
+	// Return a copy to avoid data races
+	entry := h.entries[internalIdx]
+	return &entry, true
 }
 
-// Len returns the number of entries
+// Len returns the number of entries (thread-safe)
 func (h *ConsoleHistory) Len() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return len(h.entries)
 }
 
-// Clear removes all entries
+// Clear removes all entries (thread-safe)
 func (h *ConsoleHistory) Clear() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.entries = make([]ConsoleEntry, 0)
 }
 
-// IsEmpty returns true if no entries
+// IsEmpty returns true if no entries (thread-safe)
 func (h *ConsoleHistory) IsEmpty() bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return len(h.entries) == 0
 }

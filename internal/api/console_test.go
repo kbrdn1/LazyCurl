@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -189,10 +190,10 @@ func TestConsoleEntryCopyHeaders(t *testing.T) {
 	if headers == "" {
 		t.Error("expected non-empty headers")
 	}
-	if !contains(headers, "Authorization: Bearer token") {
+	if !strings.Contains(headers, "Authorization: Bearer token") {
 		t.Error("expected request header to be included")
 	}
-	if !contains(headers, "Content-Type: application/json") {
+	if !strings.Contains(headers, "Content-Type: application/json") {
 		t.Error("expected response header to be included")
 	}
 }
@@ -247,17 +248,100 @@ func TestConsoleEntryCopyAll(t *testing.T) {
 	entry := NewConsoleEntry(req, resp, nil, 125*time.Millisecond)
 	all := entry.CopyAll()
 
-	if !contains(all, "POST http://test.com/api") {
+	if !strings.Contains(all, "POST http://test.com/api") {
 		t.Error("expected request method and URL")
 	}
-	if !contains(all, "201 Created") {
+	if !strings.Contains(all, "201 Created") {
 		t.Error("expected response status")
 	}
-	if !contains(all, "=== REQUEST ===") {
+	if !strings.Contains(all, "=== REQUEST ===") {
 		t.Error("expected REQUEST section")
 	}
-	if !contains(all, "=== RESPONSE ===") {
+	if !strings.Contains(all, "=== RESPONSE ===") {
 		t.Error("expected RESPONSE section")
+	}
+}
+
+func TestConsoleEntryCopyCookies(t *testing.T) {
+	req := &Request{Method: GET, URL: "http://test.com"}
+
+	// Test with Set-Cookie header (standard case)
+	resp := &Response{
+		StatusCode: 200,
+		Headers: map[string][]string{
+			"Set-Cookie": {"session=abc123", "token=xyz789"},
+		},
+	}
+	entry := NewConsoleEntry(req, resp, nil, time.Second)
+	cookies := entry.CopyCookies()
+
+	if !strings.Contains(cookies, "session=abc123") {
+		t.Error("expected session cookie to be included")
+	}
+	if !strings.Contains(cookies, "token=xyz789") {
+		t.Error("expected token cookie to be included")
+	}
+
+	// Test with lowercase header name (case-insensitivity)
+	respLower := &Response{
+		StatusCode: 200,
+		Headers: map[string][]string{
+			"set-cookie": {"auth=test"},
+		},
+	}
+	entryLower := NewConsoleEntry(req, respLower, nil, time.Second)
+	cookiesLower := entryLower.CopyCookies()
+
+	if !strings.Contains(cookiesLower, "auth=test") {
+		t.Error("expected case-insensitive cookie header matching")
+	}
+
+	// Test with no cookies
+	respNoCookies := &Response{
+		StatusCode: 200,
+		Headers:    map[string][]string{"Content-Type": {"application/json"}},
+	}
+	entryNoCookies := NewConsoleEntry(req, respNoCookies, nil, time.Second)
+	if entryNoCookies.CopyCookies() != "" {
+		t.Error("expected empty string when no cookies")
+	}
+
+	// Test with nil response
+	errorEntry := NewConsoleEntry(req, nil, errors.New("error"), time.Second)
+	if errorEntry.CopyCookies() != "" {
+		t.Error("expected empty string for error entry")
+	}
+}
+
+func TestConsoleEntryCopyInfo(t *testing.T) {
+	req := &Request{Method: POST, URL: "http://test.com/api"}
+	resp := &Response{
+		StatusCode: 201,
+		Status:     "201 Created",
+		Size:       1024,
+	}
+	entry := NewConsoleEntry(req, resp, nil, 125*time.Millisecond)
+	info := entry.CopyInfo()
+
+	if !strings.Contains(info, "Method: POST") {
+		t.Error("expected method to be included")
+	}
+	if !strings.Contains(info, "URL: http://test.com/api") {
+		t.Error("expected URL to be included")
+	}
+	if !strings.Contains(info, "Status: 201 Created") {
+		t.Error("expected status to be included")
+	}
+	if !strings.Contains(info, "Duration:") {
+		t.Error("expected duration to be included")
+	}
+
+	// Test with error entry
+	errorEntry := NewConsoleEntry(req, nil, errors.New("connection refused"), time.Second)
+	errorInfo := errorEntry.CopyInfo()
+
+	if !strings.Contains(errorInfo, "Error: connection refused") {
+		t.Error("expected error message to be included")
 	}
 }
 
@@ -420,18 +504,4 @@ func TestConsoleHistoryDefaultMaxSize(t *testing.T) {
 	if h.Len() != 1000 {
 		t.Errorf("expected 1000 entries with default max, got %d", h.Len())
 	}
-}
-
-// Helper function
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

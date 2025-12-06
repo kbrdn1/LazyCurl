@@ -252,8 +252,8 @@ func (c *ConsoleView) renderListView(width, height int, history *api.ConsoleHist
 
 	// Column widths
 	const timeCol = 8     // "HH:MM:SS"
-	const statusCol = 7   // " 200 " + space
-	const methodCol = 6  // " DELETE " + space
+	const statusCol = 7   // " 200 " + padding
+	const methodCol = 10  // " DELETE " + padding (longest method with badge padding)
 	const durSizeCol = 20 // right side for dur + size
 	urlWidth := width - timeCol - statusCol - methodCol - durSizeCol
 	if urlWidth < 10 {
@@ -265,7 +265,7 @@ func (c *ConsoleView) renderListView(width, height int, history *api.ConsoleHist
 	durHeaderStyle := lipgloss.NewStyle().Bold(true).Foreground(styles.Teal)
 	sizeHeaderStyle := lipgloss.NewStyle().Bold(true).Foreground(styles.Peach)
 
-	header := fmt.Sprintf("%-8s%-7s%-7s%-*s",
+	header := fmt.Sprintf("%-8s%-7s%-10s%-*s",
 		"Time", "Status", "Method", urlWidth, "URL")
 	result.WriteString(headerStyle.Render(header))
 	result.WriteString(durHeaderStyle.Render("    ◷ Dur"))
@@ -343,17 +343,17 @@ func (c *ConsoleView) renderEntryRow(entry *api.ConsoleEntry, width int, selecte
 	// Column widths (same as header)
 	const timeCol = 8
 	const statusCol = 7
-	const methodCol = 6
+	const methodCol = 10
 	const durSizeCol = 20
 	urlWidth := width - timeCol - statusCol - methodCol - durSizeCol
 	if urlWidth < 12 {
 		urlWidth = 12
 	}
 
-	// URL (truncated if needed)
+	// URL (truncated if needed) - use rune-aware truncation for UTF-8 support
 	url := entry.Request.URL
-	if len(url) > urlWidth {
-		url = url[:urlWidth]
+	if lipgloss.Width(url) > urlWidth {
+		url = truncateURL(url, urlWidth)
 	}
 
 	// Time in gray (no icon)
@@ -386,17 +386,6 @@ func (c *ConsoleView) renderEntryRow(entry *api.ConsoleEntry, width int, selecte
 	// Calculate padding for badges to align columns
 	statusWidth := lipgloss.Width(statusBadge)
 	methodWidth := lipgloss.Width(methodBadge)
-	statusPad := statusCol - statusWidth + 1
-	methodPad := methodCol - methodWidth
-	if statusPad < 1 {
-		statusPad = 1
-	}
-	if methodPad < 1 {
-		methodPad = 1
-	}
-
-	// Build row with column alignment matching header
-	// Column widths: timeCol=8, statusCol=7, methodCol=10, urlWidth, durSizeCol=20
 	statusPadding := statusCol - statusWidth
 	if statusPadding < 0 {
 		statusPadding = 0
@@ -406,12 +395,14 @@ func (c *ConsoleView) renderEntryRow(entry *api.ConsoleEntry, width int, selecte
 		methodPadding = 0
 	}
 
+	// Build row with column alignment matching header
+	// Order: Time | Status+padding | Method+padding | URL | Duration+Size
 	var rowBuilder strings.Builder
 	rowBuilder.WriteString(timeText)
-	rowBuilder.WriteString(strings.Repeat(" ", methodPadding))
 	rowBuilder.WriteString(statusBadge)
-	rowBuilder.WriteString(methodBadge)
 	rowBuilder.WriteString(strings.Repeat(" ", statusPadding))
+	rowBuilder.WriteString(methodBadge)
+	rowBuilder.WriteString(strings.Repeat(" ", methodPadding))
 	rowBuilder.WriteString(fmt.Sprintf("%-*s", urlWidth, url))
 	rowBuilder.WriteString(fmt.Sprintf("   %s %s", durText, sizeText))
 	row := rowBuilder.String()
@@ -421,9 +412,10 @@ func (c *ConsoleView) renderEntryRow(entry *api.ConsoleEntry, width int, selecte
 		rowStyle := lipgloss.NewStyle().
 			Background(styles.Surface1).
 			Foreground(styles.Text)
-		// Pad to full width
-		if len(row) < width {
-			row += strings.Repeat(" ", width-lipgloss.Width(row))
+		// Pad to full width using lipgloss.Width for proper ANSI-aware measurement
+		rowWidth := lipgloss.Width(row)
+		if rowWidth < width {
+			row += strings.Repeat(" ", width-rowWidth)
 		}
 		return rowStyle.Render(row)
 	}
@@ -609,4 +601,21 @@ func (c *ConsoleView) Reset() {
 	c.cursor = 0
 	c.scrollOffset = 0
 	c.expandedEntry = nil
+}
+
+// truncateURL truncates a URL to maxWidth using rune-aware measurement for UTF-8 support
+func truncateURL(url string, maxWidth int) string {
+	if maxWidth <= 3 {
+		return "..."
+	}
+	runes := []rune(url)
+	currentWidth := 0
+	for i, r := range runes {
+		runeWidth := lipgloss.Width(string(r))
+		if currentWidth+runeWidth > maxWidth-3 { // Reserve 3 chars for "..."
+			return string(runes[:i]) + "..."
+		}
+		currentWidth += runeWidth
+	}
+	return url
 }

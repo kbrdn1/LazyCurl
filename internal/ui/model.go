@@ -625,6 +625,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Copy content to clipboard
 		if msg.Content != "" {
 			clipboard.Write(clipboard.FmtText, []byte(msg.Content))
+			// Note: clipboard.Write doesn't return an error in this library version
 			m.statusBar.Success("Copied", msg.Label)
 		} else {
 			m.statusBar.Info("Nothing to copy")
@@ -637,7 +638,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case StatusSuccess:
 			m.statusBar.Success("", msg.Message)
 		case StatusError:
-			m.statusBar.Info(msg.Message)
+			m.statusBar.Error(fmt.Errorf("%s", msg.Message))
 		default:
 			m.statusBar.Info(msg.Message)
 		}

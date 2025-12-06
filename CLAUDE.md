@@ -272,14 +272,16 @@ Add Console tab to Response Panel for HTTP request/response history logging with
 - **Clipboard**: Use `golang.design/x/clipboard` package
 
 ### Keybindings
-- `Ctrl+C`: Switch to Console tab
-- `Ctrl+R`: Switch to Response tab
-- `j/k/g/G`: Navigate console list
+- `4`: Switch to Console tab (tab switching: 1=Body, 2=Cookies, 3=Headers, 4=Console)
+- `j/k`: Navigate up/down in console list
+- `g/G`: Jump to first/last entry
+- `Enter/l`: Expand selected entry
+- `Esc/h/q`: Collapse back to list
 - `R`: Resend selected request
-- `H/B/E/A`: Copy headers/body/error/all to clipboard
+- `U/H/B/C/I/E/A`: Copy URL/headers/body/cookies/info/error/all to clipboard
 
 ### Architecture Pattern
-```
+```text
 Request sent → RequestCompleteMsg → Add to ConsoleHistory → ConsoleView updates
 ```
 

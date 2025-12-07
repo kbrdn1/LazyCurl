@@ -58,6 +58,9 @@ temp/
 .specify/
 specs
 
+# Serena specific
+.serena/
+
 # Documentation tools
 documenter.md
 

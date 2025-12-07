@@ -14,6 +14,7 @@ import (
 
 	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
+	"github.com/kbrdn1/LazyCurl/internal/session"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
@@ -103,29 +104,81 @@ type Model struct {
 	consoleHistory *api.ConsoleHistory
 	lastRequest    *api.Request // Track the last sent request for console logging
 	requestStart   time.Time    // Track when request started for duration calculation
+
+	// Session persistence
+	session          *session.Session
+	sessionDirtyTime time.Time
 }
 
 // NewModel creates a new application model
 func NewModel(globalConfig *config.GlobalConfig, workspaceConfig *config.WorkspaceConfig, workspacePath string) Model {
 	zm := zone.New()
 
+	// Load session (returns default if missing/invalid)
+	sess, _ := session.LoadSession(workspacePath)
+	sess = sess.Validate(workspacePath)
+
+	// Determine active panel from session
+	activePanel := CollectionsPanel
+	switch sess.ActivePanel {
+	case "collections":
+		activePanel = CollectionsPanel
+	case "request":
+		activePanel = RequestPanel
+	case "response":
+		activePanel = ResponsePanel
+	}
+
+	// Create panels
+	leftPanel := NewLeftPanel(workspacePath)
+	requestPanel := NewRequestView()
+	responsePanel := NewResponseView()
+
+	// Apply session state to panels
+	leftPanel.SetSessionState(sess.Panels.Collections)
+	requestPanel.SetSessionState(sess.Panels.Request)
+	responsePanel.SetSessionState(sess.Panels.Response)
+
+	// Restore active environment
+	if sess.ActiveEnvironment != "" {
+		leftPanel.GetEnvironments().SetActiveEnvironmentName(sess.ActiveEnvironment)
+	}
+
+	// Restore active request (find in tree and load FULL request from collection)
+	if sess.ActiveRequest != "" {
+		collections := leftPanel.GetCollections().GetCollections()
+		for _, coll := range collections {
+			if req := coll.FindRequest(sess.ActiveRequest); req != nil {
+				requestPanel.LoadCollectionRequest(req)
+				break
+			}
+		}
+	}
+
+	// Create status bar and set initial state
+	statusBar := NewStatusBar("v1.0.0")
+	if sess.ActiveEnvironment != "" {
+		statusBar.SetEnvironment(sess.ActiveEnvironment)
+	}
+
 	return Model{
 		globalConfig:    globalConfig,
 		workspaceConfig: workspaceConfig,
 		workspacePath:   workspacePath,
-		activePanel:     CollectionsPanel,
+		activePanel:     activePanel,
 		zoneManager:     zm,
-		leftPanel:       NewLeftPanel(workspacePath),
-		requestPanel:    NewRequestView(),
-		responsePanel:   NewResponseView(),
+		leftPanel:       leftPanel,
+		requestPanel:    requestPanel,
+		responsePanel:   responsePanel,
 		mode:            NormalMode,
-		statusBar:       NewStatusBar("v1.0.0"),
+		statusBar:       statusBar,
 		commandInput:    NewCommandInput(),
 		dialog:          components.NewDialog(),
 		whichKey:        components.NewWhichKey(),
 		httpClient:      api.NewClient(),
 		isSending:       false,
 		consoleHistory:  api.NewConsoleHistory(1000),
+		session:         sess,
 	}
 }
 
@@ -195,15 +248,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case components.EditorQuitMsg:
 		// Editor requested to quit the application (Q key in NORMAL mode)
-		return m, tea.Quit
+		return m.saveSessionAndQuit()
+
+	case SessionSaveTickMsg:
+		// Handle debounced session save
+		// Only save if this tick matches the current dirty time (debounce)
+		if !m.sessionDirtyTime.IsZero() && msg.DirtyTime.Equal(m.sessionDirtyTime) {
+			m.saveSession()
+			m.sessionDirtyTime = time.Time{} // Reset dirty time
+		}
+		return m, nil
 
 	case components.DialogResultMsg:
 		return m.handleDialogResult(msg)
 
 	case tea.KeyMsg:
-		// CTRL+C always quits
+		// CTRL+C always quits (save session first)
 		if msg.String() == "ctrl+c" {
-			return m, tea.Quit
+			return m.saveSessionAndQuit()
 		}
 
 		// CTRL+S sends HTTP request from ANY context (global handler)
@@ -300,7 +362,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Check for quit in NORMAL mode
 			if m.matchKey(msg.String(), m.globalConfig.KeyBindings.Quit) {
-				return m, tea.Quit
+				return m.saveSessionAndQuit()
 			}
 
 			// ? to show WhichKey modal
@@ -330,26 +392,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Panel navigation with h/l only in NORMAL mode
 			// Skip navigation if search is active in the left panel
 			// Note: Body tab is handled earlier and returns before reaching here
+			// IMPORTANT: In CollectionsPanel, let the tree handle l/h first for expand/collapse
 			if m.mode.AllowsNavigation() && !m.leftPanel.IsSearching() {
+				// Left navigation (h) - in CollectionsPanel, only navigate if at root level collapsed folder
 				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateLeft) {
+					// In CollectionsPanel, h should collapse folders, not navigate panels
+					// Only navigate panels from Request or Response panels
 					if m.activePanel > CollectionsPanel {
 						m.activePanel--
 						// Update fullscreen panel if in fullscreen mode
 						if m.isFullscreen {
 							m.fullscreenPanel = m.activePanel
 						}
+						return m, m.markSessionDirty()
 					}
-					return m, nil
+					// In CollectionsPanel, let tree handle h for collapse
 				}
+				// Right navigation (l) - in CollectionsPanel, let tree handle it
 				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateRight) {
-					if m.activePanel < ResponsePanel {
+					// In CollectionsPanel, l should expand folders or select requests
+					// Only navigate panels from Request panel
+					if m.activePanel == RequestPanel {
 						m.activePanel++
 						// Update fullscreen panel if in fullscreen mode
 						if m.isFullscreen {
 							m.fullscreenPanel = m.activePanel
 						}
+						return m, m.markSessionDirty()
 					}
-					return m, nil
+					// In CollectionsPanel, let tree handle l for expand/select
+					// In ResponsePanel, we're already at the rightmost panel
 				}
 			}
 		}
@@ -357,25 +429,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Handle VIEW mode navigation (read-only browsing)
 		if m.mode == ViewMode {
 			if m.mode.AllowsNavigation() {
+				// Same logic as NORMAL mode - let tree handle h/l in CollectionsPanel
 				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateLeft) {
 					if m.activePanel > CollectionsPanel {
 						m.activePanel--
-						// Update fullscreen panel if in fullscreen mode
 						if m.isFullscreen {
 							m.fullscreenPanel = m.activePanel
 						}
+						return m, m.markSessionDirty()
 					}
-					return m, nil
 				}
 				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateRight) {
-					if m.activePanel < ResponsePanel {
+					if m.activePanel == RequestPanel {
 						m.activePanel++
-						// Update fullscreen panel if in fullscreen mode
 						if m.isFullscreen {
 							m.fullscreenPanel = m.activePanel
 						}
+						return m, m.markSessionDirty()
 					}
-					return m, nil
 				}
 			}
 		}
@@ -388,8 +459,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case components.TreeSelectionMsg:
 		// Handle request selection from tree
 		if msg.Node != nil && msg.Node.Type == components.RequestNode {
-			// Load the selected request into the request panel
-			m.requestPanel.LoadRequest(msg.Node.ID, msg.Node.Name, msg.Node.HTTPMethod, msg.Node.URL)
+			// Find and load the FULL request from the collection
+			collections := m.leftPanel.GetCollections().GetCollections()
+			found := false
+			for _, coll := range collections {
+				if req := coll.FindRequest(msg.Node.ID); req != nil {
+					m.requestPanel.LoadCollectionRequest(req)
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				m.statusBar.Error(fmt.Errorf("request not found: %s", msg.Node.ID))
+			}
 
 			// Focus the Request Panel
 			m.activePanel = RequestPanel
@@ -1212,8 +1295,8 @@ func buildBreadcrumb(node *components.TreeNode) []string {
 func (m Model) handleCommand(msg CommandExecuteMsg) (tea.Model, tea.Cmd) {
 	switch msg.Command {
 	case CmdQuit, CmdQuitLong:
-		// :q or :quit - exit application
-		return m, tea.Quit
+		// :q or :quit - exit application (save session first)
+		return m.saveSessionAndQuit()
 
 	case CmdWrite, CmdWriteLong:
 		// :w or :write - save current request
@@ -1221,8 +1304,8 @@ func (m Model) handleCommand(msg CommandExecuteMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case CmdWriteQuit:
-		// :wq - save and quit
-		return m, tea.Quit
+		// :wq - save and quit (save session first)
+		return m.saveSessionAndQuit()
 
 	case CmdWorkspace, CmdWorkspaceShort:
 		// :workspace or :ws - workspace management
@@ -1532,13 +1615,8 @@ func (m *Model) removePathParamFromURL(paramKey string) {
 		newURL = strings.Replace(url, ":"+paramKey, "", 1)
 	}
 
-	// Update internal URL and save
-	m.requestPanel.LoadRequest(
-		m.requestPanel.GetCurrentRequestID(),
-		"", // name doesn't change
-		m.requestPanel.GetMethod(),
-		newURL,
-	)
+	// Update URL without clearing other request data
+	m.requestPanel.SetURL(newURL)
 	m.saveURLToCollection()
 }
 
@@ -1824,4 +1902,63 @@ func formatBytes(bytes int64) string {
 	default:
 		return fmt.Sprintf("%.1fMB", float64(bytes)/MB)
 	}
+}
+
+// SessionSaveTickMsg is sent when the debounced save timer fires
+type SessionSaveTickMsg struct {
+	DirtyTime time.Time
+}
+
+// sessionSaveTick returns a command that fires after the debounce delay
+func sessionSaveTick(dirtyTime time.Time) tea.Cmd {
+	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return SessionSaveTickMsg{DirtyTime: dirtyTime}
+	})
+}
+
+// markSessionDirty marks the session as dirty and returns a command to trigger debounced save
+func (m *Model) markSessionDirty() tea.Cmd {
+	now := time.Now()
+	m.sessionDirtyTime = now
+	return sessionSaveTick(now)
+}
+
+// saveSession saves the current session state to disk
+func (m *Model) saveSession() {
+	if m.session == nil {
+		return
+	}
+
+	// Update session from current state
+	switch m.activePanel {
+	case CollectionsPanel:
+		m.session.ActivePanel = "collections"
+	case RequestPanel:
+		m.session.ActivePanel = "request"
+	case ResponsePanel:
+		m.session.ActivePanel = "response"
+	}
+
+	// Save active request ID
+	m.session.ActiveRequest = m.requestPanel.GetCurrentRequestID()
+
+	// Save active environment
+	m.session.ActiveEnvironment = m.leftPanel.GetEnvironments().GetActiveEnvironmentName()
+
+	// Get panel states
+	m.session.Panels.Collections = m.leftPanel.GetSessionState()
+	m.session.Panels.Request = m.requestPanel.GetSessionState()
+	m.session.Panels.Response = m.responsePanel.GetSessionState()
+
+	// Update timestamp
+	m.session.LastUpdated = time.Now()
+
+	// Save to disk (ignore errors silently)
+	_ = m.session.Save(m.workspacePath)
+}
+
+// saveSessionAndQuit saves the session and returns the quit command
+func (m *Model) saveSessionAndQuit() (Model, tea.Cmd) {
+	m.saveSession()
+	return *m, tea.Quit
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
+	"github.com/kbrdn1/LazyCurl/internal/session"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
@@ -558,4 +559,49 @@ func (r *ResponseView) TickLoader() {
 	if r.isLoading {
 		r.loaderFrame++
 	}
+}
+
+// SetSessionState applies session state to the response panel
+func (r *ResponseView) SetSessionState(state session.ResponsePanelState) {
+	// Set active tab
+	tabIndex := 0
+	switch state.ActiveTab {
+	case "body":
+		tabIndex = 0
+	case "cookies":
+		tabIndex = 1
+	case "headers":
+		tabIndex = 2
+	case "console":
+		tabIndex = 3
+	}
+	r.tabs.SetActive(tabIndex)
+
+	// Restore scroll position
+	if state.ScrollPosition >= 0 {
+		r.scrollOffset = state.ScrollPosition
+	}
+}
+
+// GetSessionState returns the current session state for the response panel
+func (r *ResponseView) GetSessionState() session.ResponsePanelState {
+	state := session.ResponsePanelState{
+		ScrollPosition: r.scrollOffset,
+	}
+
+	// Get active tab name
+	switch r.tabs.ActiveIndex {
+	case 0:
+		state.ActiveTab = "body"
+	case 1:
+		state.ActiveTab = "cookies"
+	case 2:
+		state.ActiveTab = "headers"
+	case 3:
+		state.ActiveTab = "console"
+	default:
+		state.ActiveTab = "body"
+	}
+
+	return state
 }

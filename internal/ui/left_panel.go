@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/kbrdn1/LazyCurl/internal/config"
+	"github.com/kbrdn1/LazyCurl/internal/session"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
 
@@ -148,4 +149,30 @@ func (l LeftPanel) RenderTabs(width int, active bool, borderColor lipgloss.Color
 	}
 
 	return borderStyle.Render("─") + collectionsTab + borderStyle.Render("─") + envTab + borderStyle.Render(strings.Repeat("─", remainingWidth))
+}
+
+// SetSessionState applies session state to the left panel
+func (l *LeftPanel) SetSessionState(state session.CollectionsPanelState) {
+	// Apply expanded folders to the tree
+	if l.collections != nil && l.collections.tree != nil {
+		l.collections.tree.SetExpandedFolders(state.ExpandedFolders)
+		l.collections.tree.SetScrollPosition(state.ScrollPosition)
+		l.collections.tree.SetSelectedIndex(state.SelectedIndex)
+	}
+}
+
+// GetSessionState returns the current session state for the left panel
+func (l *LeftPanel) GetSessionState() session.CollectionsPanelState {
+	state := session.CollectionsPanelState{
+		ScrollPosition: 0,
+		SelectedIndex:  0,
+	}
+
+	if l.collections != nil && l.collections.tree != nil {
+		state.ExpandedFolders = l.collections.tree.GetExpandedFolders()
+		state.ScrollPosition = l.collections.tree.GetScrollPosition()
+		state.SelectedIndex = l.collections.tree.GetSelectedIndex()
+	}
+
+	return state
 }

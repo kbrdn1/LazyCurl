@@ -84,6 +84,7 @@ LazyCurl is designed for developers who live in the terminal. It combines:
 | **WhichKey** | Press `?` for context-aware keybinding hints |
 | **Command Mode** | Vim-style commands with `:` prefix |
 | **Mouse Support** | Click to select, scroll to navigate |
+| **Session Persistence** | Automatic save/restore of application state |
 
 ### 🔧 Request Builder
 
@@ -106,6 +107,15 @@ LazyCurl is designed for developers who live in the terminal. It combines:
 - **Visual Status Indicators**: Color-coded badges for 2xx/3xx/4xx/5xx responses and network errors
 - **Quick Actions**: Resend requests, copy headers/body/error to clipboard
 - **Vim Navigation**: Browse history with j/k, expand entries with Enter/l
+
+### 💾 Session Persistence
+
+- **Automatic State Saving**: Application state is saved automatically on changes
+- **Seamless Restore**: Resume exactly where you left off when reopening
+- **What's Saved**: Active panel, selected request, active environment, expanded folders, scroll positions, active tabs
+- **Smart Debouncing**: 500ms delay prevents excessive writes during rapid changes
+- **Atomic Writes**: Safe file operations using temp file + rename pattern
+- **Graceful Degradation**: Missing or invalid session files are handled silently
 
 ### 🌍 Environment System
 
@@ -328,6 +338,7 @@ LazyCurl automatically creates a `.lazycurl/` directory:
 your-project/
 ├── .lazycurl/
 │   ├── config.yaml              # Workspace configuration
+│   ├── session.yml              # Session state (auto-generated)
 │   ├── collections/
 │   │   ├── api.json             # Collection file
 │   │   └── admin.json
@@ -549,7 +560,7 @@ We use **Gitmoji + Conventional Commits**:
 - [ ] Settings Panel (`Ctrl+;` fullscreen with Global/Workspace tabs) [#25](https://github.com/kbrdn1/LazyCurl/issues/25)
 - [x] Console tab in Response Panel (request/response history) [#9](https://github.com/kbrdn1/LazyCurl/issues/9)
 - [ ] Improved statusbar rendering and display [#10](https://github.com/kbrdn1/LazyCurl/issues/10)
-- [ ] Session persistence (`.lazycurl/session.yml`) [#11](https://github.com/kbrdn1/LazyCurl/issues/11)
+- [x] Session persistence (`.lazycurl/session.yml`) [#11](https://github.com/kbrdn1/LazyCurl/issues/11)
 - [ ] Theme system refactoring [#12](https://github.com/kbrdn1/LazyCurl/issues/12)
 - [ ] Theme management and custom themes [#13](https://github.com/kbrdn1/LazyCurl/issues/13)
 

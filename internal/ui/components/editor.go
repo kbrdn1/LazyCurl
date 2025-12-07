@@ -1404,3 +1404,40 @@ func (e *Editor) CanUndo() bool {
 func (e *Editor) CanRedo() bool {
 	return len(e.redoStack) > 0
 }
+
+// GetCursorPosition returns the current cursor row and column
+func (e *Editor) GetCursorPosition() (row, col int) {
+	return e.cursorRow, e.cursorCol
+}
+
+// SetCursorPosition sets the cursor to the specified row and column
+func (e *Editor) SetCursorPosition(row, col int) {
+	// Validate row
+	if row < 0 {
+		row = 0
+	}
+	if row >= len(e.content) {
+		row = len(e.content) - 1
+	}
+	// Handle empty content case
+	if row < 0 {
+		row = 0
+	}
+	e.cursorRow = row
+
+	// Validate column
+	if col < 0 {
+		col = 0
+	}
+	lineLen := 0
+	if row < len(e.content) {
+		lineLen = len(e.content[row])
+	}
+	if col > lineLen {
+		col = lineLen
+	}
+	e.cursorCol = col
+
+	// Ensure cursor is visible
+	e.scrollIntoView()
+}

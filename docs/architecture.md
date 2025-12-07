@@ -50,6 +50,7 @@ LazyCurl/
 ├── internal/
 │   ├── api/                     # HTTP client and data models
 │   │   ├── collection.go        # Collection file handling
+│   │   ├── console.go           # Request/response history
 │   │   ├── environment.go       # Environment file handling
 │   │   ├── http.go              # HTTP request execution
 │   │   └── variables.go         # Variable substitution
@@ -57,6 +58,8 @@ LazyCurl/
 │   │   └── config.go            # Global & workspace config
 │   ├── format/                  # Response formatting
 │   │   └── formatter.go         # JSON/XML/HTML formatting
+│   ├── session/                 # Session persistence
+│   │   └── session.go           # Session save/load
 │   └── ui/                      # User interface
 │       ├── model.go             # Main Bubble Tea model
 │       ├── mode.go              # Vim-style modes
@@ -92,6 +95,7 @@ LazyCurl/
 | `internal/api` | HTTP client, data models, file I/O |
 | `internal/config` | Configuration loading/saving |
 | `internal/format` | Response body formatting |
+| `internal/session` | Session state persistence |
 | `internal/ui` | User interface, Bubble Tea models |
 | `pkg/styles` | Theme colors, reusable styles |
 
@@ -369,6 +373,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
     return m, cmd
 }
+```
+
+### Session Persistence
+
+Session state is managed by the `internal/session` package and persisted to `.lazycurl/session.yml`.
+
+```go
+// Session represents the complete application state
+type Session struct {
+    Version           int         `yaml:"version"`
+    LastUpdated       time.Time   `yaml:"last_updated"`
+    ActivePanel       string      `yaml:"active_panel"`
+    ActiveCollection  string      `yaml:"active_collection,omitempty"`
+    ActiveRequest     string      `yaml:"active_request,omitempty"`
+    ActiveEnvironment string      `yaml:"active_environment,omitempty"`
+    Panels            PanelsState `yaml:"panels"`
+}
+```
+
+**Key Features:**
+- **Auto-save**: State changes trigger debounced saves (500ms delay)
+- **Atomic writes**: Uses temp file + rename for safe file operations
+- **Version control**: Session format version for future migrations
+- **Graceful degradation**: Invalid/missing sessions fall back to defaults
+
+**Save/Load Flow:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Startup                                                      │
+│   LoadSession() → Validate() → Apply to Model               │
+├─────────────────────────────────────────────────────────────┤
+│ Runtime                                                      │
+│   State change → Mark dirty → 500ms debounce → Save()       │
+├─────────────────────────────────────────────────────────────┤
+│ Shutdown                                                     │
+│   Final Save() before exit                                  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---

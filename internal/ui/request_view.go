@@ -11,6 +11,7 @@ import (
 
 	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/internal/config"
+	"github.com/kbrdn1/LazyCurl/internal/session"
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
@@ -2045,6 +2046,12 @@ func (r *RequestView) GetCurrentRequestID() string {
 	return r.currentRequestID
 }
 
+// SetURL sets the URL without clearing params or headers
+func (r *RequestView) SetURL(url string) {
+	r.url = url
+	r.ParseURLParams()
+}
+
 // GetHeadersTable returns the headers table for HTTP request building
 func (r *RequestView) GetHeadersTable() *components.Table {
 	return r.headersTable
@@ -2222,4 +2229,67 @@ func (r *RequestView) loadAuthFromRequest(req *api.CollectionRequest) {
 	default:
 		r.authType = AuthNone
 	}
+}
+
+// SetSessionState applies session state to the request panel
+func (r *RequestView) SetSessionState(state session.RequestPanelState) {
+	// Set active tab (order: Params=0, Authorization=1, Headers=2, Body=3, Scripts=4)
+	tabIndex := 0
+	switch state.ActiveTab {
+	case "params":
+		tabIndex = 0
+	case "auth":
+		tabIndex = 1
+	case "headers":
+		tabIndex = 2
+	case "body":
+		tabIndex = 3
+	case "scripts":
+		tabIndex = 4
+	}
+	r.tabs.SetActive(tabIndex)
+
+	// Restore URL cursor position
+	if state.URLCursor >= 0 {
+		r.urlCursor = state.URLCursor
+	}
+
+	// Restore body cursor position
+	if state.BodyCursor != nil && r.bodyEditor != nil {
+		r.bodyEditor.SetCursorPosition(state.BodyCursor.Line, state.BodyCursor.Column)
+	}
+}
+
+// GetSessionState returns the current session state for the request panel
+func (r *RequestView) GetSessionState() session.RequestPanelState {
+	state := session.RequestPanelState{
+		URLCursor: r.urlCursor,
+	}
+
+	// Get active tab name (order: Params=0, Authorization=1, Headers=2, Body=3, Scripts=4)
+	switch r.tabs.ActiveIndex {
+	case 0:
+		state.ActiveTab = "params"
+	case 1:
+		state.ActiveTab = "auth"
+	case 2:
+		state.ActiveTab = "headers"
+	case 3:
+		state.ActiveTab = "body"
+	case 4:
+		state.ActiveTab = "scripts"
+	default:
+		state.ActiveTab = "params"
+	}
+
+	// Get body cursor position
+	if r.bodyEditor != nil {
+		line, col := r.bodyEditor.GetCursorPosition()
+		state.BodyCursor = &session.CursorPosition{
+			Line:   line,
+			Column: col,
+		}
+	}
+
+	return state
 }

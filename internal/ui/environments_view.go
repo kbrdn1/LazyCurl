@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -710,9 +711,13 @@ func (e EnvironmentsView) handleModalClose(msg components.ModalCloseMsg) (Enviro
 	case "delete":
 		if e.pendingNode != nil {
 			if e.pendingNode.Type == EnvNode {
-				// Delete environment file
+				// Delete environment file from disk
 				if e.pendingNode.EnvFile.FilePath != "" {
-					// Would need os.Remove here
+					_ = os.Remove(e.pendingNode.EnvFile.FilePath)
+				}
+				// Clear active environment if it was the deleted one
+				if e.activeEnvName == e.pendingNode.Name {
+					e.activeEnvName = ""
 				}
 				// Remove from list
 				for i, env := range e.environments {
@@ -720,6 +725,10 @@ func (e EnvironmentsView) handleModalClose(msg components.ModalCloseMsg) (Enviro
 						e.environments = append(e.environments[:i], e.environments[i+1:]...)
 						break
 					}
+				}
+				// Set first remaining environment as active if none selected
+				if e.activeEnvName == "" && len(e.environments) > 0 {
+					e.activeEnvName = e.environments[0].Name
 				}
 			} else {
 				// Delete variable
@@ -1081,6 +1090,21 @@ func (e *EnvironmentsView) GetActiveEnvironment() *api.EnvironmentFile {
 // GetActiveEnvironmentName returns the name of the active environment
 func (e *EnvironmentsView) GetActiveEnvironmentName() string {
 	return e.activeEnvName
+}
+
+// SetActiveEnvironmentName sets the active environment by name
+func (e *EnvironmentsView) SetActiveEnvironmentName(name string) {
+	// Verify the environment exists before setting
+	for _, env := range e.environments {
+		if env.Name == name {
+			e.activeEnvName = name
+			return
+		}
+	}
+	// If not found, keep current or use first available
+	if e.activeEnvName == "" && len(e.environments) > 0 {
+		e.activeEnvName = e.environments[0].Name
+	}
 }
 
 // GetActiveEnvironmentVariables returns the variables of the active environment

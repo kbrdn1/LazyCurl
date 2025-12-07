@@ -55,6 +55,7 @@ In LazyCurl, environments appear as an expandable tree:
 ```
 
 **Legend:**
+
 - `✓` = Active environment
 - `●` = Secret variable (value hidden)
 - `○` = Regular variable
@@ -216,6 +217,7 @@ Variables can be used in:
 **Example:**
 
 Environment:
+
 ```json
 {
   "base_url": { "value": "https://api.example.com", "active": true },
@@ -224,11 +226,13 @@ Environment:
 ```
 
 Request URL:
+
 ```
 {{base_url}}/users
 ```
 
 Sent as:
+
 ```
 https://api.example.com/users
 ```
@@ -262,11 +266,13 @@ LazyCurl provides built-in system variables that generate dynamic values.
 ### Usage Examples
 
 **Request ID header:**
+
 ```
 X-Request-ID: {{$uuid}}
 ```
 
 **Timestamp in body:**
+
 ```json
 {
   "created_at": "{{$datetime}}",
@@ -275,6 +281,7 @@ X-Request-ID: {{$uuid}}
 ```
 
 **Random test data:**
+
 ```json
 {
   "email": "user_{{$randomInt}}@test.com",
@@ -463,6 +470,7 @@ X-Request-ID: {{$uuid}}
 ### 2. Mark Sensitive Values as Secret
 
 Always mark these as secret:
+
 - API tokens and keys
 - Passwords
 - Private URLs
@@ -500,11 +508,13 @@ Production:  base_url = https://api.com
 ### 6. Use System Variables for Dynamic Data
 
 Instead of hardcoding:
+
 ```json
 {"timestamp": "1699876543"}
 ```
 
 Use:
+
 ```json
 {"timestamp": "{{$timestamp}}"}
 ```
@@ -512,6 +522,7 @@ Use:
 ### 7. Deactivate Instead of Delete
 
 Use inactive state for:
+
 - Temporarily disabling features
 - Keeping reference values
 - A/B testing configurations
@@ -530,6 +541,7 @@ Use inactive state for:
 ### Secret Value Shown
 
 Secret values are only hidden in the UI. They are:
+
 - Stored in plain text in JSON files
 - Sent in requests as normal values
 - Visible if you open the JSON file

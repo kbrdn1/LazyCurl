@@ -42,6 +42,7 @@ User Input → RequestView.Update() → RequestXxxMsg → Model.Update() → Col
 - Query parameter synchronization with URL
 
 **Key Functions**:
+
 - `renderURLEditor()` - Renders URL with cursor and variable highlighting
 - `parsePathParams()` - Extracts `:param` patterns from URL
 - `parseQueryParams()` - Parses `?key=value&...` into table
@@ -50,6 +51,7 @@ User Input → RequestView.Update() → RequestXxxMsg → Model.Update() → Col
 ### 2. Params Tab (Query + Path Parameters)
 
 **Features**:
+
 - Dual-section layout: Path Parameters / Query Parameters
 - h/l navigation between sections
 - Automatic sync with URL bar
@@ -57,6 +59,7 @@ User Input → RequestView.Update() → RequestXxxMsg → Model.Update() → Col
 - CRUD operations (n/c/d/D/y/p)
 
 **Data Structure**:
+
 ```go
 type ParamsSection int
 const (
@@ -68,6 +71,7 @@ const (
 ### 3. Authorization Tab
 
 **Supported Auth Types**:
+
 - **No Auth**: No authentication headers
 - **Bearer Token**: `Authorization: Bearer <token>`
 - **Basic Auth**: `Authorization: Basic base64(user:pass)`
@@ -76,11 +80,13 @@ const (
 **File**: `internal/ui/request_view.go`
 
 **Key Functions**:
+
 - `renderAuthTab()` - Renders auth type selector and fields
 - `handleAuthTabInput()` - Handles auth-specific keybindings
 - `GetAuthHeaders()` - Generates auth headers for HTTP request
 
 **Navigation**:
+
 - h/l: Change auth type
 - j/k: Navigate between fields
 - i/c/Enter: Edit selected field
@@ -89,12 +95,14 @@ const (
 ### 4. Headers Tab
 
 **Features**:
+
 - Default headers (Content-Type, Accept, User-Agent)
 - Custom header management
 - Enable/disable toggle
 - CRUD operations
 
 **Default Headers**:
+
 ```go
 []api.KeyValueEntry{
     {Key: "Content-Type", Value: "application/json", Enabled: true},
@@ -106,6 +114,7 @@ const (
 ### 5. Body Tab with Vim Editor
 
 **Supported Body Types**:
+
 - JSON (with syntax highlighting)
 - XML
 - Raw Text
@@ -113,6 +122,7 @@ const (
 - None
 
 **Editor Features** (`internal/ui/components/editor.go`):
+
 - NORMAL/INSERT modes
 - Vim motions: h/j/k/l, w/b, 0/$, gg/G
 - Line operations: dd, yy, p
@@ -123,10 +133,12 @@ const (
 ### 6. Scripts Tab
 
 **Sections**:
+
 - Pre-request: Executed before sending
 - Post-request: Executed after response
 
 **Features**:
+
 - Dual editor layout
 - Section switching with h/l
 - Full vim-like editing
@@ -136,6 +148,7 @@ const (
 **File**: `internal/ui/components/whichkey.go`
 
 **Contexts Added**:
+
 - `ContextRequestParams`
 - `ContextRequestAuth`
 - `ContextRequestHeaders`
@@ -152,6 +165,7 @@ Dynamic hints based on active tab showing available keybindings.
 **File**: `internal/api/collection.go`
 
 **New Methods**:
+
 ```go
 // Update request URL by ID
 func (c *CollectionFile) UpdateRequestURL(requestID, newURL string) bool
@@ -167,6 +181,7 @@ func (c *CollectionFile) UpdateRequestAuth(requestID string, auth *AuthConfig) b
 ```
 
 **Data Structures Added**:
+
 ```go
 type AuthConfig struct {
     Type           string `json:"type"`
@@ -196,6 +211,7 @@ type CollectionRequest struct {
 **Solution**: Truncate content to fit width without ellipsis.
 
 **Files Modified**:
+
 - `internal/ui/components/tree.go` - Node name truncation
 - `internal/ui/environments_view.go` - Variable key/value truncation
 - `internal/ui/request_view.go` - Table row truncation
@@ -207,6 +223,7 @@ type CollectionRequest struct {
 **Solution**: Corrected height deductions in view rendering chain.
 
 **Changes**:
+
 - `View()`: `height - 5` → `height - 4`
 - `renderScriptsTab()`: `height - 3` → `height - 2`
 - `renderParamsTab()`: `height - 3` → `height - 2`
@@ -242,6 +259,7 @@ case components.TreeSelectionMsg:
 ## Keybindings Summary
 
 ### Global (Request Panel)
+
 | Key | Action |
 |-----|--------|
 | Tab | Next tab |
@@ -249,6 +267,7 @@ case components.TreeSelectionMsg:
 | Ctrl+S | Send request |
 
 ### Params/Headers Tab
+
 | Key | Action |
 |-----|--------|
 | j/k | Navigate rows |
@@ -262,6 +281,7 @@ case components.TreeSelectionMsg:
 | Space | Toggle enabled |
 
 ### Authorization Tab
+
 | Key | Action |
 |-----|--------|
 | h/l | Change auth type |
@@ -270,6 +290,7 @@ case components.TreeSelectionMsg:
 | Esc | Exit edit |
 
 ### Body/Scripts Tab
+
 | Key | Action |
 |-----|--------|
 | i | Enter INSERT mode |
@@ -283,6 +304,7 @@ case components.TreeSelectionMsg:
 **File**: `internal/api/collection_test.go`
 
 **Tests Added**:
+
 - `TestCollectionFile_UpdateRequestURL`
 - `TestCollectionFile_UpdateRequestBody`
 - `TestCollectionFile_UpdateRequestScripts`

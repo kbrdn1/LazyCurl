@@ -102,6 +102,7 @@ global_environments:
 | `editor` | string | `"vim"` | External editor command |
 
 Supported editors:
+
 - `vim`, `nvim` - Vim/Neovim
 - `nano` - GNU Nano
 - `code` - VS Code

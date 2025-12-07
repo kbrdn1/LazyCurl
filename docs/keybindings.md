@@ -365,6 +365,7 @@ Press `?` to show context-aware keybinding hints.
 ### Context Indicators
 
 WhichKey shows different hints based on your current context:
+
 - `normal_collections` - Collections panel in NORMAL mode
 - `normal_env` - Environments panel in NORMAL mode
 - `normal_request` - Request panel in NORMAL mode

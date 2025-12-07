@@ -242,6 +242,7 @@ The StatusBar provides real-time context through a structured layout:
 ```
 
 **Key Features:**
+
 - **Mode Badge**: Colored indicator for NORMAL/INSERT/VIEW/COMMAND
 - **HTTP Method Badge**: Color-coded method (GET=green, POST=orange, etc.)
 - **Fullscreen Badge**: Optional indicator when a panel is fullscreen
@@ -250,6 +251,7 @@ The StatusBar provides real-time context through a structured layout:
 - **HTTP Status Badge**: Last response status with semantic coloring
 
 **Content Priority (middle area):**
+
 1. Status messages (temporary, auto-dismiss after 2s)
 2. Breadcrumb navigation (Collection > Folder > Request)
 3. Context-aware keyboard hints (fallback)
@@ -430,12 +432,14 @@ type Session struct {
 ```
 
 **Key Features:**
+
 - **Auto-save**: State changes trigger debounced saves (500ms delay)
 - **Atomic writes**: Uses temp file + rename for safe file operations
 - **Version control**: Session format version for future migrations
 - **Graceful degradation**: Invalid/missing sessions fall back to defaults
 
 **Save/Load Flow:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Startup                                                      │

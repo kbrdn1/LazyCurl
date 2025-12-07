@@ -70,6 +70,7 @@ Displays the current vim-style interaction mode with distinctive coloring.
 | COMMAND | `COMMAND` | Orange (#a45e0e) | White | Command line input |
 
 **Behavior:**
+
 - Updates immediately on mode transition
 - Always positioned at the far left
 - Includes horizontal padding for visual separation
@@ -89,6 +90,7 @@ Shows the HTTP method of the current/selected request.
 | OPTIONS | Brown/Taupe (#a48e85) | White |
 
 **Behavior:**
+
 - Only visible when a method is set
 - Appears after the mode badge
 - Cleared when no request is selected
@@ -102,6 +104,7 @@ Indicates when fullscreen mode is active for a panel.
 | Active | `FULLSCREEN` | Mauve (#cba6f7) | Dark (#11111b) |
 
 **Behavior:**
+
 - Only visible when fullscreen is enabled
 - Positioned after the method badge
 
@@ -114,6 +117,7 @@ Flexible-width area displaying contextual information in priority order:
 3. **Keyboard Hints** - Context-aware shortcuts (fallback)
 
 **Truncation Behavior:**
+
 - Content truncates with `...` when exceeding available width
 - Uses Unicode-aware width calculation for proper handling
 - Minimum 3 characters before truncation applies
@@ -128,6 +132,7 @@ Shows the active environment name for variable substitution.
 | None | `NONE` | Gray (#a6adc8) | Normal |
 
 **Behavior:**
+
 - Always visible on the right side
 - Updates when environment selection changes
 
@@ -143,10 +148,12 @@ Displays the status code and text from the last HTTP response.
 | 5xx | Server Error | Red/Coral (#fa827c) | White |
 
 **Display Format:**
+
 - With text: `200 OK`, `404 Not Found`
 - Code only: `201` (if no text provided)
 
 **Behavior:**
+
 - Only visible after a request completes
 - Can be cleared with `ClearHTTPStatus()`
 
@@ -469,6 +476,7 @@ The middle content area (breadcrumb/hints/messages) uses a transparent backgroun
 ### 2-Second Message Duration
 
 All action messages display for exactly 2 seconds, providing:
+
 - Sufficient time to read short confirmations
 - Quick return to normal status bar content
 - Consistent, predictable behavior
@@ -476,6 +484,7 @@ All action messages display for exactly 2 seconds, providing:
 ### Unicode-Aware Truncation
 
 Content truncation uses `lipgloss.Width()` which correctly handles:
+
 - Multi-byte UTF-8 characters
 - Wide characters (CJK)
 - Emoji and special symbols
@@ -483,6 +492,7 @@ Content truncation uses `lipgloss.Width()` which correctly handles:
 ### Badge Priority
 
 Left-side badges (Mode, Method, Fullscreen) take priority over right-side content because:
+
 - Mode awareness is critical for vim-style navigation
 - HTTP method context aids request identification
 - Environment and status can be viewed in other panels if truncated

@@ -148,8 +148,8 @@ func (s *Session) Save(workspacePath string) error {
 
 	// Atomic rename
 	if err := os.Rename(tempPath, sessionPath); err != nil {
-		// Clean up temp file on failure
-		os.Remove(tempPath)
+		// Clean up temp file on failure (best-effort, ignore error)
+		_ = os.Remove(tempPath)
 		return err
 	}
 

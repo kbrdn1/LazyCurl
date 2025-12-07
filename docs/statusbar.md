@@ -181,7 +181,7 @@ The StatusBar supports temporary status messages that auto-dismiss after 2 secon
 
 ### Message Format Examples
 
-```
+```text
 Info:    "Request saved"
 Success: "Saved: Create User"
 Error:   "Error: Connection refused"
@@ -197,10 +197,10 @@ When no message or breadcrumb is displayed, context-sensitive keyboard hints app
 
 | Mode | Default Hints |
 |------|---------------|
-| NORMAL | `j/k:Up/Down | h/l:Nav | n:New | R:Rename | d:Delete | ?:Help` |
-| INSERT | `type:Edit | tab:Next | esc:Normal` |
-| VIEW | `j/k:Scroll | g/G:Top/End | h/l:Panel | esc:Normal` |
-| COMMAND | `:q:quit | :w:save | :ws:workspace | esc:Cancel` |
+| NORMAL | `j/k:Up/Down │ h/l:Nav │ n:New │ R:Rename │ d:Delete │ ?:Help` |
+| INSERT | `type:Edit │ tab:Next │ esc:Normal` |
+| VIEW | `j/k:Scroll │ g/G:Top/End │ h/l:Panel │ esc:Normal` |
+| COMMAND | `:q:quit │ :w:save │ :ws:workspace │ esc:Cancel` |
 
 ### Custom Hints
 

@@ -92,6 +92,22 @@ make build-all      # Cross-compile for Linux/macOS/Windows (AMD64 & ARM64)
 - Zone manager (`bubblezone`) enables mouse interactions
 - Styles centralized in `pkg/styles/`
 
+**StatusBar** (`internal/ui/statusbar.go`):
+- Displays mode (NORMAL/INSERT/VIEW/COMMAND), HTTP method, breadcrumb, environment, HTTP status
+- Mode colors defined in `pkg/styles/styles.go` (ModeNormalBg, ModeInsertBg, etc.)
+- HTTP method colors: GET=green, POST=orange, PUT=blue, DELETE=red, PATCH=purple
+- HTTP status colors: 2xx=green, 3xx=blue, 4xx=orange, 5xx=red
+- Temporary messages auto-dismiss after 2 seconds (MessageDuration constant)
+- Middle content priority: message > breadcrumb > keyboard hints
+- See `docs/statusbar.md` for complete API reference
+
+**Mode System** (`internal/ui/mode.go`):
+- Mode enum: NormalMode, InsertMode, ViewMode, CommandMode
+- Mode.String() returns display name ("NORMAL", "INSERT", etc.)
+- Mode.Color() returns Lipgloss style with background/foreground colors
+- Mode.AllowsInput() returns true for INSERT, COMMAND
+- Mode.AllowsNavigation() returns true for NORMAL, VIEW
+
 ### State Flow
 
 1. **Initialization** (`cmd/lazycurl/main.go`):

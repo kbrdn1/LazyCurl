@@ -456,6 +456,7 @@ Full documentation is available in the `docs/` directory:
 | [Configuration](docs/configuration.md) | Config files and options |
 | [Collections](docs/collections.md) | Managing request collections |
 | [Environments](docs/environments.md) | Variables and environments |
+| [StatusBar](docs/statusbar.md) | StatusBar component and modes |
 | [Architecture](docs/architecture.md) | Technical architecture |
 
 ---

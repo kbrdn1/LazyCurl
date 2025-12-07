@@ -80,6 +80,12 @@ make build-all      # Cross-compile for Linux/macOS/Windows (AMD64 & ARM64)
 - **HTTP Client**: Request execution with variable interpolation
 - **Response Formatting**: JSON/XML/HTML formatting via `internal/format/`
 
+**Session Layer** (`internal/session/`):
+- **Session Persistence**: Auto-save/restore of application state to `.lazycurl/session.yml`
+- **Debounced Saves**: 500ms delay prevents excessive disk writes during rapid changes
+- **Atomic Writes**: Uses temp file + rename pattern for safe file operations
+- **Graceful Degradation**: Missing/invalid session files silently fall back to defaults
+
 **UI Components** (`internal/ui/`):
 - Each panel is a self-contained view with Update/View pattern
 - Active panel receives keyboard input via central dispatcher
@@ -133,7 +139,7 @@ resolvedURL := ReplaceVariables(url, env.Variables)
 
 **Package Organization**:
 - `cmd/`: Application entry points (only `lazycurl/main.go`)
-- `internal/`: Private application code (api, config, ui, format)
+- `internal/`: Private application code (api, config, ui, format, session)
 - `pkg/`: Reusable libraries (currently only styles)
 - Root: Configuration files, documentation, Makefile
 
@@ -272,17 +278,59 @@ Add Console tab to Response Panel for HTTP request/response history logging with
 - **Clipboard**: Use `golang.design/x/clipboard` package
 
 ### Keybindings
-- `4`: Switch to Console tab (tab switching: 1=Body, 2=Cookies, 3=Headers, 4=Console)
-- `j/k`: Navigate up/down in console list
-- `g/G`: Jump to first/last entry
-- `Enter/l`: Expand selected entry
-- `Esc/h/q`: Collapse back to list
+- `Ctrl+C`: Switch to Console tab
+- `Ctrl+R`: Switch to Response tab
+- `j/k/g/G`: Navigate console list
 - `R`: Resend selected request
-- `U/H/B/C/I/E/A`: Copy URL/headers/body/cookies/info/error/all to clipboard
+- `H/B/E/A`: Copy headers/body/error/all to clipboard
 
 ### Architecture Pattern
-```text
+```
 Request sent → RequestCompleteMsg → Add to ConsoleHistory → ConsoleView updates
 ```
 
 See `specs/009-console-tab-in-response-panel/quickstart.md` for implementation guide.
+
+## Completed Feature: Session Persistence (Issue #11)
+
+### Overview
+Session persistence automatically saves and restores application state across sessions.
+
+### Key Files
+- `internal/session/session.go` - Session types and Load/Save functions
+- `internal/session/session_test.go` - Comprehensive tests
+
+### Session File Format (`.lazycurl/session.yml`)
+```yaml
+version: 1
+last_updated: "2025-12-06T10:30:00Z"
+active_panel: request
+active_collection: "api.json"
+active_request: "req_001"
+active_environment: "development"
+panels:
+  collections:
+    expanded_folders: ["Users"]
+    scroll_position: 5
+    selected_index: 3
+  request:
+    active_tab: "body"
+  response:
+    active_tab: "body"
+    scroll_position: 0
+```
+
+### Architecture Pattern
+```
+State change → Mark dirty → 500ms debounce → Save to YAML (atomic write)
+Startup → LoadSession() → Validate references → Apply to panels
+Quit → Final save
+```
+
+### What's Persisted
+- Active panel (Collections, Request, Response)
+- Active collection and request
+- Active environment
+- Expanded folders in Collections tree
+- Scroll positions and cursor positions
+- Active tabs in each panel

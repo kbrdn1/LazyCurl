@@ -115,9 +115,17 @@ func (s *StatusBar) View(width int) string {
 		s.message = ""
 	}
 
-	// Mode badge
+	// Mode badge (always first)
 	modeBadge := s.mode.Color().Render(s.mode.String())
 	modeWidth := lipgloss.Width(modeBadge)
+
+	// HTTP method badge (if present, after mode)
+	var methodBadge string
+	methodWidth := 0
+	if s.httpMethod != "" {
+		methodBadge = s.renderMethodBadge()
+		methodWidth = lipgloss.Width(methodBadge)
+	}
 
 	// Fullscreen badge (if active)
 	var fullscreenBadge string
@@ -132,7 +140,7 @@ func (s *StatusBar) View(width int) string {
 		fullscreenWidth = lipgloss.Width(fullscreenBadge)
 	}
 
-	// Environment badge
+	// Environment badge (right side)
 	var envBadge string
 	envWidth := 0
 	if s.environment != "" {
@@ -150,31 +158,16 @@ func (s *StatusBar) View(width int) string {
 		envWidth = lipgloss.Width(envBadge)
 	}
 
-	// HTTP status badge (if present)
+	// HTTP status badge (if present, right side)
 	var statusBadge string
 	statusWidth := 0
 	if s.httpStatus > 0 {
 		statusBadge = s.renderHTTPStatus()
-		statusWidth = lipgloss.Width(statusBadge) + 1 // +1 for space
+		statusWidth = lipgloss.Width(statusBadge)
 	}
-
-	// HTTP method badge (if present)
-	var methodBadge string
-	methodWidth := 0
-	if s.httpMethod != "" {
-		methodBadge = s.renderMethodBadge()
-		methodWidth = lipgloss.Width(methodBadge) + 1 // +1 for space
-	}
-
-	// Version badge
-	versionStyle := lipgloss.NewStyle().
-		Foreground(styles.Subtext0).
-		Padding(0, 1)
-	versionBadge := versionStyle.Render(s.version)
-	versionWidth := lipgloss.Width(versionBadge)
 
 	// Calculate middle content width
-	usedWidth := modeWidth + fullscreenWidth + envWidth + statusWidth + methodWidth + versionWidth
+	usedWidth := modeWidth + methodWidth + fullscreenWidth + envWidth + statusWidth
 	middleWidth := width - usedWidth
 	if middleWidth < 0 {
 		middleWidth = 0
@@ -183,7 +176,7 @@ func (s *StatusBar) View(width int) string {
 	// Middle content: message, breadcrumb, or hints (truncated to fit)
 	var middleText string
 	if s.message != "" {
-		middleText = s.message
+		middleText = " " + s.message
 	} else if len(s.breadcrumb) > 0 {
 		middleText = s.formatBreadcrumbText()
 	} else {
@@ -191,50 +184,59 @@ func (s *StatusBar) View(width int) string {
 	}
 
 	// Truncate middle text to fit available width
-	if len(middleText) > middleWidth {
+	middleTextWidth := lipgloss.Width(middleText)
+	if middleTextWidth > middleWidth {
 		if middleWidth > 3 {
-			middleText = middleText[:middleWidth-3] + "..."
+			// Truncate by runes to handle unicode properly
+			runes := []rune(middleText)
+			for lipgloss.Width(string(runes)) > middleWidth-3 && len(runes) > 0 {
+				runes = runes[:len(runes)-1]
+			}
+			middleText = string(runes) + "..."
 		} else if middleWidth > 0 {
-			middleText = middleText[:middleWidth]
+			runes := []rune(middleText)
+			for lipgloss.Width(string(runes)) > middleWidth && len(runes) > 0 {
+				runes = runes[:len(runes)-1]
+			}
+			middleText = string(runes)
 		} else {
 			middleText = ""
 		}
+		middleTextWidth = lipgloss.Width(middleText)
 	}
 
 	// Pad middle content to exact width
-	if len(middleText) < middleWidth {
-		middleText = middleText + strings.Repeat(" ", middleWidth-len(middleText))
+	padding := middleWidth - middleTextWidth
+	if padding > 0 {
+		middleText = middleText + strings.Repeat(" ", padding)
 	}
 
-	// Style middle content
+	// Style middle content (no background for transparency)
 	var middleStyle lipgloss.Style
 	if s.message != "" {
 		middleStyle = lipgloss.NewStyle().
 			Foreground(styles.Yellow).
-			Background(styles.Mantle).
 			Bold(true)
 	} else {
 		middleStyle = lipgloss.NewStyle().
-			Foreground(styles.Subtext0).
-			Background(styles.Mantle)
+			Foreground(styles.Subtext0)
 	}
 	middleContent := middleStyle.Render(middleText)
 
-	// Join all parts on single line
+	// Join all parts: Mode | Method | Middle | Env | Status
 	var parts []string
 	parts = append(parts, modeBadge)
+	if methodBadge != "" {
+		parts = append(parts, methodBadge)
+	}
 	if fullscreenBadge != "" {
 		parts = append(parts, fullscreenBadge)
 	}
+	parts = append(parts, middleContent)
 	parts = append(parts, envBadge)
 	if statusBadge != "" {
-		parts = append(parts, " "+statusBadge)
+		parts = append(parts, statusBadge)
 	}
-	if methodBadge != "" {
-		parts = append(parts, " "+methodBadge)
-	}
-	parts = append(parts, middleContent)
-	parts = append(parts, versionBadge)
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, parts...)
 }

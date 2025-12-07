@@ -102,7 +102,7 @@ make build-all      # Cross-compile for Linux/macOS/Windows (AMD64 & ARM64)
 - See `docs/statusbar.md` for complete API reference
 
 **Mode System** (`internal/ui/mode.go`):
-- Mode enum: NormalMode, InsertMode, ViewMode, CommandMode
+- Mode enum: NormalMode, ViewMode, CommandMode, InsertMode
 - Mode.String() returns display name ("NORMAL", "INSERT", etc.)
 - Mode.Color() returns Lipgloss style with background/foreground colors
 - Mode.AllowsInput() returns true for INSERT, COMMAND

@@ -376,11 +376,11 @@ func TestStatusBarClearHTTPStatus(t *testing.T) {
 
 func TestStatusBarSetBreadcrumb(t *testing.T) {
 	tests := []struct {
-		name           string
-		parts          []string
-		wantLen        int
-		wantInView     []string
-		wantNotInView  []string
+		name          string
+		parts         []string
+		wantLen       int
+		wantInView    []string
+		wantNotInView []string
 	}{
 		// T026: Single-level path
 		{
@@ -780,7 +780,7 @@ func TestHelperFunctions(t *testing.T) {
 		m := InsertMode
 		ptr := ModePtr(m)
 		if ptr == nil {
-			t.Error("ModePtr() returned nil")
+			t.Fatal("ModePtr() returned nil")
 		}
 		if *ptr != m {
 			t.Errorf("*ModePtr() = %v, want %v", *ptr, m)
@@ -791,7 +791,7 @@ func TestHelperFunctions(t *testing.T) {
 		i := 42
 		ptr := IntPtr(i)
 		if ptr == nil {
-			t.Error("IntPtr() returned nil")
+			t.Fatal("IntPtr() returned nil")
 		}
 		if *ptr != i {
 			t.Errorf("*IntPtr() = %d, want %d", *ptr, i)
@@ -802,7 +802,7 @@ func TestHelperFunctions(t *testing.T) {
 		s := "test"
 		ptr := StringPtr(s)
 		if ptr == nil {
-			t.Error("StringPtr() returned nil")
+			t.Fatal("StringPtr() returned nil")
 		}
 		if *ptr != s {
 			t.Errorf("*StringPtr() = %q, want %q", *ptr, s)

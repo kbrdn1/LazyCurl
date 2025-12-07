@@ -37,7 +37,7 @@ The StatusBar automatically adapts to terminal width, truncating content intelli
 
 ## Layout
 
-```
+```text
 +-----------------------------------------------------------------------+
 | NORMAL | POST | FULLSCREEN | My API > Users > Create | dev | 200 OK  |
 +-----------------------------------------------------------------------+

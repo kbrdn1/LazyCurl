@@ -223,7 +223,7 @@ func (s *StatusBar) View(width int) string {
 	}
 	middleContent := middleStyle.Render(middleText)
 
-	// Join all parts: Mode | Method | Middle | Env | Status
+	// Join all parts: Mode | Method | Fullscreen | Middle | Env | Status
 	var parts []string
 	parts = append(parts, modeBadge)
 	if methodBadge != "" {

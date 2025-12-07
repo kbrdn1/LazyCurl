@@ -233,7 +233,7 @@ Model
 
 The StatusBar provides real-time context through a structured layout:
 
-```
+```text
 +-----------------------------------------------------------------------+
 | NORMAL | POST | FULLSCREEN | My API > Users > Create | dev | 200 OK  |
 +-----------------------------------------------------------------------+

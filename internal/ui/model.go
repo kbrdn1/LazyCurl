@@ -1909,9 +1909,9 @@ type SessionSaveTickMsg struct {
 	DirtyTime time.Time
 }
 
-// sessionSaveTick returns a command that fires after the debounce delay
+// sessionSaveTick returns a command that fires after the debounce delay (500ms)
 func sessionSaveTick(dirtyTime time.Time) tea.Cmd {
-	return tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
 		return SessionSaveTickMsg{DirtyTime: dirtyTime}
 	})
 }
@@ -1950,8 +1950,7 @@ func (m *Model) saveSession() {
 	m.session.Panels.Request = m.requestPanel.GetSessionState()
 	m.session.Panels.Response = m.responsePanel.GetSessionState()
 
-	// Update timestamp
-	m.session.LastUpdated = time.Now()
+	// Note: LastUpdated is set by session.Save()
 
 	// Save to disk (ignore errors silently)
 	_ = m.session.Save(m.workspacePath)

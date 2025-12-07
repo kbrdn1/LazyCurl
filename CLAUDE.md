@@ -285,7 +285,7 @@ Add Console tab to Response Panel for HTTP request/response history logging with
 - `H/B/E/A`: Copy headers/body/error/all to clipboard
 
 ### Architecture Pattern
-```
+```text
 Request sent → RequestCompleteMsg → Add to ConsoleHistory → ConsoleView updates
 ```
 
@@ -321,7 +321,7 @@ panels:
 ```
 
 ### Architecture Pattern
-```
+```text
 State change → Mark dirty → 500ms debounce → Save to YAML (atomic write)
 Startup → LoadSession() → Validate references → Apply to panels
 Quit → Final save

@@ -2233,16 +2233,16 @@ func (r *RequestView) loadAuthFromRequest(req *api.CollectionRequest) {
 
 // SetSessionState applies session state to the request panel
 func (r *RequestView) SetSessionState(state session.RequestPanelState) {
-	// Set active tab
+	// Set active tab (order: Params=0, Authorization=1, Headers=2, Body=3, Scripts=4)
 	tabIndex := 0
 	switch state.ActiveTab {
 	case "params":
 		tabIndex = 0
-	case "headers":
-		tabIndex = 1
-	case "body":
-		tabIndex = 2
 	case "auth":
+		tabIndex = 1
+	case "headers":
+		tabIndex = 2
+	case "body":
 		tabIndex = 3
 	case "scripts":
 		tabIndex = 4
@@ -2266,16 +2266,16 @@ func (r *RequestView) GetSessionState() session.RequestPanelState {
 		URLCursor: r.urlCursor,
 	}
 
-	// Get active tab name
+	// Get active tab name (order: Params=0, Authorization=1, Headers=2, Body=3, Scripts=4)
 	switch r.tabs.ActiveIndex {
 	case 0:
 		state.ActiveTab = "params"
 	case 1:
-		state.ActiveTab = "headers"
-	case 2:
-		state.ActiveTab = "body"
-	case 3:
 		state.ActiveTab = "auth"
+	case 2:
+		state.ActiveTab = "headers"
+	case 3:
+		state.ActiveTab = "body"
 	case 4:
 		state.ActiveTab = "scripts"
 	default:

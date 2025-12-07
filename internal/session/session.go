@@ -192,6 +192,14 @@ func (s *Session) Validate(workspacePath string) *Session {
 	if s.Panels.Request.URLCursor < 0 {
 		s.Panels.Request.URLCursor = 0
 	}
+	if s.Panels.Request.BodyCursor != nil {
+		if s.Panels.Request.BodyCursor.Line < 0 {
+			s.Panels.Request.BodyCursor.Line = 0
+		}
+		if s.Panels.Request.BodyCursor.Column < 0 {
+			s.Panels.Request.BodyCursor.Column = 0
+		}
+	}
 
 	// Validate tab values
 	validRequestTabs := map[string]bool{"params": true, "headers": true, "body": true, "auth": true, "scripts": true}

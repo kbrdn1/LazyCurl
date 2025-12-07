@@ -910,3 +910,96 @@ func (t *Tree) restoreExpandedState(nodes []*TreeNode, expanded map[string]bool)
 		}
 	}
 }
+
+// GetExpandedFolders returns a list of expanded folder names/IDs for session persistence
+func (t *Tree) GetExpandedFolders() []string {
+	var expanded []string
+	t.collectExpandedFolders(t.Root, &expanded)
+	return expanded
+}
+
+// collectExpandedFolders recursively collects expanded folder names
+func (t *Tree) collectExpandedFolders(nodes []*TreeNode, expanded *[]string) {
+	for _, node := range nodes {
+		if node.Expanded && (node.Type == FolderNode || node.Type == CollectionNode) {
+			*expanded = append(*expanded, node.ID)
+		}
+		if len(node.Children) > 0 {
+			t.collectExpandedFolders(node.Children, expanded)
+		}
+	}
+}
+
+// SetExpandedFolders expands folders matching the given IDs
+func (t *Tree) SetExpandedFolders(folderIDs []string) {
+	if len(folderIDs) == 0 {
+		return
+	}
+	// Create a set for quick lookup
+	expandSet := make(map[string]bool)
+	for _, id := range folderIDs {
+		expandSet[id] = true
+	}
+	t.applyExpandedFolders(t.Root, expandSet)
+	t.Refresh()
+}
+
+// applyExpandedFolders recursively expands folders matching IDs
+func (t *Tree) applyExpandedFolders(nodes []*TreeNode, expandSet map[string]bool) {
+	for _, node := range nodes {
+		if expandSet[node.ID] {
+			node.Expanded = true
+		}
+		if len(node.Children) > 0 {
+			t.applyExpandedFolders(node.Children, expandSet)
+		}
+	}
+}
+
+// GetScrollPosition returns the current scroll offset for session persistence
+func (t *Tree) GetScrollPosition() int {
+	return t.scrollOffset
+}
+
+// SetScrollPosition sets the scroll offset from session state
+func (t *Tree) SetScrollPosition(offset int) {
+	if offset >= 0 {
+		t.scrollOffset = offset
+	}
+}
+
+// GetSelectedIndex returns the current cursor position for session persistence
+func (t *Tree) GetSelectedIndex() int {
+	return t.cursor
+}
+
+// SetSelectedIndex sets the cursor position from session state
+func (t *Tree) SetSelectedIndex(index int) {
+	if index >= 0 && index < len(t.visible) {
+		t.cursor = index
+		t.selected = t.visible[t.cursor]
+	} else if len(t.visible) > 0 {
+		t.cursor = 0
+		t.selected = t.visible[0]
+	}
+}
+
+// FindNodeByID searches the tree recursively for a node with the given ID
+func (t *Tree) FindNodeByID(id string) *TreeNode {
+	return t.findNodeByIDRecursive(t.Root, id)
+}
+
+// findNodeByIDRecursive is the recursive helper for FindNodeByID
+func (t *Tree) findNodeByIDRecursive(nodes []*TreeNode, id string) *TreeNode {
+	for _, node := range nodes {
+		if node.ID == id {
+			return node
+		}
+		if len(node.Children) > 0 {
+			if found := t.findNodeByIDRecursive(node.Children, id); found != nil {
+				return found
+			}
+		}
+	}
+	return nil
+}

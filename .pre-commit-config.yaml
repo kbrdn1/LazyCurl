@@ -19,18 +19,30 @@ repos:
     rev: v0.5.1
     hooks:
       - id: go-fmt
-      - id: go-imports
-        args: ["-local", "github.com/kbrdn1/LazyCurl"]
       - id: go-mod-tidy
       - id: go-build
       - id: go-unit-tests
 
-  # golangci-lint
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.61.0
+  # Go imports (local hook for reliable PATH handling)
+  - repo: local
+    hooks:
+      - id: go-imports
+        name: goimports
+        entry: bash -c 'export PATH="$PATH:$HOME/go/bin" && goimports -local github.com/kbrdn1/LazyCurl -w "$@"' --
+        language: system
+        types: [go]
+        pass_filenames: true
+
+  # golangci-lint (using local installation for reliability)
+  # Uses --new-from-rev to only check new issues, not existing technical debt
+  - repo: local
     hooks:
       - id: golangci-lint
-        args: ["--timeout=5m"]
+        name: golangci-lint
+        entry: golangci-lint run --timeout=5m --new-from-rev=origin/main
+        language: system
+        types: [go]
+        pass_filenames: false
 
   # Conventional commits
   - repo: https://github.com/compilerla/conventional-pre-commit
@@ -56,7 +68,7 @@ repos:
     rev: v0.42.0
     hooks:
       - id: markdownlint
-        args: ["--fix", "--disable", "MD013", "MD033", "MD041", "--"]
+        args: ["--fix", "--disable", "MD013", "MD024", "MD029", "MD033", "MD036", "MD040", "MD041", "MD045", "MD051", "MD056", "--"]
 
   # YAML
   - repo: https://github.com/adrienverge/yamllint

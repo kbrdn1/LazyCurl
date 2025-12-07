@@ -36,9 +36,8 @@ func TestModeString(t *testing.T) {
 // TestModeStringDefault verifies unknown mode defaults to "NORMAL"
 func TestModeStringDefault(t *testing.T) {
 	unknownMode := Mode(99)
-	want := "NORMAL"
-	if got := unknownMode.String(); got != want {
-		t.Errorf("Mode(99).String() = %v, want %v", got, want)
+	if got := unknownMode.String(); got != NormalMode.String() {
+		t.Errorf("Mode(99).String() = %v, want %v", got, NormalMode.String())
 	}
 }
 

@@ -208,7 +208,7 @@ func (s *StatusBar) View(width int) string {
 	// Pad middle content to exact width
 	padding := middleWidth - middleTextWidth
 	if padding > 0 {
-		middleText = middleText + strings.Repeat(" ", padding)
+		middleText += strings.Repeat(" ", padding)
 	}
 
 	// Style middle content (no background for transparency)

@@ -189,9 +189,12 @@ func (s *Session) Validate(workspacePath string) *Session {
 	if s.Panels.Response.ScrollPosition < 0 {
 		s.Panels.Response.ScrollPosition = 0
 	}
+	if s.Panels.Request.URLCursor < 0 {
+		s.Panels.Request.URLCursor = 0
+	}
 
 	// Validate tab values
-	validRequestTabs := map[string]bool{"params": true, "headers": true, "body": true, "auth": true}
+	validRequestTabs := map[string]bool{"params": true, "headers": true, "body": true, "auth": true, "scripts": true}
 	if !validRequestTabs[s.Panels.Request.ActiveTab] {
 		s.Panels.Request.ActiveTab = "params"
 	}

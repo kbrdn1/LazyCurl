@@ -2250,7 +2250,7 @@ func (r *RequestView) SetSessionState(state session.RequestPanelState) {
 	r.tabs.SetActive(tabIndex)
 
 	// Restore URL cursor position
-	if state.URLCursor > 0 {
+	if state.URLCursor >= 0 {
 		r.urlCursor = state.URLCursor
 	}
 

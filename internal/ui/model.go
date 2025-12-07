@@ -482,7 +482,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			breadcrumb := buildBreadcrumb(msg.Node)
 			m.statusBar.SetBreadcrumb(breadcrumb...)
 		}
-		return m, nil
+		return m, m.markSessionDirty()
 
 	case components.TreeRenameMsg:
 		// Handle rename request - show input dialog

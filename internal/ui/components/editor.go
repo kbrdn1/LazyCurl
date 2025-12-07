@@ -1419,6 +1419,7 @@ func (e *Editor) SetCursorPosition(row, col int) {
 	if row >= len(e.content) {
 		row = len(e.content) - 1
 	}
+	// Handle empty content case
 	if row < 0 {
 		row = 0
 	}

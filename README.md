@@ -23,6 +23,7 @@
   <a href="https://github.com/kbrdn1/LazyCurl/releases"><img src="https://img.shields.io/github/v/release/kbrdn1/LazyCurl?style=flat-square" alt="Release" /></a>
   <a href="https://codecov.io/gh/kbrdn1/LazyCurl"><img src="https://codecov.io/gh/kbrdn1/LazyCurl/branch/main/graph/badge.svg" alt="Coverage" /></a>
   <a href="https://goreportcard.com/report/github.com/kbrdn1/LazyCurl"><img src="https://goreportcard.com/badge/github.com/kbrdn1/LazyCurl" alt="Go Report Card" /></a>
+  <a href="https://coderabbit.ai"><img src="https://img.shields.io/coderabbit/prs/github/kbrdn1/LazyCurl?utm_source=oss&utm_medium=github&utm_campaign=kbrdn1%2FLazyCurl&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews" alt="CodeRabbit Reviews" /></a>
 </p>
 
 <p align="center">
@@ -562,7 +563,7 @@ We use **Gitmoji + Conventional Commits**:
 - [x] Find in editors (`/` in NORMAL mode) [#24](https://github.com/kbrdn1/LazyCurl/issues/24)
 - [ ] Settings Panel (`Ctrl+;` fullscreen with Global/Workspace tabs) [#25](https://github.com/kbrdn1/LazyCurl/issues/25)
 - [x] Console tab in Response Panel (request/response history) [#9](https://github.com/kbrdn1/LazyCurl/issues/9)
-- [ ] Improved statusbar rendering and display [#10](https://github.com/kbrdn1/LazyCurl/issues/10)
+- [x] Improved statusbar rendering and display [#10](https://github.com/kbrdn1/LazyCurl/issues/10)
 - [x] Session persistence (`.lazycurl/session.yml`) [#11](https://github.com/kbrdn1/LazyCurl/issues/11)
 - [ ] Theme system refactoring [#12](https://github.com/kbrdn1/LazyCurl/issues/12)
 - [ ] Theme management and custom themes [#13](https://github.com/kbrdn1/LazyCurl/issues/13)
@@ -571,7 +572,7 @@ We use **Gitmoji + Conventional Commits**:
 
 - Import/export Postman collections [#14](https://github.com/kbrdn1/LazyCurl/issues/14)
 - Request history [#15](https://github.com/kbrdn1/LazyCurl/issues/15)
-- Pre/post-request scripts execution [#16](https://github.com/kbrdn1/LazyCurl/issues/16)
+- Pre-request & post-response scripting (JavaScript via Goja) [#35](https://github.com/kbrdn1/LazyCurl/issues/35)
 - Authentication helpers (OAuth2, AWS Sig) [#17](https://github.com/kbrdn1/LazyCurl/issues/17)
 - GraphQL support [#18](https://github.com/kbrdn1/LazyCurl/issues/18)
 - WebSocket testing [#19](https://github.com/kbrdn1/LazyCurl/issues/19)

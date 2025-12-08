@@ -33,16 +33,12 @@ repos:
         types: [go]
         pass_filenames: true
 
-  # golangci-lint (using local installation for reliability)
-  # Uses --new-from-rev to only check new issues, not existing technical debt
-  - repo: local
+  # golangci-lint
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.64.8
     hooks:
       - id: golangci-lint
-        name: golangci-lint
-        entry: golangci-lint run --timeout=5m --new-from-rev=origin/main
-        language: system
-        types: [go]
-        pass_filenames: false
+        args: ["--timeout=5m", "--new-from-rev=origin/main"]
 
   # Conventional commits
   - repo: https://github.com/compilerla/conventional-pre-commit

@@ -227,13 +227,13 @@ Environment:
 
 Request URL:
 
-```
+```text
 {{base_url}}/users
 ```
 
 Sent as:
 
-```
+```text
 https://api.example.com/users
 ```
 
@@ -241,7 +241,7 @@ https://api.example.com/users
 
 Inactive variables are **not** substituted:
 
-```
+```text
 {{inactive_var}} → {{inactive_var}} (unchanged)
 ```
 
@@ -267,7 +267,7 @@ LazyCurl provides built-in system variables that generate dynamic values.
 
 **Request ID header:**
 
-```
+```text
 X-Request-ID: {{$uuid}}
 ```
 

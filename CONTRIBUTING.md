@@ -588,5 +588,5 @@ Thank you for contributing to LazyCurl! Your contributions help make this projec
 </p>
 
 <p align="center">
- <a href="https://github.com/kbrdn1/LazyCurl/blob/main/LICENSE"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8"/></a>
+ <a href="https://github.com/kbrdn1/LazyCurl/blob/main/LICENSE"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8" alt="MIT License"/></a>
 </p>

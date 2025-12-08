@@ -223,11 +223,40 @@ Model
 ├── ResponseView
 │   ├── TabsComponent
 │   └── EditorComponent (body)
-├── StatusBar
+├── StatusBar                    # Mode, method, breadcrumb, env, status
 ├── CommandInput
 ├── Dialog
 └── WhichKey
 ```
+
+### StatusBar Architecture
+
+The StatusBar provides real-time context through a structured layout:
+
+```text
++-----------------------------------------------------------------------+
+| NORMAL | POST | FULLSCREEN | My API > Users > Create | dev | 200 OK  |
++-----------------------------------------------------------------------+
+    |       |         |                |                  |       |
+   Mode   Method  Fullscreen      Breadcrumb            Env   Status
+```
+
+**Key Features:**
+
+- **Mode Badge**: Colored indicator for NORMAL/INSERT/VIEW/COMMAND
+- **HTTP Method Badge**: Color-coded method (GET=green, POST=orange, etc.)
+- **Fullscreen Badge**: Optional indicator when a panel is fullscreen
+- **Middle Content**: Breadcrumb path, status messages, or keyboard hints
+- **Environment Badge**: Active environment name or "NONE"
+- **HTTP Status Badge**: Last response status with semantic coloring
+
+**Content Priority (middle area):**
+
+1. Status messages (temporary, auto-dismiss after 2s)
+2. Breadcrumb navigation (Collection > Folder > Request)
+3. Context-aware keyboard hints (fallback)
+
+For detailed API documentation, see [StatusBar Documentation](statusbar.md).
 
 ---
 
@@ -312,16 +341,26 @@ type WorkspaceConfig struct {
 
 ### Mode System
 
+The mode system controls user interaction context and is displayed in the StatusBar.
+
 ```go
 type Mode int
 
 const (
-    NormalMode Mode = iota
-    InsertMode
-    ViewMode
-    CommandMode
+    NormalMode  Mode = iota // Default navigation mode
+    InsertMode              // Text input mode
+    ViewMode                // Read-only browsing
+    CommandMode             // Command line input
 )
+
+// Mode methods
+func (m Mode) String() string        // Returns display name ("NORMAL", etc.)
+func (m Mode) Color() lipgloss.Style // Returns mode-specific colored style
+func (m Mode) AllowsInput() bool     // True for INSERT, COMMAND
+func (m Mode) AllowsNavigation() bool // True for NORMAL, VIEW
 ```
+
+See [StatusBar Documentation](statusbar.md) for mode badge styling details.
 
 ### Mode Transitions
 
@@ -393,12 +432,14 @@ type Session struct {
 ```
 
 **Key Features:**
+
 - **Auto-save**: State changes trigger debounced saves (500ms delay)
 - **Atomic writes**: Uses temp file + rename for safe file operations
 - **Version control**: Session format version for future migrations
 - **Graceful degradation**: Invalid/missing sessions fall back to defaults
 
 **Save/Load Flow:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Startup                                                      │

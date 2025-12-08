@@ -20,14 +20,16 @@ Complete keyboard shortcut reference for LazyCurl.
 
 ## Vim-Style Modes
 
-LazyCurl uses vim-style modes for different interaction contexts:
+LazyCurl uses vim-style modes for different interaction contexts. The current mode is always visible in the StatusBar as a colored badge.
 
-| Mode | Status Bar | Color | Description |
-|------|------------|-------|-------------|
-| **NORMAL** | `NORMAL` | Blue | Default mode for navigation and commands |
-| **INSERT** | `INSERT` | Gray | Text input mode for editing fields |
-| **VIEW** | `VIEW` | Green | Read-only browsing mode |
-| **COMMAND** | `COMMAND` | Orange | Command line mode (`:` prefix) |
+| Mode | Status Bar | Background | Foreground | Description |
+|------|------------|------------|------------|-------------|
+| **NORMAL** | `NORMAL` | Blue (#6798da) | White | Default mode for navigation and commands |
+| **INSERT** | `INSERT` | Light Gray (#b8bcc2) | Black | Text input mode for editing fields |
+| **VIEW** | `VIEW` | Green (#4c8c49) | White | Read-only browsing mode |
+| **COMMAND** | `COMMAND` | Orange (#a45e0e) | White | Command line mode (`:` prefix) |
+
+For detailed StatusBar information, see [StatusBar Documentation](statusbar.md).
 
 ### Mode Transitions
 
@@ -363,6 +365,7 @@ Press `?` to show context-aware keybinding hints.
 ### Context Indicators
 
 WhichKey shows different hints based on your current context:
+
 - `normal_collections` - Collections panel in NORMAL mode
 - `normal_env` - Environments panel in NORMAL mode
 - `normal_request` - Request panel in NORMAL mode

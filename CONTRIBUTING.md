@@ -3,6 +3,7 @@
 Thank you for your interest in contributing to LazyCurl! This document provides guidelines and conventions to follow when contributing to this project.
 
 ## Table of Contents
+
 - [Getting Started](#getting-started)
 - [Development Workflow](#development-workflow)
 - [Branch Convention](#branch-convention)
@@ -19,6 +20,7 @@ Thank you for your interest in contributing to LazyCurl! This document provides 
 ## Getting Started
 
 ### Prerequisites
+
 - Go 1.21 or higher
 - Git
 - A GitHub account
@@ -27,27 +29,32 @@ Thank you for your interest in contributing to LazyCurl! This document provides 
 
 1. Fork the repository
 2. Clone your fork:
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/LazyCurl.git
    cd LazyCurl
    ```
 
 3. Add upstream remote:
+
    ```bash
    git remote add upstream https://github.com/kbrdn1/LazyCurl.git
    ```
 
 4. Install dependencies:
+
    ```bash
    go mod download
    ```
 
 5. Build the project:
+
    ```bash
    make build
    ```
 
 6. Run the application:
+
    ```bash
    make run
    ```
@@ -57,6 +64,7 @@ Thank you for your interest in contributing to LazyCurl! This document provides 
 ## Development Workflow
 
 1. **Sync with upstream**:
+
    ```bash
    git checkout main
    git pull upstream main
@@ -77,6 +85,7 @@ Thank you for your interest in contributing to LazyCurl! This document provides 
 ## Branch Convention 🌿
 
 Main branches:
+
 - `main`: Production-ready code
 - `dev`: Development branch (currently not used, all development on feature branches)
 
@@ -87,6 +96,7 @@ Main branches:
 ```
 
 **Components**:
+
 - `type`: Type of the branch (see types below)
 - `issue-number`: Related GitHub issue number
 - `short-description`: Brief description in kebab-case
@@ -201,6 +211,7 @@ Use imperative mood and follow these patterns:
 | `disable` | Disable code | `🔒 chore(api): disable experimental feature` |
 
 **Rules**:
+
 - Don't capitalize first letter
 - No period (.) at the end
 - Keep it under 72 characters
@@ -294,6 +305,7 @@ Add screenshots for UI changes
 Follow the official [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments).
 
 **Key points**:
+
 - Use `gofmt` for formatting (automatically done with `make fmt`)
 - Use meaningful variable and function names
 - Keep functions small and focused
@@ -320,18 +332,22 @@ LazyCurl/
 ### Naming Conventions
 
 **Files**:
+
 - Use snake_case: `collections_view.go`
 - Test files: `collections_view_test.go`
 
 **Functions/Methods**:
+
 - Exported: `PascalCase` (e.g., `LoadCollection`)
 - Private: `camelCase` (e.g., `parseJSON`)
 
 **Constants**:
+
 - Exported: `PascalCase` (e.g., `DefaultTimeout`)
 - Private: `camelCase` (e.g., `maxRetries`)
 
 **Variables**:
+
 - Use descriptive names: `collectionPath`, `httpClient`
 - Avoid single letters except for short scopes (i, j, k in loops)
 
@@ -568,9 +584,9 @@ Thank you for contributing to LazyCurl! Your contributions help make this projec
 ---
 
 <p align="center">
-	Copyright &copy; 2024-present <a href="https://github.com/kbrdn1" target="_blank">@kbrdn1</a>
+ Copyright &copy; 2024-present <a href="https://github.com/kbrdn1" target="_blank">@kbrdn1</a>
 </p>
 
 <p align="center">
-	<a href="https://github.com/kbrdn1/LazyCurl/blob/main/LICENSE"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8"/></a>
+ <a href="https://github.com/kbrdn1/LazyCurl/blob/main/LICENSE"><img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=d9e0ee&colorA=363a4f&colorB=b7bdf8"/></a>
 </p>

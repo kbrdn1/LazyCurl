@@ -3,6 +3,7 @@
 This document presents a proposed organization of labels for our GitHub project, as well as priorities and issue types for our organization. This structure aims to improve the classification and tracking of our tickets.
 
 ## Table of Contents
+
 - [GitHub Labels](#github-labels)
   - [Type Labels](#type-labels)
   - [Domain Labels](#domain-labels)
@@ -16,7 +17,7 @@ This document presents a proposed organization of labels for our GitHub project,
 ### Type Labels
 
 | Name | Color | Description (EN) | Note (FR) |
-|-----|---------|-----------------|-----------| 
+|-----|---------|-----------------|-----------|
 | **feature** | `#0E8A16` (Green) | Implementation of a new feature | Label pour identifier l'ajout d'une nouvelle fonctionnalité au projet |
 | **fix** | `#D73A4A` (Light red) | Bug fix | Correction d'un problème existant dans le code |
 | **hotfix** | `#FF3333` (Bright red) | Critical bug fix in production | Correction urgente d'un bug critique en environnement de production |
@@ -29,7 +30,7 @@ This document presents a proposed organization of labels for our GitHub project,
 ### Domain Labels
 
 | Name | Color | Description (EN) | Note (FR) |
-|-----|---------|-----------------|-----------| 
+|-----|---------|-----------------|-----------|
 | **authentication** | `#0075CA` (Dark blue) | Related to authentication | Concerne les fonctionnalités d'authentification et de gestion des sessions |
 | **errors** | `#D73A4A` (Red) | Related to error handling | Concerne la gestion des erreurs et exceptions |
 | **ci/cd** | `#26A69A` (Teal) | Continuous integration / Continuous deployment | Modifications liées à l'intégration continue ou au déploiement continu |
@@ -39,7 +40,7 @@ This document presents a proposed organization of labels for our GitHub project,
 ### Management Labels
 
 | Name | Color | Description (EN) | Note (FR) |
-|-----|---------|-----------------|-----------| 
+|-----|---------|-----------------|-----------|
 | **dependencies** | `#8B008B` (Purple) | Updates or issues with dependencies | Mises à jour ou problèmes avec les dépendances du projet |
 | **breaking** | `#FF0000` (Red) | Non-backward compatible changes | Changements qui ne sont pas rétrocompatibles |
 | **versioning** | `#000080` (Navy blue) | Version management | Gestion des versions du projet |
@@ -48,7 +49,7 @@ This document presents a proposed organization of labels for our GitHub project,
 ### Status Labels
 
 | Name | Color | Description (EN) | Note (FR) |
-|-----|---------|-----------------|-----------| 
+|-----|---------|-----------------|-----------|
 | **duplicate** | `#CCCCCC` (Gray) | Duplicated issue or PR | Issue ou Pull Request qui duplique une autre déjà existante |
 | **invalid** | `#444444` (Dark gray) | Invalid issue that cannot be resolved | Issue non valide ou qui ne peut pas être résolue |
 | **wontfix** | `#FFFFFF` (White) | Valid issue that will not be fixed | Issue valide mais qui ne sera pas corrigée pour une raison spécifique |
@@ -58,7 +59,7 @@ This document presents a proposed organization of labels for our GitHub project,
 Priorities are managed via a dedicated selector and not via labels to avoid redundancy.
 
 | Name | Color | Description (EN) | Note (FR) |
-|-----|---------|-----------------|-----------| 
+|-----|---------|-----------------|-----------|
 | **Critical** | Red | Blocking issue that must be resolved immediately. Severely affects core functionality. | Problème bloquant qui doit être résolu immédiatement. Affecte gravement les fonctionnalités principales. |
 | **High** | Orange | Important issue that is not blocking but needs to be resolved quickly. Significant impact on user experience. | Problème important qui n'est pas bloquant mais doit être résolu rapidement. Impact significatif sur l'expérience utilisateur. |
 | **Medium** | Yellow | Standard priority issue that should be addressed in the current development cycle. | Problème de priorité standard qui devrait être traité dans le cycle de développement actuel. |
@@ -68,7 +69,7 @@ Priorities are managed via a dedicated selector and not via labels to avoid redu
 ## Issue Types (for Organisation)
 
 | Name | Color | Description (EN) | Note (FR) |
-|-----|---------|-----------------|-----------| 
+|-----|---------|-----------------|-----------|
 | **Task** | Blue | Specific task to accomplish, usually small to medium-sized. | Tâche spécifique à accomplir, généralement de petite à moyenne taille. |
 | **Story** | Green | Feature described from the end user's perspective. | Fonctionnalité décrite du point de vue de l'utilisateur final. |
 | **Bug** | Red | Problem or incorrect behavior to fix. | Problème ou comportement incorrect à corriger. |

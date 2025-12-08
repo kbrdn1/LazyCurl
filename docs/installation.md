@@ -70,11 +70,13 @@ cd LazyCurl
 #### 2. Build the binary
 
 Using Make:
+
 ```bash
 make build
 ```
 
 Or using Go directly:
+
 ```bash
 go build -o bin/lazycurl ./cmd/lazycurl
 ```
@@ -82,11 +84,13 @@ go build -o bin/lazycurl ./cmd/lazycurl
 #### 3. Install globally (optional)
 
 **Option A: Copy to /usr/local/bin (requires sudo)**
+
 ```bash
 sudo cp bin/lazycurl /usr/local/bin/
 ```
 
 **Option B: Copy to ~/bin (user-local)**
+
 ```bash
 mkdir -p ~/bin
 cp bin/lazycurl ~/bin/
@@ -96,6 +100,7 @@ source ~/.zshrc
 ```
 
 **Option C: Use Go install**
+
 ```bash
 make install
 # or
@@ -125,6 +130,7 @@ export PATH="$HOME/go/bin:$PATH"
 ```
 
 Then reload:
+
 ```bash
 source ~/.zshrc  # or ~/.bashrc
 ```
@@ -175,6 +181,7 @@ sudo mv lazycurl /usr/local/bin/
 4. Or add the extraction directory to your PATH
 
 Using PowerShell:
+
 ```powershell
 # Download
 Invoke-WebRequest -Uri "https://github.com/kbrdn1/LazyCurl/releases/latest/download/lazycurl_windows_amd64.zip" -OutFile "lazycurl.zip"
@@ -334,6 +341,7 @@ source ~/.zshrc
 **Cause**: Binary not executable or PATH directory not writable.
 
 **Solution**:
+
 ```bash
 chmod +x /path/to/lazycurl
 ```
@@ -343,6 +351,7 @@ chmod +x /path/to/lazycurl
 **Cause**: Running in non-interactive terminal or terminal doesn't support TUI.
 
 **Solution**:
+
 - Run in a proper terminal emulator (not in IDE terminal or pipe)
 - Ensure terminal supports UTF-8: `echo $LANG` should contain "UTF-8"
 - Try a different terminal (iTerm2, Alacritty, WezTerm)
@@ -352,6 +361,7 @@ chmod +x /path/to/lazycurl
 **Cause**: Go version too old or dependencies issue.
 
 **Solution**:
+
 ```bash
 # Check Go version (need 1.21+)
 go version
@@ -369,6 +379,7 @@ make clean build
 **Cause**: Terminal doesn't support 256 colors or true color.
 
 **Solution**:
+
 - Use a modern terminal (iTerm2, Alacritty, WezTerm, Windows Terminal)
 - Set TERM environment: `export TERM=xterm-256color`
 - Enable true color in terminal settings
@@ -378,6 +389,7 @@ make clean build
 **Cause**: Terminal intercepting keys or different key codes.
 
 **Solution**:
+
 - Check if terminal has conflicting shortcuts
 - Try different terminal emulator
 - Check `~/.config/lazycurl/config.yaml` for custom keybindings

@@ -184,6 +184,7 @@ URLs support variable substitution:
 ```
 
 **Examples:**
+
 - `https://api.example.com/users`
 - `{{base_url}}/users`
 - `{{base_url}}/users/{{user_id}}`
@@ -208,6 +209,7 @@ Headers are key-value pairs:
 Request body supports multiple formats:
 
 #### JSON Body
+
 ```json
 {
   "body": {
@@ -219,6 +221,7 @@ Request body supports multiple formats:
 ```
 
 #### String Body
+
 ```json
 {
   "body": "raw text content"
@@ -226,6 +229,7 @@ Request body supports multiple formats:
 ```
 
 #### Form Data
+
 ```json
 {
   "body": {
@@ -522,6 +526,7 @@ Copy and paste requests between collections:
 ### 3. Use Variables
 
 Always use variables for:
+
 - Base URLs (`{{base_url}}`)
 - Authentication tokens (`{{token}}`)
 - Dynamic IDs (`{{user_id}}`)
@@ -541,6 +546,7 @@ Add descriptions to help team members:
 ### 5. Version Control
 
 Commit collections to git for:
+
 - History tracking
 - Team collaboration
 - Backup and restore

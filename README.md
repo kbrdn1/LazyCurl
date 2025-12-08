@@ -130,6 +130,7 @@ LazyCurl is designed for developers who live in the terminal. It combines:
 ```
 
 **Built-in System Variables:**
+
 - `{{$timestamp}}` — Unix timestamp
 - `{{$datetime}}` — RFC3339 datetime
 - `{{$uuid}}` — UUID v4
@@ -435,6 +436,7 @@ LazyCurl uses the **Catppuccin Mocha** color scheme:
 | Background | Base `#1e1e2e` |
 
 **HTTP Method Colors:**
+
 - GET/HEAD: Green
 - POST: Orange
 - PUT: Blue
@@ -456,6 +458,7 @@ Full documentation is available in the `docs/` directory:
 | [Configuration](docs/configuration.md) | Config files and options |
 | [Collections](docs/collections.md) | Managing request collections |
 | [Environments](docs/environments.md) | Variables and environments |
+| [StatusBar](docs/statusbar.md) | StatusBar component and modes |
 | [Architecture](docs/architecture.md) | Technical architecture |
 
 ---

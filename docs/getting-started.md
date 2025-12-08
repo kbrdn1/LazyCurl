@@ -133,6 +133,7 @@ When you launch LazyCurl, you'll see three main panels:
 Your new request appears in the Collections tree. Press `Enter` or `Space` to select it.
 
 The Request panel (top-right) now shows:
+
 - The HTTP method (GET)
 - The URL
 - Tabs for Headers, Body, Params, etc.
@@ -207,6 +208,7 @@ LazyCurl provides built-in system variables:
 ### View the Response
 
 The Response panel shows:
+
 - **Status Badge**: Color-coded status code (200 OK = green)
 - **Metadata**: Response time, size
 - **Body Tab**: Formatted response body
@@ -242,6 +244,7 @@ See [Collections Guide](collections.md).
 ### Multiple Environments
 
 Create separate environments for different contexts:
+
 - `development.json` - Local development
 - `staging.json` - Staging server
 - `production.json` - Production API
@@ -251,6 +254,7 @@ See [Environments Guide](environments.md).
 ### Customize Configuration
 
 Edit `~/.config/lazycurl/config.yaml` to:
+
 - Customize keybindings
 - Change theme colors
 - Set default editor

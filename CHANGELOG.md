@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Lazygit-style multi-panel interface (Collections, Request, Response)
 - Vim motions for navigation (h/j/k/l)
 - Workspace system with `.lazycurl/` directory structure
@@ -42,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pre-commit hooks for code quality
 
 ### Changed
+
 - **BREAKING**: Removed all Git-related functionality
 - **BREAKING**: Switched from JSON to YAML for configuration
 - **BREAKING**: Changed project focus from Git+API tool to pure HTTP/API client
@@ -49,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated architecture to focus solely on API testing
 
 ### Removed
+
 - Git operations and git panel
 - Git-related configuration options
 - Split view mode (Git + API)
@@ -56,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-10-23
 
 ### Added
+
 - Initial project setup with Go modules
 - Bubble Tea framework integration
 - Bubbles components (viewport, textarea, list)

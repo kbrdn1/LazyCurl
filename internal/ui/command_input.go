@@ -251,6 +251,8 @@ const (
 	CmdEnv              = "env"
 	CmdCollections      = "collections"
 	CmdCollectionsShort = "col"
+	CmdImport           = "import"
+	CmdExport           = "export"
 )
 
 // Workspace subcommands
@@ -259,4 +261,10 @@ const (
 	WorkspaceSwitch = "switch"
 	WorkspaceCreate = "create"
 	WorkspaceDelete = "delete"
+)
+
+// Import/Export subcommands
+const (
+	ImportPostman = "postman"
+	ExportPostman = "postman"
 )

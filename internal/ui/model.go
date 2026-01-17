@@ -839,6 +839,47 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case PostmanImportedMsg:
+		// Handle successful Postman import
+		if msg.IsEnv {
+			// Save imported environment to workspace
+			if msg.Environment != nil {
+				if err := SaveImportedEnvironment(msg.Environment, m.workspacePath); err != nil {
+					m.statusBar.Error(err)
+				} else {
+					m.statusBar.Success("Imported", msg.Summary)
+					// Reload environments
+					m.leftPanel.GetEnvironments().ReloadEnvironments()
+				}
+			}
+		} else {
+			// Save imported collection to workspace
+			if msg.Collection != nil {
+				if err := SaveImportedCollection(msg.Collection, m.workspacePath); err != nil {
+					m.statusBar.Error(err)
+				} else {
+					m.statusBar.Success("Imported", msg.Summary)
+					// Reload collections
+					m.leftPanel.GetCollections().ReloadCollections()
+				}
+			}
+		}
+		return m, nil
+
+	case PostmanExportedMsg:
+		// Handle Postman export result
+		if msg.Error != nil {
+			m.statusBar.Error(msg.Error)
+		} else if msg.Success {
+			m.statusBar.Success("Exported", msg.FilePath)
+		}
+		return m, nil
+
+	case PostmanImportErrorMsg:
+		// Handle Postman import error
+		m.statusBar.Error(msg.Error)
+		return m, nil
+
 	case HTTPSendingMsg:
 		// HTTP request is being sent
 		m.isSending = true
@@ -1453,6 +1494,14 @@ func (m Model) handleCommand(msg CommandExecuteMsg) (tea.Model, tea.Cmd) {
 		m.activePanel = CollectionsPanel
 		return m, nil
 
+	case CmdImport:
+		// :import - import files (postman)
+		return m.handleImportCommand(msg.Args)
+
+	case CmdExport:
+		// :export - export files (postman)
+		return m.handleExportCommand(msg.Args)
+
 	default:
 		// Unknown command
 		m.statusBar.Info("Unknown command: " + msg.Command)
@@ -1523,6 +1572,63 @@ func (m Model) handleWorkspaceCommand(args []string) (tea.Model, tea.Cmd) {
 
 	default:
 		m.statusBar.Info("Unknown: " + args[0])
+		return m, nil
+	}
+}
+
+// handleImportCommand processes import subcommands
+func (m Model) handleImportCommand(args []string) (tea.Model, tea.Cmd) {
+	if len(args) == 0 {
+		m.statusBar.Info("Usage: :import postman <file>")
+		return m, nil
+	}
+
+	switch args[0] {
+	case ImportPostman:
+		// :import postman <file> - import Postman collection or environment
+		if len(args) < 2 {
+			m.statusBar.Info("Usage: :import postman <file>")
+			return m, nil
+		}
+		filePath := args[1]
+		m.statusBar.Info("Importing " + filePath + "...")
+		return m, ImportPostmanFile(filePath)
+
+	default:
+		m.statusBar.Info("Unknown import type: " + args[0] + ". Use: :import postman <file>")
+		return m, nil
+	}
+}
+
+// handleExportCommand processes export subcommands
+func (m Model) handleExportCommand(args []string) (tea.Model, tea.Cmd) {
+	if len(args) == 0 {
+		m.statusBar.Info("Usage: :export postman <file>")
+		return m, nil
+	}
+
+	switch args[0] {
+	case ExportPostman:
+		// :export postman <file> - export current collection to Postman format
+		if len(args) < 2 {
+			m.statusBar.Info("Usage: :export postman <file>")
+			return m, nil
+		}
+		outputPath := args[1]
+
+		// Get the active collection
+		collections := m.leftPanel.GetCollections().GetCollections()
+		if len(collections) == 0 {
+			m.statusBar.Info("No collection to export")
+			return m, nil
+		}
+
+		// Export the first collection (TODO: let user choose)
+		m.statusBar.Info("Exporting to " + outputPath + "...")
+		return m, ExportCollectionToPostman(collections[0], outputPath)
+
+	default:
+		m.statusBar.Info("Unknown export type: " + args[0] + ". Use: :export postman <file>")
 		return m, nil
 	}
 }

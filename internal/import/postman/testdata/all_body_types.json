@@ -1,0 +1,121 @@
+{
+  "info": {
+    "_postman_id": "body-types-collection-id",
+    "name": "Body Types",
+    "description": "Collection with all body types",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Raw JSON",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"test\", \"value\": 123}",
+          "options": {"raw": {"language": "json"}}
+        },
+        "url": {
+          "raw": "{{base_url}}/json",
+          "host": ["{{base_url}}"],
+          "path": ["json"]
+        }
+      }
+    },
+    {
+      "name": "Raw Text",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "text/plain"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "This is plain text content",
+          "options": {"raw": {"language": "text"}}
+        },
+        "url": {
+          "raw": "{{base_url}}/text",
+          "host": ["{{base_url}}"],
+          "path": ["text"]
+        }
+      }
+    },
+    {
+      "name": "Raw XML",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/xml"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "<?xml version=\"1.0\"?><root><item>test</item></root>",
+          "options": {"raw": {"language": "xml"}}
+        },
+        "url": {
+          "raw": "{{base_url}}/xml",
+          "host": ["{{base_url}}"],
+          "path": ["xml"]
+        }
+      }
+    },
+    {
+      "name": "URL Encoded",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/x-www-form-urlencoded"}
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {"key": "username", "value": "john", "disabled": false},
+            {"key": "password", "value": "secret", "disabled": false},
+            {"key": "remember", "value": "true", "disabled": true}
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/form",
+          "host": ["{{base_url}}"],
+          "path": ["form"]
+        }
+      }
+    },
+    {
+      "name": "Form Data",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {"key": "name", "value": "John Doe", "type": "text"},
+            {"key": "email", "value": "john@example.com", "type": "text"},
+            {"key": "avatar", "type": "file", "src": "/path/to/avatar.png"}
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/upload",
+          "host": ["{{base_url}}"],
+          "path": ["upload"]
+        }
+      }
+    },
+    {
+      "name": "No Body",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/no-body",
+          "host": ["{{base_url}}"],
+          "path": ["no-body"]
+        }
+      }
+    }
+  ]
+}

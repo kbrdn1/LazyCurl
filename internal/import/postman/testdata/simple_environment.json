@@ -1,0 +1,37 @@
+{
+  "id": "env-test-id",
+  "name": "Development",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "https://api.example.com",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "api_key",
+      "value": "sk-test-12345",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "access_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "debug",
+      "value": "true",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "old_endpoint",
+      "value": "https://old.api.com",
+      "type": "default",
+      "enabled": false
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

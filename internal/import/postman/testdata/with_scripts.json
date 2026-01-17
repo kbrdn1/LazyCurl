@@ -1,0 +1,63 @@
+{
+  "info": {
+    "_postman_id": "scripts-collection-id",
+    "name": "Scripts Collection",
+    "description": "Collection with pre-request and test scripts",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Request with Scripts",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const timestamp = Date.now();",
+              "pm.environment.set('timestamp', timestamp);",
+              "console.log('Pre-request script executed');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function() {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has data', function() {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.data).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/data",
+          "host": ["{{base_url}}"],
+          "path": ["data"]
+        }
+      }
+    },
+    {
+      "name": "Request without Scripts",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/simple",
+          "host": ["{{base_url}}"],
+          "path": ["simple"]
+        }
+      }
+    }
+  ]
+}

@@ -1549,8 +1549,10 @@ func (e *Editor) IsPreviewMode() bool {
 }
 
 // GetPreviewContent returns content with variables replaced (for preview)
+// System variables ($timestamp, $uuid, etc.) are always resolved in preview mode,
+// even when no environment variables are set
 func (e *Editor) GetPreviewContent() string {
-	if !e.previewMode || e.variableValues == nil {
+	if !e.previewMode {
 		return e.GetContent()
 	}
 	content := e.GetContent()

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -377,7 +378,15 @@ func convertToEnvironment(env *api.EnvironmentFile) *Environment {
 		PostmanVariableScope: "environment",
 	}
 
-	for key, v := range env.Variables {
+	// Sort keys for deterministic output
+	keys := make([]string, 0, len(env.Variables))
+	for key := range env.Variables {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		v := env.Variables[key]
 		varType := "default"
 		if v.Secret {
 			varType = "secret"

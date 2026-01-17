@@ -2,6 +2,7 @@ package postman
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -123,7 +124,7 @@ func TestImportEnvironment_MissingName(t *testing.T) {
 		t.Fatal("Expected error for missing name")
 	}
 
-	if !contains(err.Error(), "name") {
+	if !strings.Contains(err.Error(), "name") {
 		t.Errorf("Expected name required error, got: %v", err)
 	}
 }
@@ -151,10 +152,10 @@ func TestImportEnvironment_FormatSummary(t *testing.T) {
 	}
 
 	summary := result.FormatSummary()
-	if !contains(summary, "Development") {
+	if !strings.Contains(summary, "Development") {
 		t.Errorf("Summary should contain environment name, got: %s", summary)
 	}
-	if !contains(summary, "5 variables") {
+	if !strings.Contains(summary, "5 variables") {
 		t.Errorf("Summary should contain variable count, got: %s", summary)
 	}
 }

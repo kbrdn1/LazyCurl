@@ -2,6 +2,7 @@ package postman
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/kbrdn1/LazyCurl/internal/api"
@@ -201,7 +202,7 @@ func TestImportCollection_WithAuth(t *testing.T) {
 	}
 	foundOAuthWarning := false
 	for _, w := range result.Summary.Warnings {
-		if contains(w, "OAuth 2.0") {
+		if strings.Contains(w, "OAuth 2.0") {
 			foundOAuthWarning = true
 			break
 		}
@@ -376,7 +377,7 @@ func TestImportCollection_InvalidJSON(t *testing.T) {
 		t.Fatal("Expected error for invalid JSON")
 	}
 
-	if !contains(err.Error(), "parse") && !contains(err.Error(), "JSON") {
+	if !strings.Contains(err.Error(), "parse") && !strings.Contains(err.Error(), "JSON") {
 		t.Errorf("Expected JSON parse error, got: %v", err)
 	}
 }
@@ -388,7 +389,7 @@ func TestImportCollection_NotPostmanFormat(t *testing.T) {
 	}
 
 	// Error can be about missing name (no info.name field) or schema validation
-	if !contains(err.Error(), "schema") && !contains(err.Error(), "Postman") && !contains(err.Error(), "name") {
+	if !strings.Contains(err.Error(), "schema") && !strings.Contains(err.Error(), "Postman") && !strings.Contains(err.Error(), "name") {
 		t.Errorf("Expected validation error (schema/name/Postman), got: %v", err)
 	}
 }
@@ -406,7 +407,7 @@ func TestImportCollection_MissingName(t *testing.T) {
 		t.Fatal("Expected error for missing name")
 	}
 
-	if !contains(err.Error(), "name") {
+	if !strings.Contains(err.Error(), "name") {
 		t.Errorf("Expected name required error, got: %v", err)
 	}
 }
@@ -417,7 +418,7 @@ func TestImportCollection_FileNotFound(t *testing.T) {
 		t.Fatal("Expected error for missing file")
 	}
 
-	if !contains(err.Error(), "read file") {
+	if !strings.Contains(err.Error(), "read file") {
 		t.Errorf("Expected file read error, got: %v", err)
 	}
 }
@@ -440,17 +441,4 @@ func findRequest(requests []api.CollectionRequest, name string) *api.CollectionR
 		}
 	}
 	return nil
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstring(s, substr))
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

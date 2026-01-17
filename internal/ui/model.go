@@ -108,6 +108,9 @@ type Model struct {
 	// Session persistence
 	session          *session.Session
 	sessionDirtyTime time.Time
+
+	// Import modal
+	importModal *ImportModalModel
 }
 
 // NewModel creates a new application model
@@ -179,6 +182,7 @@ func NewModel(globalConfig *config.GlobalConfig, workspaceConfig *config.Workspa
 		isSending:       false,
 		consoleHistory:  api.NewConsoleHistory(1000),
 		session:         sess,
+		importModal:     NewImportModal(),
 	}
 }
 
@@ -199,6 +203,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			m.whichKey, _ = m.whichKey.Update(msg)
+		}
+		return m, nil
+	}
+
+	// Handle import modal input first if visible
+	if m.importModal.IsVisible() {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			var cmd tea.Cmd
+			m.importModal, cmd = m.importModal.Update(msg)
+			return m, cmd
+		case tea.WindowSizeMsg:
+			m.importModal.SetSize(msg.Width, msg.Height)
 		}
 		return m, nil
 	}
@@ -271,6 +288,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// CTRL+S sends HTTP request from ANY context (global handler)
 		if msg.String() == "ctrl+s" {
 			return m.sendHTTPRequest()
+		}
+
+		// CTRL+I opens import cURL modal (global handler)
+		if m.matchKey(msg.String(), m.globalConfig.KeyBindings.ImportCurl) {
+			m.importModal.SetSize(m.width, m.height)
+			m.importModal.Show()
+			return m, nil
+		}
+
+		// CTRL+E exports current request as cURL (global handler)
+		if m.matchKey(msg.String(), m.globalConfig.KeyBindings.ExportCurl) {
+			return m.exportCurlCommand()
 		}
 
 		// Handle COMMAND mode input first (forward all keys except escape)
@@ -737,6 +766,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.responsePanel.tabs.SetActive(0) // Body is tab index 0
 		return m, nil
 
+	case ShowImportModalMsg:
+		// Show the import modal
+		m.importModal.SetSize(m.width, m.height)
+		m.importModal.Show()
+		return m, nil
+
+	case HideImportModalMsg:
+		// Hide the import modal
+		m.importModal.Hide()
+		return m, nil
+
+	case CurlImportedMsg:
+		// Handle successful cURL import
+		if msg.Request != nil {
+			m.requestPanel.LoadCollectionRequest(msg.Request)
+			m.statusBar.Success("Imported", msg.Request.Name)
+			// Focus the request panel
+			m.activePanel = RequestPanel
+			// Update status bar with method
+			m.statusBar.SetMethod(string(msg.Request.Method))
+		}
+		return m, nil
+
+	case CurlExportedMsg:
+		// Handle cURL export result
+		if msg.Error != nil {
+			m.statusBar.Error(msg.Error)
+		} else if msg.Success {
+			m.statusBar.Success("Copied", "cURL command to clipboard")
+		}
+		return m, nil
+
 	case HTTPSendingMsg:
 		// HTTP request is being sent
 		m.isSending = true
@@ -1117,6 +1178,12 @@ func (m Model) View() string {
 	if m.whichKey.IsVisible() {
 		whichKeyView := m.whichKey.View(m.width, m.height)
 		result = m.overlayDialog(result, whichKeyView)
+	}
+
+	// Overlay import modal if visible
+	if m.importModal.IsVisible() {
+		importView := m.importModal.View()
+		result = m.overlayDialog(result, importView)
 	}
 
 	return result
@@ -1965,4 +2032,87 @@ func (m *Model) saveSession() {
 func (m *Model) saveSessionAndQuit() (Model, tea.Cmd) {
 	m.saveSession()
 	return *m, tea.Quit
+}
+
+// exportCurlCommand exports the current request as a cURL command to clipboard
+func (m Model) exportCurlCommand() (tea.Model, tea.Cmd) {
+	// Check if a request is loaded
+	url := m.requestPanel.GetURL()
+	if url == "" {
+		m.statusBar.Info("No request to export")
+		return m, nil
+	}
+
+	// Build a CollectionRequest from current request panel state
+	req := m.buildCollectionRequest()
+	if req == nil {
+		m.statusBar.Info("Could not build request")
+		return m, nil
+	}
+
+	// Generate cURL command
+	curlCmd := api.GenerateCurlCommand(req)
+	if curlCmd == "" {
+		m.statusBar.Info("Could not generate cURL command")
+		return m, nil
+	}
+
+	// Copy to clipboard
+	clipboard.Write(clipboard.FmtText, []byte(curlCmd))
+
+	return m, func() tea.Msg {
+		return CurlExportedMsg{Success: true}
+	}
+}
+
+// buildCollectionRequest builds a CollectionRequest from the current RequestView state
+func (m *Model) buildCollectionRequest() *api.CollectionRequest {
+	method := m.requestPanel.GetMethod()
+	url := m.requestPanel.GetURL()
+
+	if url == "" {
+		return nil
+	}
+
+	// Build headers from headers table
+	var headers []api.KeyValueEntry
+	headersTable := m.requestPanel.GetHeadersTable()
+	if headersTable != nil {
+		for _, row := range headersTable.Rows {
+			if row.Key != "" {
+				headers = append(headers, api.KeyValueEntry{
+					Key:     row.Key,
+					Value:   row.Value,
+					Enabled: row.Enabled,
+				})
+			}
+		}
+	}
+
+	// Build body config
+	var body *api.BodyConfig
+	bodyContent := m.requestPanel.GetBodyContent()
+	if bodyContent != "" {
+		body = &api.BodyConfig{
+			Type:    "raw",
+			Content: bodyContent,
+		}
+	}
+
+	// Build auth config
+	var auth *api.AuthConfig
+	authConfig := m.requestPanel.GetAuthConfig()
+	if authConfig != nil && authConfig.Type != "" && authConfig.Type != "none" {
+		auth = authConfig
+	}
+
+	return &api.CollectionRequest{
+		ID:      m.requestPanel.GetCurrentRequestID(),
+		Name:    "Exported Request",
+		Method:  api.HTTPMethod(method),
+		URL:     url,
+		Headers: headers,
+		Body:    body,
+		Auth:    auth,
+	}
 }

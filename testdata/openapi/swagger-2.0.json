@@ -1,0 +1,35 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Legacy Swagger API",
+    "version": "1.0.0",
+    "description": "A Swagger 2.0 specification for testing version rejection"
+  },
+  "host": "api.legacy.example.com",
+  "basePath": "/v1",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/legacy": {
+      "get": {
+        "operationId": "getLegacy",
+        "summary": "Legacy endpoint",
+        "description": "This should be rejected as OpenAPI 2.0 is not supported",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -120,6 +120,23 @@ LazyCurl is designed for developers who live in the terminal. It combines:
   - Generates valid cURL with proper quoting
   - Includes headers, body, and authentication
 
+### 📄 OpenAPI Import
+
+- **Import OpenAPI 3.x** (`Ctrl+O`): Import OpenAPI specifications (JSON/YAML)
+  - Supports OpenAPI 3.0.x and 3.1.x versions
+  - Automatically organizes endpoints by tags into folders
+  - Generates example request bodies from schemas
+  - Extracts query parameters, headers, and path parameters
+  - Resolves `$ref` references to schemas and components
+- **CLI Import**: Import from command line for automation
+
+  ```bash
+  lazycurl import openapi api.yaml
+  lazycurl import openapi spec.json --name "My API"
+  lazycurl import openapi spec.yaml --dry-run  # Preview without saving
+  lazycurl import openapi spec.yaml --json     # JSON output for scripting
+  ```
+
 ### 💾 Session Persistence
 
 - **Automatic State Saving**: Application state is saved automatically on changes
@@ -326,6 +343,7 @@ LazyCurl automatically creates a `.lazycurl/` directory:
 | Key | Action |
 |-----|--------|
 | `Ctrl+S` | Send request |
+| `Ctrl+O` | Import OpenAPI specification |
 | `Ctrl+I` | Import cURL command |
 | `Ctrl+E` | Export request as cURL (copy to clipboard) |
 | `?` | Show keybinding help (WhichKey) |

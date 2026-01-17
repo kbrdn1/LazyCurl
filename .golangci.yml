@@ -1,216 +1,184 @@
-# yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
+version: "2"
 run:
-  timeout: 5m
   modules-download-mode: readonly
-
 linters:
   enable:
-    # Default linters
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
-    # Additional linters
     - bodyclose
+    - copyloopvar
     - dogsled
     - dupl
     - errname
     - errorlint
-    # - exhaustive  # Disabled - Too many missing cases warnings for tea.KeyType and other enums
-    - copyloopvar
-    # - gochecknoinits  # Disabled - init() used for Go 1.20 compatibility
     - goconst
     - gocritic
     - gocyclo
-    - gofmt
-    - goimports
     - goprintffuncname
     - gosec
     - misspell
     - nakedret
-    # - nilerr  # Disabled - Too many false positives in error handling patterns
-    # - noctx  # Disabled - Context propagation requires significant refactoring
-    # - nolintlint  # Disabled - Causes issues with nolint directives
     - prealloc
-    # - predeclared  # Disabled - min/max helper functions shadow built-ins in TUI code
     - revive
-    - stylecheck
+    - staticcheck
     - tparallel
     - unconvert
     - unparam
     - whitespace
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: false  # Don't check blank identifier assignments (_ = )
-    exclude-functions:
-      - (*github.com/kbrdn1/LazyCurl/internal/ui.EnvironmentsView).saveEnvironment
-
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
-      - shadow  # Disabled - shadow warnings are too strict for error handling patterns
-
-  staticcheck:
-    checks:
-      - all
-      - "-SA4006"  # Disable "this value of X is never used"
-      - "-SA1019"  # Disable deprecated warnings
-      - "-SA9003"  # Disable empty branch warning (used for intentional no-ops)
-
-  gocyclo:
-    # Raised from 15 - TUI event handlers are inherently complex
-    # Dialog.Update is at 66, RequestView.Update is at 91
-    min-complexity: 100
-
-  dupl:
-    threshold: 150
-
-  goconst:
-    min-len: 3
-    min-occurrences: 7  # Raised from 5 to reduce noise
-    # Ignore common UI strings
-    ignore-strings: "tab|shift\\+tab|header|query|none|down|up|left|right|esc"
-
-  misspell:
-    locale: US
-
-  goimports:
-    local-prefixes: github.com/kbrdn1/LazyCurl
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-      - style
-    disabled-tags:
-      - experimental
-      - opinionated
-    disabled-checks:
-      - dupImport
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - hugeParam  # Bubble Tea uses value receivers for Update/View pattern
-      - evalOrder  # False positives with defer-like patterns
-      - emptyStringTest  # Style preference, not a bug
-      - rangeValCopy  # Performance micro-optimization
-      - appendCombine  # Style preference
-      - assignOp  # Style preference
-      - paramTypeCombine  # Style preference
-      - typeAssertChain  # Common pattern in TUI code
-      - singleCaseSwitch  # Sometimes clearer than if
-      - unnamedResult  # Style preference
-      - elseif  # Sometimes else { if } is clearer for complex conditions
-      - nestingReduce  # TUI code often has nested conditions for clarity
-      - builtinShadowDecl  # min/max shadowing is common in TUI size calculations
-      - dupBranchBody  # Sometimes intentional for code organization
-      - equalFold  # Style preference - explicit toLower can be clearer
-
-  revive:
+  settings:
+    dupl:
+      threshold: 150
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - (*github.com/kbrdn1/LazyCurl/internal/ui.EnvironmentsView).saveEnvironment
+    goconst:
+      min-len: 3
+      min-occurrences: 7
+      ignore-string-values:
+        - tab
+        - shift+tab
+        - header
+        - query
+        - none
+        - down
+        - up
+        - left
+        - right
+        - esc
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+        - hugeParam
+        - rangeValCopy
+        - appendCombine
+        - assignOp
+        - singleCaseSwitch
+        - elseif
+        - dupBranchBody
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-tags:
+        - experimental
+        - opinionated
+    gocyclo:
+      min-complexity: 100
+    gosec:
+      excludes:
+        - G301
+        - G304
+        - G306
+        - G404
+    govet:
+      disable:
+        - fieldalignment
+        - shadow
+      enable-all: true
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: if-return
+        - name: increment-decrement
+        # - name: var-naming  # Disabled - false positives for short package names like "api"
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: errorf
+        - name: superfluous-else
+        - name: unreachable-code
+    staticcheck:
+      checks:
+        - all
+        - -SA1019
+        - -SA4006
+        - -SA9003
+        - -QF1003
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: exported
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: package-comments
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      # - name: indent-error-flow  # Disabled - Often makes code less readable in TUI handlers
-      - name: errorf
-      # - name: empty-block  # Disabled - Empty blocks are used for intentional no-ops in TUI
-      - name: superfluous-else
-      - name: unreachable-code
-
-  gosec:
-    excludes:
-      - G301  # Directory permissions 0755 - acceptable for user config directories
-      - G304  # File inclusion via variable - necessary for config/collection loading
-      - G306  # WriteFile permissions 0644 - acceptable for user config files
-      - G404  # math/rand is fine for non-crypto purposes (test data generation, random IDs)
-
+      - linters:
+          - dupl
+          - goconst
+          - gosec
+          - revive
+        path: _test\.go
+      - linters:
+          - dupl
+        path: .*\.gen\.go
+      - linters:
+          - dupl
+          - errcheck
+          - goconst
+          - gocyclo
+        path: internal/ui/.*_view\.go
+      - linters:
+          - goconst
+          - gocyclo
+        path: internal/ui/model\.go
+      - linters:
+          - dupl
+          - errcheck
+          - goconst
+          - gocyclo
+        path: internal/ui/components/
+      - linters:
+          - unparam
+        path: internal/ui/
+      - linters:
+          - prealloc
+        text: Consider preallocating
+      - linters:
+          - errcheck
+        text: Error return value of `os.MkdirAll` is not checked
+      - linters:
+          - errcheck
+        text: Error return value of `os.WriteFile` is not checked
+      - linters:
+          - errcheck
+        text: Error return value of `e.saveEnvironment` is not checked
+      - linters:
+          - errcheck
+        text: Error return value is not checked
+      - linters:
+          - revive
+        path: internal/format/
+        text: stutters
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - dupl
-        - gosec
-        - goconst
-
-    # Exclude known issues in generated files
-    - path: ".*\\.gen\\.go"
-      linters:
-        - dupl
-
-    # UI view files have complex Update handlers - this is expected
-    - path: internal/ui/.*_view\.go
-      linters:
-        - gocyclo
-        - dupl
-        - goconst
-        - errcheck
-
-    # Model.go handles all app-level events - complexity is expected
-    - path: internal/ui/model\.go
-      linters:
-        - gocyclo
-        - goconst
-
-    # UI components have complex event handlers
-    - path: internal/ui/components/
-      linters:
-        - gocyclo
-        - dupl
-        - goconst
-        - errcheck
-
-    # Unparam false positives for interface compliance
-    - path: internal/ui/
-      linters:
-        - unparam
-
-    # Prealloc is micro-optimization, not critical
-    - linters:
-        - prealloc
-      text: "Consider pre-allocating"
-
-    # errcheck exclusions for intentional error ignoring
-    - linters:
-        - errcheck
-      text: "Error return value of `os.MkdirAll` is not checked"
-
-    - linters:
-        - errcheck
-      text: "Error return value of `os.WriteFile` is not checked"
-
-    - linters:
-        - errcheck
-      text: "Error return value of `e.saveEnvironment` is not checked"
-
-    - linters:
-        - errcheck
-      text: "Error return value is not checked"
-
-    # revive stuttering warnings for format package
-    - path: internal/format/
-      linters:
-        - revive
-      text: "stutters"
-
   max-issues-per-linter: 50
   max-same-issues: 10
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/kbrdn1/LazyCurl
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

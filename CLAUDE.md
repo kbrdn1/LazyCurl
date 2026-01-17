@@ -248,6 +248,7 @@ Examples:
 - **Lipgloss** (`charmbracelet/lipgloss`): Terminal styling
 - **Bubble Zone** (`lrstanley/bubblezone`): Mouse interaction support
 - **yaml.v3** (`gopkg.in/yaml.v3`): YAML parsing for configs
+- **libopenapi** (`github.com/pb33f/libopenapi`): OpenAPI 3.x parsing and validation
 
 ## Development Notes
 
@@ -307,6 +308,7 @@ URLs, headers, and body fields support `{{variable_name}}` interpolation from ac
 
 ## Recent Changes
 
+- 066-openapi-import: Added OpenAPI 3.x import via TUI (Ctrl+O) and CLI (`lazycurl import openapi`)
 - 001-vim-mode-workspace: Added Go 1.21+ + Bubble Tea (TUI), Lipgloss (styling), Bubble Zone (mouse), yaml.v3 (config)
 
 ## Current Feature: Console Tab in Response Panel (Issue #9)
@@ -389,3 +391,61 @@ Quit → Final save
 - Expanded folders in Collections tree
 - Scroll positions and cursor positions
 - Active tabs in each panel
+
+## Completed Feature: OpenAPI 3.x Import (Issue #66)
+
+### Overview
+
+Import OpenAPI 3.x specifications (JSON/YAML) into LazyCurl collections via TUI modal or CLI.
+
+### Key Files
+
+- `internal/api/openapi.go` - OpenAPIImporter, version detection, error handling
+- `internal/api/openapi_converter.go` - Conversion to LazyCurl collection format
+- `internal/ui/openapi_import_modal.go` - TUI import modal component
+- `cmd/lazycurl/import.go` - CLI import subcommand
+
+### Supported Versions
+
+- OpenAPI 3.0.x (full support)
+- OpenAPI 3.1.x (full support)
+- Swagger 2.0 (rejected with upgrade guidance)
+
+### UI Import (Ctrl+O)
+
+1. Opens import modal with file path input
+2. Validates OpenAPI spec and shows preview (endpoints, tags)
+3. Creates collection organized by tags (folders)
+4. Untagged operations go to "Untagged" folder
+
+### CLI Import
+
+```bash
+lazycurl import openapi <file>           # Basic import
+lazycurl import openapi spec.yaml --name "My API"  # Custom name
+lazycurl import openapi spec.yaml --output /path/to/collection.json
+lazycurl import openapi spec.yaml --dry-run   # Preview without saving
+lazycurl import openapi spec.yaml --json      # JSON output for scripting
+```
+
+### Architecture Pattern
+
+```text
+OpenAPI File → OpenAPIImporter.Parse() → BuildV3Model() → ToCollection()
+                    ↓                         ↓              ↓
+             Version check            $ref resolution    Tag-to-folder mapping
+```
+
+### Conversion Features
+
+- **Tag Organization**: Operations grouped by tags into folders
+- **Path Parameters**: Extracted to URL with `{param}` syntax
+- **Query Parameters**: Added to request params with examples
+- **Headers**: Extracted from parameter definitions
+- **Request Bodies**: JSON body with schema-generated examples
+- **$ref Resolution**: Automatic via libopenapi's BuildV3Model()
+- **Circular Refs**: Handled with depth limit (> 5 levels)
+
+### Dependencies
+
+- `github.com/pb33f/libopenapi` - OpenAPI parsing and validation

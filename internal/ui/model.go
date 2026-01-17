@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -111,7 +112,8 @@ type Model struct {
 	sessionDirtyTime time.Time
 
 	// Import modal
-	importModal *ImportModalModel
+	importModal        *ImportModalModel
+	openAPIImportModal *OpenAPIImportModal
 }
 
 // NewModel creates a new application model
@@ -165,26 +167,30 @@ func NewModel(globalConfig *config.GlobalConfig, workspaceConfig *config.Workspa
 		statusBar.SetEnvironment(sess.ActiveEnvironment)
 	}
 
+	// Collections directory for OpenAPI import
+	collectionsDir := filepath.Join(workspacePath, ".lazycurl", "collections")
+
 	return Model{
-		globalConfig:    globalConfig,
-		workspaceConfig: workspaceConfig,
-		workspacePath:   workspacePath,
-		activePanel:     activePanel,
-		zoneManager:     zm,
-		leftPanel:       leftPanel,
-		requestPanel:    requestPanel,
-		responsePanel:   responsePanel,
-		mode:            NormalMode,
-		jumpMode:        NewJumpMode(),
-		statusBar:       statusBar,
-		commandInput:    NewCommandInput(),
-		dialog:          components.NewDialog(),
-		whichKey:        components.NewWhichKey(),
-		httpClient:      api.NewClient(),
-		isSending:       false,
-		consoleHistory:  api.NewConsoleHistory(1000),
-		session:         sess,
-		importModal:     NewImportModal(),
+		globalConfig:       globalConfig,
+		workspaceConfig:    workspaceConfig,
+		workspacePath:      workspacePath,
+		activePanel:        activePanel,
+		zoneManager:        zm,
+		leftPanel:          leftPanel,
+		requestPanel:       requestPanel,
+		responsePanel:      responsePanel,
+		mode:               NormalMode,
+		jumpMode:           NewJumpMode(),
+		statusBar:          statusBar,
+		commandInput:       NewCommandInput(),
+		dialog:             components.NewDialog(),
+		whichKey:           components.NewWhichKey(),
+		httpClient:         api.NewClient(),
+		isSending:          false,
+		consoleHistory:     api.NewConsoleHistory(1000),
+		session:            sess,
+		importModal:        NewImportModal(),
+		openAPIImportModal: NewOpenAPIImportModal(collectionsDir),
 	}
 }
 
@@ -218,6 +224,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		case tea.WindowSizeMsg:
 			m.importModal.SetSize(msg.Width, msg.Height)
+		}
+		return m, nil
+	}
+
+	// Handle OpenAPI import modal input if visible
+	if m.openAPIImportModal.IsVisible() {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			var cmd tea.Cmd
+			m.openAPIImportModal, cmd = m.openAPIImportModal.Update(msg)
+			return m, cmd
+		case tea.WindowSizeMsg:
+			m.openAPIImportModal.SetSize(msg.Width, msg.Height)
 		}
 		return m, nil
 	}
@@ -296,6 +315,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.matchKey(msg.String(), m.globalConfig.KeyBindings.ImportCurl) {
 			m.importModal.SetSize(m.width, m.height)
 			m.importModal.Show()
+			return m, nil
+		}
+
+		// CTRL+O opens import OpenAPI modal (global handler)
+		if m.matchKey(msg.String(), m.globalConfig.KeyBindings.ImportOpenAPI) {
+			m.openAPIImportModal.SetSize(m.width, m.height)
+			m.openAPIImportModal.Show()
 			return m, nil
 		}
 
@@ -839,6 +865,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case ShowOpenAPIImportModalMsg:
+		// Show the OpenAPI import modal
+		m.openAPIImportModal.SetSize(m.width, m.height)
+		m.openAPIImportModal.Show()
+		return m, nil
+
+	case HideOpenAPIImportModalMsg:
+		// Hide the OpenAPI import modal
+		m.openAPIImportModal.Hide()
+		return m, nil
+
+	case OpenAPIImportedMsg:
+		// Handle successful OpenAPI import
+		if msg.Collection != nil {
+			// Refresh the collections panel to show the new collection
+			m.leftPanel.GetCollections().ReloadCollections()
+			m.statusBar.Success("Imported", fmt.Sprintf("%s (%d requests)", msg.Collection.Name, msg.Stats.RequestCount))
+			// Show warning count if any
+			if msg.Stats.WarningCount > 0 {
+				m.statusBar.Info(fmt.Sprintf("%d warnings during import", msg.Stats.WarningCount))
+			}
+		}
+		return m, nil
+
 	case PostmanImportedMsg:
 		// Handle successful Postman import
 		if msg.IsEnv {
@@ -865,7 +915,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, nil
-
 	case PostmanExportedMsg:
 		// Handle Postman export result
 		if msg.Error != nil {
@@ -1271,6 +1320,12 @@ func (m Model) View() string {
 	if m.importModal.IsVisible() {
 		importView := m.importModal.View()
 		result = m.overlayDialog(result, importView)
+	}
+
+	// Overlay OpenAPI import modal if visible
+	if m.openAPIImportModal.IsVisible() {
+		openAPIView := m.openAPIImportModal.View()
+		result = m.overlayDialog(result, openAPIView)
 	}
 
 	return result

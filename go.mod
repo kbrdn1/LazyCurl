@@ -8,6 +8,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/google/uuid v1.6.0
 	github.com/lrstanley/bubblezone v1.0.0
+	github.com/pb33f/libopenapi v0.31.2
 	golang.design/x/clipboard v0.7.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -30,7 +31,6 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/pb33f/jsonpath v0.7.0 // indirect
-	github.com/pb33f/libopenapi v0.31.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect

@@ -20,3 +20,32 @@ type ShowImportModalMsg struct{}
 
 // HideImportModalMsg triggers the import modal to close
 type HideImportModalMsg struct{}
+
+// OpenAPIImportedMsg is sent when an OpenAPI spec is successfully imported
+type OpenAPIImportedMsg struct {
+	Collection *api.CollectionFile
+	Stats      OpenAPIImportStats
+}
+
+// OpenAPIImportStats contains import statistics
+type OpenAPIImportStats struct {
+	FolderCount  int
+	RequestCount int
+	WarningCount int
+}
+
+// ShowOpenAPIImportModalMsg triggers the OpenAPI import modal to open
+type ShowOpenAPIImportModalMsg struct{}
+
+// HideOpenAPIImportModalMsg triggers the OpenAPI import modal to close
+type HideOpenAPIImportModalMsg struct{}
+
+// OpenAPISpinnerTickMsg is sent to animate the import spinner
+type OpenAPISpinnerTickMsg struct{}
+
+// OpenAPIImportCompleteMsg is sent when async import completes
+type OpenAPIImportCompleteMsg struct {
+	Collection *api.CollectionFile
+	Error      error
+	SavePath   string
+}

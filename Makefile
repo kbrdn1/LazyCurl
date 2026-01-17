@@ -1,4 +1,4 @@
-.PHONY: build run clean test install dev help lint fmt pre-commit setup-hooks
+.PHONY: build run clean test install dev help lint fmt pre-commit setup-hooks worktree
 
 # Variables
 BINARY_NAME=lazycurl
@@ -20,6 +20,7 @@ help:
 	@echo "  make install   - Installe l'application globalement"
 	@echo "  make dev       - Mode développement avec live reload"
 	@echo "  make deps      - Télécharge les dépendances"
+	@echo "  make worktree  - Gestion des worktrees Git avec gwq"
 
 ## build: Compile l'application
 build:
@@ -126,3 +127,7 @@ pre-commit:
 ## ci: Run all CI checks locally
 ci: fmt lint test
 	@echo "✅ All CI checks passed"
+
+## worktree: Manage Git worktrees with gwq (interactive menu)
+worktree:
+	@bash tools/worktree-manager.sh

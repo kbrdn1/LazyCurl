@@ -5,6 +5,7 @@ Thank you for your interest in contributing to LazyCurl! This document provides 
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+- [Working with Claude Code (Parallel Features)](#working-with-claude-code-parallel-features)
 - [Development Workflow](#development-workflow)
 - [Branch Convention](#branch-convention)
 - [Commit Convention](#commit-convention)
@@ -58,6 +59,149 @@ Thank you for your interest in contributing to LazyCurl! This document provides 
    ```bash
    make run
    ```
+
+---
+
+## Working with Claude Code (Parallel Features)
+
+When working on multiple features simultaneously with Claude Code, use **Git Worktrees** to maintain isolated working directories. This prevents context switching and keeps each Claude Code session focused on its specific task.
+
+### Why Git Worktrees?
+
+- Each worktree has its own working directory with isolated files while sharing the same Git history
+- Claude Code maintains deep context understanding for each feature without pollution from other work
+- No need for `git stash` or constant branch switching
+- Parallel development without merge conflicts with yourself
+
+### gwq - Git Worktree Manager
+
+We use [gwq](https://github.com/d-kuro/gwq) for efficient worktree management with fuzzy finder integration.
+
+**Installation:**
+
+```bash
+# Via Homebrew (macOS/Linux)
+brew install d-kuro/tap/gwq
+
+# Via Go
+go install github.com/d-kuro/gwq/cmd/gwq@latest
+```
+
+### gwq Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `gwq add -b <branch>` | Create worktree with new branch |
+| `gwq add -i` | Interactive worktree creation with fuzzy finder |
+| `gwq list` | List all worktrees |
+| `gwq list -v` | List with verbose info (uncommitted changes, etc.) |
+| `gwq get <pattern>` | Get worktree path (for `cd $(gwq get feat)`) |
+| `gwq cd <pattern>` | Change to worktree directory (launches new shell) |
+| `gwq exec <pattern> -- <cmd>` | Execute command in worktree |
+| `gwq remove <branch>` | Remove worktree |
+| `gwq remove -b <branch>` | Remove worktree AND delete branch |
+| `gwq status` | Show status of all worktrees |
+| `gwq status --watch` | Monitor worktrees in real-time |
+| `gwq prune` | Clean up stale worktree references |
+
+### Quick Create Examples
+
+```bash
+# Create a feature worktree
+gwq add -b feat/#123-user-authentication
+
+# Create a bugfix worktree
+gwq add -b fix/#456-http-timeout
+
+# Create a hotfix worktree
+gwq add -b hotfix/#789-critical-security-fix
+
+# Interactive creation with fuzzy finder
+gwq add -i
+
+# Use the interactive manager
+make worktree
+```
+
+**Branch naming convention**: `<type>/#<issue>-<description>`
+
+**Branch types available**: `feat`, `fix`, `hotfix`, `docs`, `test`, `refactor`, `chore`, `perf`, `ci`, `build`
+
+### Navigation & Execution
+
+```bash
+# Navigate to a worktree (fuzzy match)
+cd $(gwq get authentication)
+gwq cd feat                          # Opens new shell in matching worktree
+
+# Execute commands in worktrees
+gwq exec authentication -- make build
+gwq exec -s feat -- make test         # Stay in worktree after execution
+
+# Monitor all worktrees
+gwq status --watch
+```
+
+### Running Claude Code Sessions
+
+```bash
+# Terminal 1 - Working on authentication
+cd $(gwq get authentication)
+claude
+
+# Terminal 2 - Working on API refactor
+cd $(gwq get refactor)
+claude
+
+# Terminal 3 - Fixing bug
+cd $(gwq get fix)
+claude
+```
+
+Or using `gwq cd` (launches new shell):
+
+```bash
+gwq cd authentication && claude
+```
+
+### Cleanup
+
+```bash
+# Remove a specific worktree
+gwq remove feat/#123-user-authentication
+
+# Remove worktree AND delete the branch
+gwq remove -b feat/#123-completed-feature
+
+# Dry run to preview what would be removed
+gwq remove --dry-run feat/#123-old-feature
+
+# Clean up stale worktree references
+gwq prune
+```
+
+### Configuration (Optional)
+
+Create `~/.config/gwq/config.toml` or `.gwq.toml` in the project root:
+
+```toml
+[worktree]
+basedir = "~/worktrees"
+
+[[repository_settings]]
+repository = "~/Projects/Perso/LazyCurl"
+setup_commands = ["make deps"]
+```
+
+This automatically runs `make deps` when creating worktrees.
+
+### Best Practices
+
+1. **Use gwq**: Prefer `gwq add -b` over manual `git worktree add` for consistency
+2. **Bootstrap Each Worktree**: Run `make deps` in each new worktree (or configure in `.gwq.toml`)
+3. **Keep Worktrees Updated**: Regularly merge `main` into feature branches to avoid large conflicts
+4. **Clean Up**: Use `gwq remove -b` after merging to remove worktrees AND branches
+5. **Monitor Status**: Use `gwq status --watch` to track changes across all worktrees
 
 ---
 

@@ -1,0 +1,10 @@
+{
+  "name": "Some Other Format",
+  "version": "1.0",
+  "data": {
+    "items": [
+      {"id": 1, "name": "Item 1"},
+      {"id": 2, "name": "Item 2"}
+    ]
+  }
+}

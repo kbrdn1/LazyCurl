@@ -1,0 +1,160 @@
+{
+  "info": {
+    "_postman_id": "auth-collection-id",
+    "name": "Auth Examples",
+    "description": "Collection with various auth types",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Bearer Token Auth",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/protected",
+          "host": ["{{base_url}}"],
+          "path": ["protected"]
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Basic Auth",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/basic-protected",
+          "host": ["{{base_url}}"],
+          "path": ["basic-protected"]
+        },
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "test_password_placeholder",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "API Key Header",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api-key-protected",
+          "host": ["{{base_url}}"],
+          "path": ["api-key-protected"]
+        },
+        "auth": {
+          "type": "apikey",
+          "apikey": [
+            {
+              "key": "key",
+              "value": "X-API-Key",
+              "type": "string"
+            },
+            {
+              "key": "value",
+              "value": "{{api_key}}",
+              "type": "string"
+            },
+            {
+              "key": "in",
+              "value": "header",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "API Key Query",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api-key-query",
+          "host": ["{{base_url}}"],
+          "path": ["api-key-query"]
+        },
+        "auth": {
+          "type": "apikey",
+          "apikey": [
+            {
+              "key": "key",
+              "value": "api_key",
+              "type": "string"
+            },
+            {
+              "key": "value",
+              "value": "{{api_key}}",
+              "type": "string"
+            },
+            {
+              "key": "in",
+              "value": "query",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "No Auth",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/public",
+          "host": ["{{base_url}}"],
+          "path": ["public"]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
+      "name": "OAuth2 (Unsupported)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/oauth-protected",
+          "host": ["{{base_url}}"],
+          "path": ["oauth-protected"]
+        },
+        "auth": {
+          "type": "oauth2",
+          "oauth2": [
+            {
+              "key": "accessToken",
+              "value": "test_oauth_token_placeholder",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

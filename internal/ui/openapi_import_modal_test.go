@@ -56,9 +56,9 @@ func TestSanitizeFilename(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := sanitizeFilename(tt.input)
+			got := sanitizeOpenAPIFilename(tt.input)
 			if got != tt.want {
-				t.Errorf("sanitizeFilename(%q) = %q, want %q", tt.input, got, tt.want)
+				t.Errorf("sanitizeOpenAPIFilename(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}

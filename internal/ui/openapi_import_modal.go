@@ -299,7 +299,7 @@ func (m *OpenAPIImportModal) checkConflictAndImport() (*OpenAPIImportModal, tea.
 	}
 
 	// Get the target filename
-	filename := sanitizeFilename(m.preview.Title) + ".json"
+	filename := sanitizeOpenAPIFilename(m.preview.Title) + ".json"
 	savePath := filepath.Join(m.collectionsDir, filename)
 
 	// Check if file already exists
@@ -358,7 +358,7 @@ func (m *OpenAPIImportModal) executeImport() (*OpenAPIImportModal, tea.Cmd) {
 		}
 	} else {
 		// No conflict
-		filename := sanitizeFilename(m.preview.Title) + ".json"
+		filename := sanitizeOpenAPIFilename(m.preview.Title) + ".json"
 		savePath = filepath.Join(m.collectionsDir, filename)
 	}
 
@@ -637,8 +637,8 @@ func (m *OpenAPIImportModal) SetError(err string) {
 
 // Helper functions
 
-// sanitizeFilename converts a name to a valid filename
-func sanitizeFilename(name string) string {
+// sanitizeOpenAPIFilename converts a name to a valid filename
+func sanitizeOpenAPIFilename(name string) string {
 	// Replace spaces and special characters
 	name = strings.ToLower(name)
 	name = strings.ReplaceAll(name, " ", "-")

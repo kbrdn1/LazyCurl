@@ -49,3 +49,23 @@ type OpenAPIImportCompleteMsg struct {
 	Error      error
 	SavePath   string
 }
+
+// PostmanImportedMsg is sent when a Postman file is successfully imported
+type PostmanImportedMsg struct {
+	Collection  *api.CollectionFile
+	Environment *api.EnvironmentFile
+	Summary     string
+	IsEnv       bool
+}
+
+// PostmanExportedMsg is sent when a collection/environment is exported
+type PostmanExportedMsg struct {
+	Success  bool
+	FilePath string
+	Error    error
+}
+
+// PostmanImportErrorMsg is sent when Postman import fails
+type PostmanImportErrorMsg struct {
+	Error error
+}

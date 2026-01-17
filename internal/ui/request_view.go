@@ -273,6 +273,10 @@ console.log('Response received');
 // Access response data
 const response = pm.response.json();`, "javascript")
 
+	// Enable external editor for body editor
+	bodyEditor.EnableExternalEditor(true)
+	bodyEditor.SetExternalEditorField(api.EditableFieldBody)
+
 	rv := &RequestView{
 		method:             api.GET,
 		url:                "{{base_url}}/admin/users/:id",
@@ -493,6 +497,26 @@ func (r *RequestView) GetActiveScriptsEditor() *components.Editor {
 // Update handles messages for the request view
 func (r RequestView) Update(msg tea.Msg, cfg *config.GlobalConfig) (RequestView, tea.Cmd) {
 	switch msg := msg.(type) {
+	case components.ExternalEditorRequestMsg:
+		// Forward external editor request to the model (it will handle tea.ExecProcess)
+		return r, func() tea.Msg { return msg }
+
+	case components.ExternalEditorFinishedMsg:
+		// Handle external editor finished - update content if changed
+		if msg.Field == api.EditableFieldBody && msg.Changed && msg.Err == nil {
+			r.bodyEditor.SetContent(msg.Content)
+			// Emit body changed message
+			bodyType := r.bodyType.String()
+			return r, func() tea.Msg {
+				return RequestBodyChangedMsg{BodyType: bodyType, Content: msg.Content}
+			}
+		}
+		return r, nil
+
+	case components.ExternalEditorErrorMsg:
+		// Error is handled at the model level for status bar display
+		return r, nil
+
 	case components.SearchUpdateMsg, components.SearchCloseMsg:
 		// Forward search messages to the active editor
 		if r.tabs.GetActive() == "Body" && r.bodyType == JSONBody {

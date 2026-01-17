@@ -42,14 +42,14 @@ func CreateTempFile(content string, contentType ContentType) (*TempFileInfo, err
 
 	// Write content to file
 	if _, err := tmpFile.WriteString(content); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
+		_ = tmpFile.Close()           // Best effort cleanup
+		_ = os.Remove(tmpFile.Name()) // Best effort cleanup
 		return nil, err
 	}
 
 	// Close file handle (required for some editors)
 	if err := tmpFile.Close(); err != nil {
-		os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name()) // Best effort cleanup
 		return nil, err
 	}
 

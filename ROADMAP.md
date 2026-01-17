@@ -1,132 +1,189 @@
 # LazyCurl Roadmap
 
-> Development roadmap for LazyCurl - a powerful TUI HTTP client
+> **Vision** : Devenir le "Bruno du terminal" avec toutes les fonctionnalités de Yaak
 
-## Vision
+---
 
-LazyCurl aims to be the **go-to terminal HTTP client** for developers who prefer keyboard-driven workflows. Our goals:
+## Vision Stratégique
 
-- **Single binary** — No runtime dependencies, easy installation
-- **Vim-first UX** — Authentic modal editing with familiar keybindings
-- **File-based storage** — Git-friendly JSON collections and environments
-- **Full-featured** — Match desktop tools like Postman and Insomnia
+LazyCurl vise à être le **client HTTP TUI de référence** pour les développeurs terminal-first :
+
+- **Single binary Go** — Performance, distribution simple, démarrage instantané
+- **Vim-first UX** — Motions authentiques (h/j/k/l), jump mode unique
+- **Lazygit-style** — Interface familière pour les développeurs terminal
+- **Git-native** — Collections JSON versionnables, 100% offline
+- **Multi-protocol** — REST, GraphQL, WebSocket, gRPC, SSE (objectif Yaak)
+- **Full-featured** — Scripting, assertions, runner (objectif Bruno)
 
 ---
 
 ## Completed Releases
 
-### v1.0.0 - Foundation (Sprint 1-2)
+### v1.0.0 - Foundation (Sprint 1-2) ✅
 
-Core TUI with essential HTTP testing capabilities.
+Core TUI avec capacités essentielles de test HTTP.
 
-- [x] Lazygit-style multi-panel interface
-- [x] Vim modes (NORMAL, INSERT, VIEW, COMMAND)
-- [x] Collections and folders management
-- [x] Environment variables with `{{var}}` syntax
-- [x] HTTP request builder (method, URL, headers, body)
-- [x] Response viewer with JSON formatting
-- [x] Session persistence
-- [x] Console tab (request history)
-- [x] WhichKey help system
-- [x] Search with `/`
+- [x] Interface multi-panneaux style Lazygit
+- [x] Modes Vim (NORMAL, INSERT, VIEW, COMMAND)
+- [x] Gestion collections et dossiers
+- [x] Variables d'environnement avec syntaxe `{{var}}`
+- [x] Builder de requêtes HTTP (method, URL, headers, body)
+- [x] Viewer de réponses avec formatage JSON
+- [x] Persistance de session
+- [x] Onglet Console (historique des requêtes)
+- [x] Système d'aide WhichKey
+- [x] Recherche avec `/`
 
-### v1.1.0 - Import/Export (Sprint 3a)
+### v1.1.0 - Import/Export (Sprint 3a) ✅
 
-Interoperability with existing tools and workflows.
+Interopérabilité avec outils et workflows existants.
 
-- [x] cURL import/export ([#60](https://github.com/kbrdn1/LazyCurl/issues/60))
-- [x] Jump mode navigation ([#61](https://github.com/kbrdn1/LazyCurl/issues/61))
+- [x] Import/export cURL ([#60](https://github.com/kbrdn1/LazyCurl/issues/60))
+- [x] Navigation Jump mode ([#61](https://github.com/kbrdn1/LazyCurl/issues/61))
 
-### v1.2.0 - External Tools (Sprint 3b)
+### v1.2.0 - External Tools (Sprint 3b) ✅
 
-Integration with external editors and API specs.
+Intégration avec éditeurs externes et specs API.
 
-- [x] External editor integration ([#65](https://github.com/kbrdn1/LazyCurl/issues/65))
-- [x] OpenAPI 3.x import with security schemes ([#66](https://github.com/kbrdn1/LazyCurl/issues/66), [#71](https://github.com/kbrdn1/LazyCurl/issues/71))
-- [x] Postman collection/environment import ([#14](https://github.com/kbrdn1/LazyCurl/issues/14), [#72](https://github.com/kbrdn1/LazyCurl/issues/72))
+- [x] Intégration éditeur externe ([#65](https://github.com/kbrdn1/LazyCurl/issues/65))
+- [x] Import OpenAPI 3.x avec security schemes ([#66](https://github.com/kbrdn1/LazyCurl/issues/66), [#71](https://github.com/kbrdn1/LazyCurl/issues/71))
+- [x] Import collection/environment Postman ([#14](https://github.com/kbrdn1/LazyCurl/issues/14), [#72](https://github.com/kbrdn1/LazyCurl/issues/72))
 
 ---
 
 ## Current Sprint
 
-### Sprint 4 - Advanced Features
+### Sprint 4 - Parité Fonctionnelle Bruno 🔥
 
-**Goal**: Power user features for advanced API testing workflows.
+**Objectif** : Atteindre la parité fonctionnelle avec Bruno pour le scripting et l'automatisation.
 
 #### Critical Priority 🔴
 
-| Feature | Issue | Description |
-|---------|-------|-------------|
-| JavaScript Scripting | [#35](https://github.com/kbrdn1/LazyCurl/issues/35) | Pre/post-request scripts using Goja JS engine |
-| Request Chaining | [#42](https://github.com/kbrdn1/LazyCurl/issues/42) | Extract values from responses, chain requests |
+| Feature | Issue | Description | Concurrent |
+|---------|-------|-------------|------------|
+| JavaScript Scripting | [#35](https://github.com/kbrdn1/LazyCurl/issues/35) | Scripts pre/post-request via Goja JS engine | Bruno, Yaak |
+| Request Chaining | [#42](https://github.com/kbrdn1/LazyCurl/issues/42) | Extraction de valeurs, chaînage de requêtes | Bruno, Yaak |
 
 #### High Priority 🟡
 
-| Feature | Issue | Description |
-|---------|-------|-------------|
-| Test Assertions | [#43](https://github.com/kbrdn1/LazyCurl/issues/43) | Assert response status, body, headers |
-| Collection Runner | [#44](https://github.com/kbrdn1/LazyCurl/issues/44) | Run all requests in sequence |
-| Fuzzy Finder | [#45](https://github.com/kbrdn1/LazyCurl/issues/45) | fzf-style quick search |
+| Feature | Issue | Description | Concurrent |
+|---------|-------|-------------|------------|
+| Test Assertions | [#43](https://github.com/kbrdn1/LazyCurl/issues/43) | Assertions sur status, body, headers | Bruno, Yaak |
+| Collection Runner | [#44](https://github.com/kbrdn1/LazyCurl/issues/44) | Exécution séquentielle de toutes les requêtes | Bruno, Yaak |
+| Fuzzy Finder | [#45](https://github.com/kbrdn1/LazyCurl/issues/45) | Recherche rapide style fzf | UX improvement |
 
 #### Medium Priority 🟢
 
 | Feature | Issue | Description |
 |---------|-------|-------------|
-| Request Diff | [#46](https://github.com/kbrdn1/LazyCurl/issues/46) | Compare two responses |
-| Request Templates | [#47](https://github.com/kbrdn1/LazyCurl/issues/47) | Reusable request patterns |
-| Settings Panel | [#25](https://github.com/kbrdn1/LazyCurl/issues/25) | In-app configuration UI |
-| Theme System | [#12](https://github.com/kbrdn1/LazyCurl/issues/12), [#13](https://github.com/kbrdn1/LazyCurl/issues/13) | Theme refactoring and UI |
-| Hot Reload Config | [#41](https://github.com/kbrdn1/LazyCurl/issues/41) | Auto-reload on config change |
+| Request Diff | [#46](https://github.com/kbrdn1/LazyCurl/issues/46) | Comparaison de deux réponses |
+| Request Templates | [#47](https://github.com/kbrdn1/LazyCurl/issues/47) | Patterns de requêtes réutilisables |
+| Hot Reload Config | [#41](https://github.com/kbrdn1/LazyCurl/issues/41) | Rechargement auto sur changement config |
 
 ---
 
 ## Future Sprints
 
-### Sprint 5 - Protocol Expansion
+### Sprint 5 - Multi-Protocol (Parité Yaak)
 
-**Goal**: Support for modern API protocols beyond REST.
+**Objectif** : Supporter tous les protocoles modernes comme Yaak.
 
-| Feature | Issue | Priority | Description |
-|---------|-------|----------|-------------|
-| GraphQL Support | [#18](https://github.com/kbrdn1/LazyCurl/issues/18) | 🔴 Critical | Schema explorer, variables, queries |
-| WebSocket Testing | [#19](https://github.com/kbrdn1/LazyCurl/issues/19) | 🟡 High | Interactive WS client |
-| gRPC Support | [#20](https://github.com/kbrdn1/LazyCurl/issues/20) | 🟡 High | Proto reflection, streaming |
-| SSE Support | [#48](https://github.com/kbrdn1/LazyCurl/issues/48) | 🟢 Medium | Server-Sent Events viewer |
+| Feature | Issue | Priority | Description | Gap vs Yaak |
+|---------|-------|----------|-------------|-------------|
+| GraphQL Support | [#18](https://github.com/kbrdn1/LazyCurl/issues/18) | 🔴 Critical | Schema explorer, variables, queries | ✅ Requis |
+| WebSocket Testing | [#19](https://github.com/kbrdn1/LazyCurl/issues/19) | 🔴 Critical | Client WS interactif | ✅ Requis |
+| SSE Support | [#48](https://github.com/kbrdn1/LazyCurl/issues/48) | 🟡 High | Viewer Server-Sent Events | ✅ Requis |
+| gRPC Support | [#20](https://github.com/kbrdn1/LazyCurl/issues/20) | 🟡 High | Proto reflection, streaming | ✅ Requis |
 
 ### Sprint 6 - Enterprise Features
 
-**Goal**: Features for enterprise and production API testing.
+**Objectif** : Features pour environnements professionnels et entreprise.
 
 | Feature | Issue | Priority | Description |
 |---------|-------|----------|-------------|
 | OAuth2 Flows | [#17](https://github.com/kbrdn1/LazyCurl/issues/17) | 🔴 Critical | Auth code, client credentials, refresh |
-| AWS Signature v4 | [#17](https://github.com/kbrdn1/LazyCurl/issues/17) | 🟡 High | AWS API authentication |
-| mTLS / Client Certs | [#49](https://github.com/kbrdn1/LazyCurl/issues/49) | 🟡 High | Mutual TLS authentication |
-| Proxy Support | [#50](https://github.com/kbrdn1/LazyCurl/issues/50) | 🟡 High | HTTP/SOCKS proxy |
-| Request Retry | [#51](https://github.com/kbrdn1/LazyCurl/issues/51) | 🟢 Medium | Auto-retry with backoff |
-| Rate Limiting | [#52](https://github.com/kbrdn1/LazyCurl/issues/52) | 🟢 Medium | Respect API rate limits |
+| AWS Signature v4 | [#17](https://github.com/kbrdn1/LazyCurl/issues/17) | 🟡 High | Authentification API AWS |
+| mTLS / Client Certs | [#49](https://github.com/kbrdn1/LazyCurl/issues/49) | 🟡 High | Authentification TLS mutuelle |
+| Proxy Support | [#50](https://github.com/kbrdn1/LazyCurl/issues/50) | 🟡 High | Proxy HTTP/SOCKS |
+| Request Retry | [#51](https://github.com/kbrdn1/LazyCurl/issues/51) | 🟢 Medium | Auto-retry avec backoff |
+| Rate Limiting | [#52](https://github.com/kbrdn1/LazyCurl/issues/52) | 🟢 Medium | Respect des limites API |
 
 ### Sprint 7 - CLI & Automation
 
-**Goal**: Headless operation and CI/CD integration.
+**Objectif** : Mode headless et intégration CI/CD.
 
 | Feature | Issue | Priority | Description |
 |---------|-------|----------|-------------|
 | CLI Mode | [#26](https://github.com/kbrdn1/LazyCurl/issues/26) | 🔴 Critical | `lazycurl run collection.json` |
 | CI/CD Integration | [#53](https://github.com/kbrdn1/LazyCurl/issues/53) | 🔴 Critical | Exit codes, JSON output |
-| Request Export | [#54](https://github.com/kbrdn1/LazyCurl/issues/54) | 🟡 High | Export to Go, Python, JS code |
-| Mock Server | [#55](https://github.com/kbrdn1/LazyCurl/issues/55) | 🟢 Medium | Local mock from collection |
-| API Docs Generator | [#56](https://github.com/kbrdn1/LazyCurl/issues/56) | 🟢 Medium | Generate docs from collection |
+| Request Export | [#54](https://github.com/kbrdn1/LazyCurl/issues/54) | 🟡 High | Export vers Go, Python, JS |
+| Mock Server | [#55](https://github.com/kbrdn1/LazyCurl/issues/55) | 🟢 Medium | Mock local depuis collection |
+| API Docs Generator | [#56](https://github.com/kbrdn1/LazyCurl/issues/56) | 🟢 Medium | Génération docs depuis collection |
 
 ---
 
 ## Backlog
 
-Features not yet scheduled:
+Features non encore planifiées :
 
 | Feature | Issue | Description |
 |---------|-------|-------------|
-| Animated Dashboard | [#36](https://github.com/kbrdn1/LazyCurl/issues/36) | Workspace selector with splash screen |
+| Animated Dashboard | [#36](https://github.com/kbrdn1/LazyCurl/issues/36) | Sélecteur workspace avec splash screen |
+| Settings Panel | [#25](https://github.com/kbrdn1/LazyCurl/issues/25) | UI de configuration in-app |
+| Theme System | [#12](https://github.com/kbrdn1/LazyCurl/issues/12), [#13](https://github.com/kbrdn1/LazyCurl/issues/13) | Refactoring et UI des thèmes |
+
+---
+
+## Competitive Analysis
+
+### vs posting (Concurrent TUI direct)
+
+| Critère | posting | LazyCurl | Avantage |
+|---------|---------|----------|----------|
+| Langage | Python | Go | **LazyCurl** (perf) |
+| Startup | ~500ms | ~50ms | **LazyCurl** |
+| Jump mode | ❌ | ✅ | **LazyCurl** |
+| OpenAPI import | ❌ | ✅ | **LazyCurl** |
+| WebSocket | ✅ | ❌ (Sprint 5) | posting |
+| SSH tunneling | ✅ | ❌ | posting |
+
+### vs Bruno (Concurrent philosophique)
+
+| Critère | Bruno | LazyCurl | Gap |
+|---------|-------|----------|-----|
+| Scripting JS | ✅ | ❌ | Sprint 4 |
+| Collection Runner | ✅ | ❌ | Sprint 4 |
+| GraphQL | ✅ | ❌ | Sprint 5 |
+| CLI mode | ✅ | ❌ | Sprint 7 |
+| Git-friendly | ✅ | ✅ | ✅ Parité |
+
+### vs Yaak (Référence multi-protocol)
+
+| Protocol | Yaak | LazyCurl | Gap |
+|----------|------|----------|-----|
+| REST | ✅ | ✅ | ✅ Parité |
+| GraphQL | ✅ | ❌ | Sprint 5 |
+| WebSocket | ✅ | ❌ | Sprint 5 |
+| gRPC | ✅ | ❌ | Sprint 5 |
+| SSE | ✅ | ❌ | Sprint 5 |
+
+---
+
+## Timeline
+
+```
+2025 Q1: Sprint 4 - Parité Bruno
+         └── Scripting + Assertions + Runner
+
+2025 Q2: Sprint 5 - Multi-Protocol
+         └── GraphQL + WebSocket + SSE + gRPC
+
+2025 Q3: Sprint 6 - Enterprise
+         └── OAuth2 + mTLS + Proxy
+
+2025 Q4: Sprint 7 - CI/CD
+         └── CLI Mode + Automation
+```
 
 ---
 
@@ -134,9 +191,21 @@ Features not yet scheduled:
 
 | Symbol | Priority | Description |
 |--------|----------|-------------|
-| 🔴 | Critical | Core functionality, blocks other features |
-| 🟡 | High | Important for user experience |
-| 🟢 | Medium | Nice to have, quality of life |
+| 🔴 | Critical | Fonctionnalité core, bloque d'autres features |
+| 🟡 | High | Important pour l'expérience utilisateur |
+| 🟢 | Medium | Nice to have, qualité de vie |
+
+---
+
+## Success Metrics
+
+| Milestone | Target | Status |
+|-----------|--------|--------|
+| Parité posting | v1.3.0 | 🔄 In Progress |
+| Parité Bruno | v1.4.0 | ⏳ Sprint 4-5 |
+| Parité Yaak protocols | v1.5.0 | ⏳ Sprint 5 |
+| Enterprise-ready | v1.6.0 | ⏳ Sprint 6 |
+| CI/CD complete | v2.0.0 | ⏳ Sprint 7 |
 
 ---
 

@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for taking the time to suggest a new feature! Please fill out this form as completely as possible.
 
-        Before submitting, please check the [existing issues](https://github.com/kbrdn1/LazyCurl/issues) to avoid duplicates.
+        Before submitting, please check the [existing issues](https://github.com/kbrdn1/LazyCurl/issues) and the [ROADMAP](https://github.com/kbrdn1/LazyCurl/blob/main/ROADMAP.md) to avoid duplicates.
 
   - type: textarea
     id: description
@@ -37,15 +37,6 @@ body:
     validations:
       required: true
 
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives Considered
-      description: Have you considered any alternative solutions or workarounds?
-      placeholder: Describe any alternatives...
-    validations:
-      required: false
-
   - type: dropdown
     id: category
     attributes:
@@ -60,6 +51,9 @@ body:
         - CLI/Commands
         - Authentication
         - Import/Export
+        - Protocols (GraphQL, WebSocket, gRPC, SSE)
+        - Scripting
+        - Testing/Assertions
         - Other
     validations:
       required: true
@@ -70,11 +64,32 @@ body:
       label: Priority
       description: How important is this feature to you?
       options:
-        - Low - Nice to have
-        - Medium - Would improve my workflow
-        - High - Essential for my use case
+        - "🟢 Low - Nice to have"
+        - "🟡 Medium - Would improve my workflow"
+        - "🔴 High - Essential for my use case"
     validations:
       required: true
+
+  - type: textarea
+    id: competitors
+    attributes:
+      label: Competitor Reference
+      description: Does another tool (Bruno, Yaak, Postman, posting, etc.) have this feature?
+      placeholder: |
+        - Bruno: Yes, supports this via...
+        - Yaak: Yes, with feature X...
+        - posting: No
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: Describe any alternatives...
+    validations:
+      required: false
 
   - type: textarea
     id: mockup

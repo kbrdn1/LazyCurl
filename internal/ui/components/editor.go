@@ -13,8 +13,16 @@ import (
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
 
-// Variable pattern for {{variable}} syntax
-var editorVariablePattern = regexp.MustCompile(`\{\{([^}]+)\}\}`)
+// Variable pattern for {{variable}} syntax - matches valid variable names only
+var editorVariablePattern = regexp.MustCompile(`\{\{([a-zA-Z0-9_$]+)\}\}`)
+
+// extractVariableName extracts the variable name from a {{variable}} match
+func extractVariableName(match string) string {
+	if len(match) < 4 {
+		return ""
+	}
+	return match[2 : len(match)-2]
+}
 
 // EditorMode represents the current editing mode
 type EditorMode int
@@ -1172,7 +1180,7 @@ func (e *Editor) highlightJSON(line string) string {
 
 			// In preview mode, show resolved value
 			if e.previewMode && e.variableValues != nil {
-				varName := strings.TrimSpace(varText[2 : len(varText)-2])
+				varName := extractVariableName(varText)
 				if value, exists := e.variableValues[varName]; exists {
 					result.WriteString(previewStyle.Render(value))
 				} else {
@@ -1534,8 +1542,10 @@ func (e *Editor) replaceVariables(text string) string {
 		return text
 	}
 	return editorVariablePattern.ReplaceAllStringFunc(text, func(match string) string {
-		// Extract variable name (remove {{ and }})
-		varName := strings.TrimSpace(match[2 : len(match)-2])
+		varName := extractVariableName(match)
+		if varName == "" {
+			return match
+		}
 		if value, exists := e.variableValues[varName]; exists {
 			return value
 		}

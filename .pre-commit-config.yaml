@@ -40,24 +40,15 @@ repos:
       - id: golangci-lint
         args: ["--timeout=5m", "--new-from-rev=origin/main"]
 
-  # Conventional commits
-  - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v3.4.0
+  # Conventional commits with gitmoji support
+  - repo: local
     hooks:
       - id: conventional-pre-commit
+        name: Conventional Commit
+        entry: bash -c 'tools/check-commit-msg.sh "$1"' --
+        language: system
         stages: [commit-msg]
-        args:
-          - feat
-          - fix
-          - docs
-          - style
-          - refactor
-          - perf
-          - test
-          - build
-          - ci
-          - chore
-          - revert
+        always_run: true
 
   # Markdown
   - repo: https://github.com/igorshubovych/markdownlint-cli

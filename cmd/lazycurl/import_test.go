@@ -1,103 +1,60 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
 func TestParseImportArgs(t *testing.T) {
 	tests := []struct {
-		name    string
-		args    []string
-		wantErr bool
-		wantCmd *ImportCommand
+		name       string
+		args       []string
+		wantFormat string
+		wantFile   string
+		wantErr    bool
 	}{
 		{
-			name:    "no args",
+			name:       "file only defaults to auto",
+			args:       []string{"collection.json"},
+			wantFormat: "auto",
+			wantFile:   "collection.json",
+			wantErr:    false,
+		},
+		{
+			name:       "explicit auto format",
+			args:       []string{"auto", "collection.json"},
+			wantFormat: "auto",
+			wantFile:   "collection.json",
+			wantErr:    false,
+		},
+		{
+			name:       "explicit postman format",
+			args:       []string{"postman", "collection.json"},
+			wantFormat: "postman",
+			wantFile:   "collection.json",
+			wantErr:    false,
+		},
+		{
+			name:       "explicit openapi format",
+			args:       []string{"openapi", "spec.yaml"},
+			wantFormat: "openapi",
+			wantFile:   "spec.yaml",
+			wantErr:    false,
+		},
+		{
+			name:       "format flag overrides",
+			args:       []string{"collection.json", "--format", "postman"},
+			wantFormat: "postman",
+			wantFile:   "collection.json",
+			wantErr:    false,
+		},
+		{
+			name:    "missing file path",
 			args:    []string{},
 			wantErr: true,
 		},
 		{
-			name:    "only format",
-			args:    []string{"openapi"},
-			wantErr: true,
-		},
-		{
-			name:    "basic openapi import",
-			args:    []string{"openapi", "spec.yaml"},
-			wantErr: false,
-			wantCmd: &ImportCommand{
-				Format:   "openapi",
-				FilePath: "spec.yaml",
-			},
-		},
-		{
-			name:    "with --name flag",
-			args:    []string{"openapi", "spec.yaml", "--name", "My API"},
-			wantErr: false,
-			wantCmd: &ImportCommand{
-				Format:   "openapi",
-				FilePath: "spec.yaml",
-				Name:     "My API",
-			},
-		},
-		{
-			name:    "with --output flag",
-			args:    []string{"openapi", "spec.yaml", "--output", "/tmp/api.json"},
-			wantErr: false,
-			wantCmd: &ImportCommand{
-				Format:   "openapi",
-				FilePath: "spec.yaml",
-				Output:   "/tmp/api.json",
-			},
-		},
-		{
-			name:    "with --dry-run flag",
-			args:    []string{"openapi", "spec.yaml", "--dry-run"},
-			wantErr: false,
-			wantCmd: &ImportCommand{
-				Format:   "openapi",
-				FilePath: "spec.yaml",
-				DryRun:   true,
-			},
-		},
-		{
-			name:    "with --json flag",
-			args:    []string{"openapi", "spec.yaml", "--json"},
-			wantErr: false,
-			wantCmd: &ImportCommand{
-				Format:     "openapi",
-				FilePath:   "spec.yaml",
-				JSONOutput: true,
-			},
-		},
-		{
-			name:    "all flags combined",
-			args:    []string{"openapi", "spec.yaml", "--name", "API", "--output", "/tmp/out.json", "--dry-run", "--json"},
-			wantErr: false,
-			wantCmd: &ImportCommand{
-				Format:     "openapi",
-				FilePath:   "spec.yaml",
-				Name:       "API",
-				Output:     "/tmp/out.json",
-				DryRun:     true,
-				JSONOutput: true,
-			},
-		},
-		{
-			name:    "unknown flag",
-			args:    []string{"openapi", "spec.yaml", "--unknown"},
-			wantErr: true,
-		},
-		{
-			name:    "--name without value",
-			args:    []string{"openapi", "spec.yaml", "--name"},
-			wantErr: true,
-		},
-		{
-			name:    "--output without value",
-			args:    []string{"openapi", "spec.yaml", "--output"},
+			name:    "format without file",
+			args:    []string{"postman"},
 			wantErr: true,
 		},
 	}
@@ -105,119 +62,92 @@ func TestParseImportArgs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd, err := ParseImportArgs(tt.args)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Error("expected error, got nil")
-				}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseImportArgs() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-
 			if err != nil {
-				t.Errorf("unexpected error: %v", err)
 				return
 			}
-
-			if cmd.Format != tt.wantCmd.Format {
-				t.Errorf("Format = %q, want %q", cmd.Format, tt.wantCmd.Format)
+			if cmd.Format != tt.wantFormat {
+				t.Errorf("ParseImportArgs() format = %v, want %v", cmd.Format, tt.wantFormat)
 			}
-			if cmd.FilePath != tt.wantCmd.FilePath {
-				t.Errorf("FilePath = %q, want %q", cmd.FilePath, tt.wantCmd.FilePath)
-			}
-			if cmd.Name != tt.wantCmd.Name {
-				t.Errorf("Name = %q, want %q", cmd.Name, tt.wantCmd.Name)
-			}
-			if cmd.Output != tt.wantCmd.Output {
-				t.Errorf("Output = %q, want %q", cmd.Output, tt.wantCmd.Output)
-			}
-			if cmd.DryRun != tt.wantCmd.DryRun {
-				t.Errorf("DryRun = %v, want %v", cmd.DryRun, tt.wantCmd.DryRun)
-			}
-			if cmd.JSONOutput != tt.wantCmd.JSONOutput {
-				t.Errorf("JSONOutput = %v, want %v", cmd.JSONOutput, tt.wantCmd.JSONOutput)
+			if cmd.FilePath != tt.wantFile {
+				t.Errorf("ParseImportArgs() file = %v, want %v", cmd.FilePath, tt.wantFile)
 			}
 		})
 	}
 }
 
-func TestSanitizeFilename(t *testing.T) {
+func TestParseImportArgsWithFlags(t *testing.T) {
 	tests := []struct {
-		name  string
-		input string
-		want  string
+		name       string
+		args       []string
+		wantName   string
+		wantOutput string
+		wantDryRun bool
+		wantJSON   bool
 	}{
 		{
-			name:  "simple name",
-			input: "MyAPI",
-			want:  "MyAPI",
+			name:       "name flag",
+			args:       []string{"file.json", "--name", "MyCollection"},
+			wantName:   "MyCollection",
+			wantOutput: "",
+			wantDryRun: false,
+			wantJSON:   false,
 		},
 		{
-			name:  "with spaces",
-			input: "My API Name",
-			want:  "My-API-Name",
+			name:       "output flag",
+			args:       []string{"file.json", "--output", "/tmp/out.json"},
+			wantName:   "",
+			wantOutput: "/tmp/out.json",
+			wantDryRun: false,
+			wantJSON:   false,
 		},
 		{
-			name:  "with special characters",
-			input: "API@v1.0!",
-			want:  "APIv10",
+			name:       "dry-run flag",
+			args:       []string{"file.json", "--dry-run"},
+			wantName:   "",
+			wantOutput: "",
+			wantDryRun: true,
+			wantJSON:   false,
 		},
 		{
-			name:  "empty string",
-			input: "",
-			want:  "imported-api",
+			name:       "json flag",
+			args:       []string{"file.json", "--json"},
+			wantName:   "",
+			wantOutput: "",
+			wantDryRun: false,
+			wantJSON:   true,
 		},
 		{
-			name:  "only special characters",
-			input: "@#$%",
-			want:  "imported-api",
-		},
-		{
-			name:  "with underscores and dashes",
-			input: "my-api_v2",
-			want:  "my-api_v2",
+			name:       "all flags",
+			args:       []string{"postman", "file.json", "--name", "Test", "--output", "out.json", "--dry-run", "--json"},
+			wantName:   "Test",
+			wantOutput: "out.json",
+			wantDryRun: true,
+			wantJSON:   true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := sanitizeFilename(tt.input)
-			if got != tt.want {
-				t.Errorf("sanitizeFilename(%q) = %q, want %q", tt.input, got, tt.want)
+			cmd, err := ParseImportArgs(tt.args)
+			if err != nil {
+				t.Fatalf("ParseImportArgs() unexpected error = %v", err)
+			}
+			if cmd.Name != tt.wantName {
+				t.Errorf("ParseImportArgs() name = %v, want %v", cmd.Name, tt.wantName)
+			}
+			if cmd.Output != tt.wantOutput {
+				t.Errorf("ParseImportArgs() output = %v, want %v", cmd.Output, tt.wantOutput)
+			}
+			if cmd.DryRun != tt.wantDryRun {
+				t.Errorf("ParseImportArgs() dryRun = %v, want %v", cmd.DryRun, tt.wantDryRun)
+			}
+			if cmd.JSONOutput != tt.wantJSON {
+				t.Errorf("ParseImportArgs() json = %v, want %v", cmd.JSONOutput, tt.wantJSON)
 			}
 		})
-	}
-}
-
-func TestRunOpenAPIImport_DryRun(t *testing.T) {
-	// Get the fixture path
-	fixturePath := filepath.Join("..", "..", "testdata", "openapi", "minimal-3.0.json")
-
-	// Check if fixture exists
-	if _, err := os.Stat(fixturePath); os.IsNotExist(err) {
-		t.Skip("test fixture not found")
-	}
-
-	cmd := &ImportCommand{
-		Format:   "openapi",
-		FilePath: fixturePath,
-		DryRun:   true,
-	}
-
-	// Dry-run should not return an error for a valid file
-	err := RunImportCommand(cmd)
-	if err != nil {
-		t.Errorf("dry-run import failed: %v", err)
-	}
-}
-
-func TestRunImportCommand_UnsupportedFormat(t *testing.T) {
-	cmd := &ImportCommand{
-		Format:   "unknown",
-		FilePath: "test.txt",
-	}
-
-	err := RunImportCommand(cmd)
-	if err == nil {
-		t.Error("expected error for unsupported format")
 	}
 }

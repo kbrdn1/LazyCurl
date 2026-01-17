@@ -1003,3 +1003,22 @@ func (t *Tree) findNodeByIDRecursive(nodes []*TreeNode, id string) *TreeNode {
 	}
 	return nil
 }
+
+// SelectIndex selects an item by its visual index in the visible items
+func (t *Tree) SelectIndex(index int) {
+	if index >= 0 && index < len(t.visible) {
+		t.selected = t.visible[index]
+		t.cursor = index
+	}
+}
+
+// GetVisibleItems returns the list of currently visible tree nodes.
+// Useful for jump mode to enumerate targets.
+func (t *Tree) GetVisibleItems() []*TreeNode {
+	return t.visible
+}
+
+// GetScrollOffset returns the current scroll offset.
+func (t *Tree) GetScrollOffset() int {
+	return t.scrollOffset
+}

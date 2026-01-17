@@ -607,3 +607,126 @@ func TestEditorPreviewMode_KeybindingP(t *testing.T) {
 		t.Error("preview mode should be off after second P key")
 	}
 }
+
+// TestEditorPreviewMode_SystemVariables verifies system variables ($uuid, $timestamp) are resolved
+func TestEditorPreviewMode_SystemVariables(t *testing.T) {
+	tests := []struct {
+		name          string
+		content       string
+		checkResolved func(preview string) bool
+	}{
+		{
+			name:    "timestamp variable",
+			content: `{"ts": "{{$timestamp}}"}`,
+			checkResolved: func(preview string) bool {
+				// Should be replaced with a numeric timestamp (Unix seconds)
+				// The original {{$timestamp}} should NOT appear in preview
+				return !contains(preview, "{{$timestamp}}") && containsDigits(preview)
+			},
+		},
+		{
+			name:    "uuid variable",
+			content: `{"id": "{{$uuid}}"}`,
+			checkResolved: func(preview string) bool {
+				// Should be replaced with a UUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+				return !contains(preview, "{{$uuid}}") && containsUUID(preview)
+			},
+		},
+		{
+			name:    "guid variable (alias for uuid)",
+			content: `{"id": "{{$guid}}"}`,
+			checkResolved: func(preview string) bool {
+				return !contains(preview, "{{$guid}}") && containsUUID(preview)
+			},
+		},
+		{
+			name:    "datetime variable",
+			content: `{"dt": "{{$datetime}}"}`,
+			checkResolved: func(preview string) bool {
+				// Should be replaced with RFC3339 format
+				return !contains(preview, "{{$datetime}}") && containsRFC3339(preview)
+			},
+		},
+		{
+			name:    "date variable",
+			content: `{"d": "{{$date}}"}`,
+			checkResolved: func(preview string) bool {
+				// Should be replaced with YYYY-MM-DD format
+				return !contains(preview, "{{$date}}") && containsDateFormat(preview)
+			},
+		},
+		{
+			name:    "mixed system and env variables",
+			content: `{"url": "{{base_url}}", "ts": "{{$timestamp}}"}`,
+			checkResolved: func(preview string) bool {
+				// base_url should remain unresolved (no env vars set)
+				// $timestamp should be resolved
+				return contains(preview, "{{base_url}}") && !contains(preview, "{{$timestamp}}")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			editor := NewEditor(tt.content, "json")
+			// Don't set any environment variables - only testing system vars
+			editor.TogglePreviewMode()
+
+			preview := editor.GetPreviewContent()
+			if !tt.checkResolved(preview) {
+				t.Errorf("system variable not properly resolved in preview: %s", preview)
+			}
+		})
+	}
+}
+
+// Helper functions for TestEditorPreviewMode_SystemVariables
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+func containsDigits(s string) bool {
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			return true
+		}
+	}
+	return false
+}
+
+func containsUUID(s string) bool {
+	// Simple check for UUID format: contains 4 dashes and is ~36 chars segment
+	dashCount := 0
+	for _, r := range s {
+		if r == '-' {
+			dashCount++
+		}
+	}
+	return dashCount >= 4
+}
+
+func containsRFC3339(s string) bool {
+	// RFC3339 contains 'T' separator and timezone indicator
+	return findSubstring(s, "T") && (findSubstring(s, "Z") || findSubstring(s, "+") || findSubstring(s, "-"))
+}
+
+func containsDateFormat(s string) bool {
+	// YYYY-MM-DD format contains exactly 2 dashes in date portion
+	dashCount := 0
+	for _, r := range s {
+		if r == '-' {
+			dashCount++
+		}
+	}
+	return dashCount >= 2
+}

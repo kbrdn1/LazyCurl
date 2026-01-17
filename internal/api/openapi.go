@@ -392,7 +392,7 @@ func (i *OpenAPIImporter) ToCollection(opts ImportOptions) (*CollectionFile, err
 
 	// Convert paths to requests organized by tags
 	if model.Model.Paths != nil {
-		collection.Folders = convertPathsToFolders(model.Model.Paths, baseURL, opts.IncludeExamples)
+		collection.Folders = convertPathsToFolders(model.Model.Paths, &model.Model, baseURL, opts.IncludeExamples)
 	}
 
 	return collection, nil

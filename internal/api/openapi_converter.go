@@ -40,6 +40,10 @@ func extractSecuritySchemes(doc *v3.Document) map[string]*AuthConfig {
 				schemes[schemeName] = &AuthConfig{
 					Type: "basic",
 				}
+			} else {
+				// Other HTTP schemes (digest, hoba, mutual, negotiate, etc.) are not supported
+				// Log warning for awareness - users should manually configure these
+				fmt.Printf("Warning: HTTP auth scheme '%s' for '%s' is not supported, skipping\n", httpScheme, schemeName)
 			}
 		case "apikey":
 			schemes[schemeName] = &AuthConfig{
@@ -76,24 +80,40 @@ func getOperationSecurity(op *v3.Operation, globalSecurity []*base.SecurityRequi
 		return nil
 	}
 
-	// Use first security requirement
-	firstReq := security[0]
-	if firstReq.Requirements == nil || firstReq.Requirements.Len() == 0 {
-		return nil
-	}
+	// Iterate over all security requirements (OR relationship in OpenAPI)
+	for _, req := range security {
+		if req == nil || req.Requirements == nil || req.Requirements.Len() == 0 {
+			continue
+		}
 
-	// Get first scheme from the requirement
-	firstPair := firstReq.Requirements.First()
-	if firstPair == nil {
-		return nil
-	}
-
-	schemeName := firstPair.Key()
-	if authConfig, exists := schemes[schemeName]; exists {
-		return authConfig
+		// Iterate over all schemes in the requirement
+		for pair := req.Requirements.First(); pair != nil; pair = pair.Next() {
+			schemeName := pair.Key()
+			if authConfig, exists := schemes[schemeName]; exists {
+				// Return a copy to avoid shared mutable state between requests
+				return cloneAuthConfig(authConfig)
+			}
+		}
 	}
 
 	return nil
+}
+
+// cloneAuthConfig creates a deep copy of an AuthConfig
+func cloneAuthConfig(src *AuthConfig) *AuthConfig {
+	if src == nil {
+		return nil
+	}
+	return &AuthConfig{
+		Type:           src.Type,
+		Token:          src.Token,
+		Prefix:         src.Prefix,
+		Username:       src.Username,
+		Password:       src.Password,
+		APIKeyName:     src.APIKeyName,
+		APIKeyValue:    src.APIKeyValue,
+		APIKeyLocation: src.APIKeyLocation,
+	}
 }
 
 // convertPathsToFolders converts OpenAPI paths to folders and requests organized by tags

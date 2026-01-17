@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"os"
 	"runtime"
 	"testing"
@@ -53,6 +54,20 @@ func TestGetEditorConfig(t *testing.T) {
 			editor:         "",
 			wantSource:     EditorSourceFallback,
 			skipIfNoEditor: true, // Skip if fallback editors aren't available
+		},
+		{
+			name:       "VISUAL whitespace only falls through to EDITOR",
+			visual:     "   ",
+			editor:     "nano",
+			wantBinary: "nano",
+			wantSource: EditorSourceEditor,
+		},
+		{
+			name:           "Both whitespace only falls through to fallback",
+			visual:         "   ",
+			editor:         "   ",
+			wantSource:     EditorSourceFallback,
+			skipIfNoEditor: true,
 		},
 	}
 
@@ -277,6 +292,65 @@ func TestParseEditorCommand(t *testing.T) {
 				if got[i] != tt.want[i] {
 					t.Errorf("parseEditorCommand()[%d] = %q, want %q", i, got[i], tt.want[i])
 				}
+			}
+		})
+	}
+}
+
+func TestGetEditorConfig_NoEditorAvailable(t *testing.T) {
+	// This test documents the expected behavior when no editor is available.
+	// It only runs meaningfully on systems without nano or vi installed.
+	// On most Unix systems, this test verifies fallback detection works.
+
+	// Save original env vars
+	originalVisual := os.Getenv("VISUAL")
+	originalEditor := os.Getenv("EDITOR")
+	defer func() {
+		os.Setenv("VISUAL", originalVisual)
+		os.Setenv("EDITOR", originalEditor)
+	}()
+
+	// Unset both environment variables
+	os.Unsetenv("VISUAL")
+	os.Unsetenv("EDITOR")
+
+	config, err := GetEditorConfig()
+
+	// If we get an error, it should be ErrNoEditorAvailable
+	if err != nil {
+		if !errors.Is(err, ErrNoEditorAvailable) {
+			t.Errorf("GetEditorConfig() error = %v, want ErrNoEditorAvailable", err)
+		}
+		// Test passes - no editor was available
+		return
+	}
+
+	// If we got a config, verify it's from fallback
+	if config.Source != EditorSourceFallback {
+		t.Errorf("GetEditorConfig() Source = %v, want EditorSourceFallback", config.Source)
+	}
+
+	// Verify the binary is one of the expected fallbacks
+	if config.Binary == "" {
+		t.Error("GetEditorConfig() Binary should not be empty for fallback")
+	}
+}
+
+func TestEditorSource_String(t *testing.T) {
+	tests := []struct {
+		source EditorSource
+		want   string
+	}{
+		{EditorSourceVisual, "VISUAL"},
+		{EditorSourceEditor, "EDITOR"},
+		{EditorSourceFallback, "fallback"},
+		{EditorSource("unknown"), "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.source), func(t *testing.T) {
+			if got := string(tt.source); got != tt.want {
+				t.Errorf("EditorSource string = %q, want %q", got, tt.want)
 			}
 		})
 	}

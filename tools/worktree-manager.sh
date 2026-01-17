@@ -267,6 +267,12 @@ setup_worktree() {
         echo -e "  ${GREEN}✓${NC} Copied .specify/"
     fi
 
+    # Copy .lazycurl/ if it exists (workspace: collections, environments, config)
+    if [ -d "${MAIN_REPO}/.lazycurl" ]; then
+        cp -r "${MAIN_REPO}/.lazycurl" "${worktree_path}/"
+        echo -e "  ${GREEN}✓${NC} Copied .lazycurl/"
+    fi
+
     # Create spec folder for this issue
     local spec_folder="${worktree_path}/specs/0${issue_number}-${description}"
     if [ ! -d "$spec_folder" ]; then

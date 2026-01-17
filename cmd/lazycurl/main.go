@@ -10,7 +10,20 @@ import (
 	"github.com/kbrdn1/LazyCurl/internal/ui"
 )
 
+// Version information set by goreleaser ldflags
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
+	// Handle --version flag
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
+		fmt.Printf("lazycurl %s (commit: %s, built: %s)\n", version, commit, date)
+		os.Exit(0)
+	}
+
 	// Load global config
 	globalConfig, err := config.LoadGlobalConfig()
 	if err != nil {

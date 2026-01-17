@@ -44,6 +44,38 @@ make deps           # Download and tidy dependencies
 make build-all      # Cross-compile for Linux/macOS/Windows (AMD64 & ARM64)
 ```
 
+### Git Worktrees (Feature Branches)
+
+**For humans**: Use the interactive menu:
+
+```bash
+make worktree       # Interactive worktree manager with gwq
+```
+
+**For Claude Code**: Use non-interactive commands:
+
+```bash
+# Create worktree for a feature
+gwq add -b feat/#<issue>-<description>
+
+# Navigate to worktree
+cd ~/cc-worktree/LazyCurl/<branch-name>
+
+# Install dependencies (REQUIRED after creating worktree)
+make deps
+
+# List worktrees
+gwq list
+
+# Remove worktree when done
+gwq remove -b feat/#<issue>-<description>
+```
+
+**Branch naming convention**: `<type>/#<issue>-<description>`
+
+- Types: `feat`, `fix`, `hotfix`, `docs`, `test`, `refactor`, `chore`, `perf`
+- Example: `feat/#35-js-scripting`, `fix/#42-request-chaining`
+
 ## Architecture
 
 ### Application Structure

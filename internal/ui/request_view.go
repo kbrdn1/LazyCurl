@@ -2092,6 +2092,16 @@ func (r *RequestView) GetBodyContent() string {
 	return r.bodyEditor.GetContent()
 }
 
+// GetPreRequestScript returns the pre-request script content
+func (r *RequestView) GetPreRequestScript() string {
+	return r.preRequestEditor.GetContent()
+}
+
+// GetPostRequestScript returns the post-request script content
+func (r *RequestView) GetPostRequestScript() string {
+	return r.postRequestEditor.GetContent()
+}
+
 // SetEnvironmentVariables sets the environment variables for body preview mode
 // Uses content-based comparison to avoid redundant updates on every render
 func (r *RequestView) SetEnvironmentVariables(vars map[string]string) {

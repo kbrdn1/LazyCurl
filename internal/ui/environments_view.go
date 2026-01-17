@@ -1123,6 +1123,15 @@ func (e *EnvironmentsView) GetActiveEnvironmentVariables() map[string]string {
 	return vars
 }
 
+// SaveActiveEnvironment saves the active environment to disk
+func (e *EnvironmentsView) SaveActiveEnvironment() error {
+	env := e.GetActiveEnvironment()
+	if env == nil || env.FilePath == "" {
+		return nil
+	}
+	return api.SaveEnvironment(env, env.FilePath)
+}
+
 // GetBreadcrumb returns the breadcrumb path for the current cursor position
 func (e *EnvironmentsView) GetBreadcrumb() []string {
 	node := e.getCurrentNode()

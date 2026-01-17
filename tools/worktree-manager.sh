@@ -140,11 +140,20 @@ create_worktree_guided() {
     if [ $? -eq 0 ]; then
         echo ""
         echo -e "${GREEN}${BOLD}Worktree created successfully!${NC}"
-        echo ""
-        echo -e "${YELLOW}Next steps:${NC}"
-        echo -e "  cd \$(gwq get ${SELECTED_TYPE})"
-        echo -e "  make deps"
-        echo -e "  claude"
+
+        # Get worktree path
+        local worktree_path=$(gwq get "${SELECTED_TYPE}/#${issue_number}" 2>/dev/null || gwq get "${SELECTED_TYPE}" 2>/dev/null)
+
+        if [ -n "$worktree_path" ] && [ -d "$worktree_path" ]; then
+            setup_worktree "$worktree_path" "$issue_number" "$description"
+            launch_claude "$worktree_path"
+        else
+            echo ""
+            echo -e "${YELLOW}Next steps:${NC}"
+            echo -e "  cd \$(gwq get ${SELECTED_TYPE})"
+            echo -e "  make deps"
+            echo -e "  claude"
+        fi
     else
         echo -e "${RED}Failed to create worktree${NC}"
         return 1
@@ -214,15 +223,71 @@ cleanup_worktrees() {
     echo -e "${GREEN}Cleanup complete!${NC}"
 }
 
+# Setup worktree after creation (copy speckit files, create spec folder, etc.)
+setup_worktree() {
+    local worktree_path="$1"
+    local issue_number="$2"
+    local description="$3"
+
+    echo -e "${BLUE}Setting up worktree...${NC}"
+
+    # Copy speckit configuration files if they exist
+    if [ -f "${MAIN_REPO}/.speckit.yaml" ]; then
+        cp "${MAIN_REPO}/.speckit.yaml" "${worktree_path}/"
+        echo -e "  ${GREEN}✓${NC} Copied .speckit.yaml"
+    fi
+
+    if [ -f "${MAIN_REPO}/.speckit.yml" ]; then
+        cp "${MAIN_REPO}/.speckit.yml" "${worktree_path}/"
+        echo -e "  ${GREEN}✓${NC} Copied .speckit.yml"
+    fi
+
+    # Copy speckit templates if they exist
+    if [ -d "${MAIN_REPO}/.speckit" ]; then
+        cp -r "${MAIN_REPO}/.speckit" "${worktree_path}/"
+        echo -e "  ${GREEN}✓${NC} Copied .speckit/ templates"
+    fi
+
+    # Create spec folder for this issue
+    local spec_folder="${worktree_path}/specs/0${issue_number}-${description}"
+    if [ ! -d "$spec_folder" ]; then
+        mkdir -p "${spec_folder}/checklists"
+        mkdir -p "${spec_folder}/contracts"
+        echo -e "  ${GREEN}✓${NC} Created specs/0${issue_number}-${description}/"
+    fi
+
+    # Run make deps if Makefile exists
+    if [ -f "${worktree_path}/Makefile" ]; then
+        echo -e "${BLUE}Running make deps...${NC}"
+        (cd "${worktree_path}" && make deps 2>/dev/null)
+        echo -e "  ${GREEN}✓${NC} Dependencies installed"
+    fi
+
+    echo ""
+}
+
+# Launch Claude in worktree
+launch_claude() {
+    local worktree_path="$1"
+
+    read -p "Launch Claude Code in worktree? [Y/n]: " launch
+    if [[ ! "$launch" =~ ^[Nn]$ ]]; then
+        echo -e "${CYAN}Launching Claude Code...${NC}"
+        cd "${worktree_path}" && claude
+    fi
+}
+
 # Quick create mode (non-interactive)
 quick_create() {
     local type="$1"
     local issue="$2"
     local desc="$3"
+    local auto_claude="${4:-}"
 
     if [[ -z "$type" ]] || [[ -z "$issue" ]] || [[ -z "$desc" ]]; then
-        echo -e "${RED}Usage: $0 create <type> <issue-number> <description>${NC}"
+        echo -e "${RED}Usage: $0 create <type> <issue-number> <description> [--claude]${NC}"
         echo -e "${YELLOW}Example: $0 create feat 123 user-authentication${NC}"
+        echo -e "${YELLOW}Example: $0 create feat 123 user-authentication --claude${NC}"
         echo ""
         echo -e "${YELLOW}Available types:${NC}"
         for type_desc in "${BRANCH_TYPES[@]}"; do
@@ -248,8 +313,8 @@ quick_create() {
     fi
 
     # Build branch name
-    desc=$(echo "$desc" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9-]//g')
-    BRANCH_NAME="${type}/#${issue}-${desc}"
+    local clean_desc=$(echo "$desc" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9-]//g')
+    BRANCH_NAME="${type}/#${issue}-${clean_desc}"
 
     echo -e "${YELLOW}Creating worktree with gwq...${NC}"
     echo -e "  Branch: ${GREEN}${BRANCH_NAME}${NC}"
@@ -259,7 +324,22 @@ quick_create() {
     if [ $? -eq 0 ]; then
         echo ""
         echo -e "${GREEN}${BOLD}Worktree created!${NC}"
-        echo -e "${YELLOW}Next: cd \$(gwq get ${type}) && make deps && claude${NC}"
+
+        # Get worktree path
+        local worktree_path=$(gwq get "${type}/#${issue}" 2>/dev/null || gwq get "${type}" 2>/dev/null)
+
+        if [ -n "$worktree_path" ] && [ -d "$worktree_path" ]; then
+            setup_worktree "$worktree_path" "$issue" "$clean_desc"
+
+            if [ "$auto_claude" == "--claude" ]; then
+                echo -e "${CYAN}Launching Claude Code...${NC}"
+                cd "${worktree_path}" && claude
+            else
+                launch_claude "$worktree_path"
+            fi
+        else
+            echo -e "${YELLOW}Next: cd \$(gwq get ${type}) && make deps && claude${NC}"
+        fi
     fi
 }
 

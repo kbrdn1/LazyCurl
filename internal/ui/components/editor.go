@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
+
+// Variable pattern for {{variable}} syntax
+var editorVariablePattern = regexp.MustCompile(`\{\{([^}]+)\}\}`)
 
 // EditorMode represents the current editing mode
 type EditorMode int
@@ -73,6 +77,10 @@ type Editor struct {
 	// Undo/Redo state
 	undoStack []EditorState // Stack of previous states for undo
 	redoStack []EditorState // Stack of undone states for redo
+
+	// Variable preview state
+	previewMode    bool              // Toggle preview mode (show resolved values)
+	variableValues map[string]string // Current variable values for preview
 }
 
 // NewEditor creates a new editor component
@@ -397,6 +405,11 @@ func (e *Editor) handleNormalMode(msg tea.KeyMsg) (*Editor, tea.Cmd) {
 		if e.syntaxType == "json" {
 			return e, e.FormatJSON()
 		}
+
+	// Toggle preview mode (show resolved variables)
+	case "P":
+		e.TogglePreviewMode()
+		return e, nil
 
 	// Search commands
 	case "/":
@@ -1078,6 +1091,16 @@ func (e *Editor) renderModeIndicator(width int, active bool) string {
 			Background(styles.Green)
 	}
 
+	// Preview indicator
+	var previewIndicator string
+	if e.previewMode {
+		previewStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(styles.Base).
+			Background(styles.Peach)
+		previewIndicator = previewStyle.Render(" PREVIEW ")
+	}
+
 	// Help text based on mode
 	helpStyle := lipgloss.NewStyle().
 		Foreground(styles.Subtext0).
@@ -1087,8 +1110,10 @@ func (e *Editor) renderModeIndicator(width int, active bool) string {
 	if e.mode == EditorNormalMode {
 		if e.HasSearchQuery() {
 			helpText = " n:next  N:prev  esc:clear  /:search "
+		} else if e.previewMode {
+			helpText = " P:exit preview  i:insert  F:format "
 		} else {
-			helpText = " i:insert  /:search  F:format  u:undo  ^R:redo "
+			helpText = " i:insert  /:search  F:format  P:preview  u:undo "
 		}
 	} else {
 		helpText = " Esc:normal  Type to insert "
@@ -1099,7 +1124,7 @@ func (e *Editor) renderModeIndicator(width int, active bool) string {
 		Background(styles.Surface0).
 		Width(width)
 
-	content := modeStyle.Render(modeText) + helpStyle.Render(helpText)
+	content := modeStyle.Render(modeText) + previewIndicator + helpStyle.Render(helpText)
 
 	if !active {
 		// Dimmed when not active
@@ -1109,20 +1134,57 @@ func (e *Editor) renderModeIndicator(width int, active bool) string {
 	return barStyle.Render(content)
 }
 
-// highlightJSON applies basic JSON syntax highlighting
+// highlightJSON applies basic JSON syntax highlighting with variable support
 func (e *Editor) highlightJSON(line string) string {
-	var result strings.Builder
-	inString := false
-	inKey := false
+	// First, find all variable positions in the line
+	variableMatches := editorVariablePattern.FindAllStringIndex(line, -1)
 
+	// Styles
 	keyStyle := lipgloss.NewStyle().Foreground(styles.Blue)
 	stringStyle := lipgloss.NewStyle().Foreground(styles.Green)
 	numberStyle := lipgloss.NewStyle().Foreground(styles.Peach)
 	boolStyle := lipgloss.NewStyle().Foreground(styles.Mauve)
 	punctStyle := lipgloss.NewStyle().Foreground(styles.Subtext1)
+	variableStyle := lipgloss.NewStyle().Foreground(styles.URLVariable).Bold(true)
+	previewStyle := lipgloss.NewStyle().Foreground(styles.Green).Background(styles.Surface0)
+
+	// Helper to check if position is inside a variable
+	isInVariable := func(pos int) (bool, int, int) {
+		for _, match := range variableMatches {
+			if pos >= match[0] && pos < match[1] {
+				return true, match[0], match[1]
+			}
+		}
+		return false, -1, -1
+	}
+
+	var result strings.Builder
+	inString := false
+	inKey := false
 
 	i := 0
 	for i < len(line) {
+		// Check if we're at the start of a variable
+		inVar, varStart, varEnd := isInVariable(i)
+		if inVar && i == varStart {
+			// Render the entire variable
+			varText := line[varStart:varEnd]
+
+			// In preview mode, show resolved value
+			if e.previewMode && e.variableValues != nil {
+				varName := strings.TrimSpace(varText[2 : len(varText)-2])
+				if value, exists := e.variableValues[varName]; exists {
+					result.WriteString(previewStyle.Render(value))
+				} else {
+					result.WriteString(variableStyle.Render(varText))
+				}
+			} else {
+				result.WriteString(variableStyle.Render(varText))
+			}
+			i = varEnd
+			continue
+		}
+
 		char := line[i]
 
 		switch {
@@ -1440,4 +1502,43 @@ func (e *Editor) SetCursorPosition(row, col int) {
 
 	// Ensure cursor is visible
 	e.scrollIntoView()
+}
+
+// SetVariableValues sets the variable values for preview mode
+func (e *Editor) SetVariableValues(values map[string]string) {
+	e.variableValues = values
+}
+
+// TogglePreviewMode toggles the preview mode on/off
+func (e *Editor) TogglePreviewMode() {
+	e.previewMode = !e.previewMode
+}
+
+// IsPreviewMode returns true if preview mode is active
+func (e *Editor) IsPreviewMode() bool {
+	return e.previewMode
+}
+
+// GetPreviewContent returns content with variables replaced (for preview)
+func (e *Editor) GetPreviewContent() string {
+	if !e.previewMode || e.variableValues == nil {
+		return e.GetContent()
+	}
+	content := e.GetContent()
+	return e.replaceVariables(content)
+}
+
+// replaceVariables replaces {{var}} patterns with their values
+func (e *Editor) replaceVariables(text string) string {
+	if e.variableValues == nil {
+		return text
+	}
+	return editorVariablePattern.ReplaceAllStringFunc(text, func(match string) string {
+		// Extract variable name (remove {{ and }})
+		varName := strings.TrimSpace(match[2 : len(match)-2])
+		if value, exists := e.variableValues[varName]; exists {
+			return value
+		}
+		return match // Keep original if not found
+	})
 }

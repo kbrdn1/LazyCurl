@@ -2065,6 +2065,27 @@ func (r *RequestView) GetBodyContent() string {
 	return r.bodyEditor.GetContent()
 }
 
+// SetEnvironmentVariables sets the environment variables for body preview mode
+func (r *RequestView) SetEnvironmentVariables(vars map[string]string) {
+	if r.bodyEditor != nil {
+		r.bodyEditor.SetVariableValues(vars)
+	}
+	if r.preRequestEditor != nil {
+		r.preRequestEditor.SetVariableValues(vars)
+	}
+	if r.postRequestEditor != nil {
+		r.postRequestEditor.SetVariableValues(vars)
+	}
+}
+
+// IsBodyPreviewMode returns true if the body editor is in preview mode
+func (r *RequestView) IsBodyPreviewMode() bool {
+	if r.bodyEditor == nil {
+		return false
+	}
+	return r.bodyEditor.IsPreviewMode()
+}
+
 // LoadCollectionRequest loads a full CollectionRequest with all its data
 func (r *RequestView) LoadCollectionRequest(req *api.CollectionRequest) {
 	if req == nil {

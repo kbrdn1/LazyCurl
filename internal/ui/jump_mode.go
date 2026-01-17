@@ -238,29 +238,34 @@ func (m *JumpModeState) GetVisibleTargets() []JumpTarget {
 // AssignLabels assigns unique labels to a list of targets using home-row priority
 //
 // Algorithm:
-//  1. Use home row keys first: a, s, d, f, j, k, l
-//  2. Then other keys: g, h, q, w, e, r, t, y, u, i, o, p, z, x, c, v, b, n, m
-//  3. For >26 targets, use two-character combinations: aa, as, ad, ...
+//  1. If ≤26 targets: Use single letters (a, s, d, f, j, k, l, g, h, ...)
+//  2. If >26 targets: Use ALL two-letter combinations (aa, as, ad, ..., sa, ss, ...)
+//     This ensures the first keypress only filters, never jumps.
 //
 // The targets slice is modified in place with Label field populated.
 func (m *JumpModeState) AssignLabels(targets []JumpTarget) {
 	numKeys := len(allKeys)
+	numTargets := len(targets)
+
+	// If we have more than 26 targets, use all two-letter combinations
+	// This way, typing the first letter only filters, never jumps immediately
+	useTwoLetters := numTargets > numKeys
 
 	for i := range targets {
-		if i < numKeys {
-			// Single character label
-			targets[i].Label = string(allKeys[i])
-		} else {
-			// Two character label for overflow
-			firstIdx := (i - numKeys) / numKeys
-			secondIdx := (i - numKeys) % numKeys
+		if useTwoLetters {
+			// Two character labels for all targets when >26
+			firstIdx := i / numKeys
+			secondIdx := i % numKeys
 
-			// Wrap around if we have very many targets
+			// Wrap around if we have very many targets (>676)
 			if firstIdx >= numKeys {
 				firstIdx = firstIdx % numKeys
 			}
 
 			targets[i].Label = string(allKeys[firstIdx]) + string(allKeys[secondIdx])
+		} else {
+			// Single character label when ≤26 targets
+			targets[i].Label = string(allKeys[i])
 		}
 	}
 }

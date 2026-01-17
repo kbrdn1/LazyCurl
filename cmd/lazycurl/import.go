@@ -32,7 +32,11 @@ func ParseImportArgs(args []string) (*ImportCommand, error) {
 
 	// Check if first arg is a format or a file
 	firstArg := args[0]
-	if firstArg == "openapi" || firstArg == "postman" || firstArg == "auto" {
+	isKnownFormat := firstArg == "openapi" || firstArg == "postman" || firstArg == "auto"
+	// Treat as format only if it's a known format AND the file doesn't exist at that path
+	// This prevents files named "postman" or "openapi" from being misinterpreted
+	_, fileErr := os.Stat(firstArg)
+	if isKnownFormat && os.IsNotExist(fileErr) {
 		// Format specified as first argument
 		if len(args) < 2 {
 			return nil, fmt.Errorf("file path required after format")
@@ -54,7 +58,11 @@ func ParseImportArgs(args []string) (*ImportCommand, error) {
 				return nil, fmt.Errorf("--format requires a value")
 			}
 			i++
-			cmd.Format = args[i]
+			format := args[i]
+			if format != "auto" && format != "openapi" && format != "postman" {
+				return nil, fmt.Errorf("invalid format %q; supported formats are: auto, openapi, postman", format)
+			}
+			cmd.Format = format
 		case "--name":
 			if i+1 >= len(args) {
 				return nil, fmt.Errorf("--name requires a value")
@@ -84,10 +92,12 @@ func ParseImportArgs(args []string) (*ImportCommand, error) {
 // ImportResult represents the result of an import operation
 type ImportResult struct {
 	Success        bool     `json:"success"`
+	ImportType     string   `json:"import_type,omitempty"` // "collection" or "environment"
 	CollectionName string   `json:"collection_name,omitempty"`
 	FilePath       string   `json:"file_path,omitempty"`
 	FolderCount    int      `json:"folder_count,omitempty"`
 	RequestCount   int      `json:"request_count,omitempty"`
+	VariableCount  int      `json:"variable_count,omitempty"` // For environments
 	Warnings       []string `json:"warnings,omitempty"`
 	Error          string   `json:"error,omitempty"`
 	ErrorLine      int      `json:"error_line,omitempty"`
@@ -111,14 +121,23 @@ func RunImportCommand(cmd *ImportCommand) error {
 // runAutoDetectImport auto-detects file format and routes to appropriate importer
 func runAutoDetectImport(cmd *ImportCommand) error {
 	// Try Postman detection first (faster)
-	fileType, err := postman.DetectFileType(cmd.FilePath)
-	if err == nil && fileType != postman.FileTypeUnknown {
-		// Detected Postman format
-		return runPostmanImport(cmd)
+	fileType, postmanErr := postman.DetectFileType(cmd.FilePath)
+	if postmanErr == nil && fileType != postman.FileTypeUnknown {
+		// Detected Postman format - pass fileType to avoid double detection
+		return runPostmanImportWithType(cmd, fileType)
 	}
 
 	// Fall back to OpenAPI
-	return runOpenAPIImport(cmd)
+	openapiErr := runOpenAPIImport(cmd)
+	if openapiErr == nil {
+		return nil
+	}
+
+	// Neither format worked - provide clear error message
+	if postmanErr != nil {
+		return handleImportError(cmd, fmt.Errorf("failed to auto-detect format: not a valid Postman file (%w) or OpenAPI spec (%w)", postmanErr, openapiErr))
+	}
+	return handleImportError(cmd, fmt.Errorf("failed to auto-detect format: file is neither a valid Postman collection/environment nor OpenAPI specification"))
 }
 
 // runPostmanImport handles Postman collection/environment import
@@ -128,7 +147,11 @@ func runPostmanImport(cmd *ImportCommand) error {
 	if err != nil {
 		return handleImportError(cmd, fmt.Errorf("failed to detect file type: %w", err))
 	}
+	return runPostmanImportWithType(cmd, fileType)
+}
 
+// runPostmanImportWithType handles Postman import with pre-detected file type (avoids double detection)
+func runPostmanImportWithType(cmd *ImportCommand, fileType postman.FileType) error {
 	switch fileType {
 	case postman.FileTypeCollection:
 		return runPostmanCollectionImport(cmd)
@@ -181,6 +204,7 @@ func runPostmanCollectionImport(cmd *ImportCommand) error {
 	// Output result
 	importResult := ImportResult{
 		Success:        true,
+		ImportType:     "collection",
 		CollectionName: result.Collection.Name,
 		FilePath:       outputPath,
 		FolderCount:    result.Summary.FoldersCount,
@@ -232,8 +256,10 @@ func runPostmanEnvironmentImport(cmd *ImportCommand) error {
 	// Output result
 	importResult := ImportResult{
 		Success:        true,
+		ImportType:     "environment",
 		CollectionName: result.Environment.Name,
 		FilePath:       outputPath,
+		VariableCount:  result.Summary.VariablesCount,
 		Warnings:       result.Summary.Warnings,
 	}
 
@@ -298,6 +324,7 @@ func runOpenAPIImport(cmd *ImportCommand) error {
 	// Output result
 	result := ImportResult{
 		Success:        true,
+		ImportType:     "collection",
 		CollectionName: collection.Name,
 		FilePath:       outputPath,
 		FolderCount:    len(collection.Folders),
@@ -481,19 +508,27 @@ func outputResult(cmd *ImportCommand, result ImportResult) error {
 		return nil
 	}
 
-	// Determine import type from context
-	importType := "file"
-	if result.FolderCount > 0 || result.RequestCount > 0 {
-		importType = "collection"
+	// Use explicit ImportType if set, otherwise infer from context
+	importType := result.ImportType
+	if importType == "" {
+		if result.FolderCount > 0 || result.RequestCount > 0 {
+			importType = "collection"
+		} else {
+			importType = "file"
+		}
 	}
 
 	fmt.Printf("Successfully imported %s\n\n", importType)
 	fmt.Printf("Name: %s\n", result.CollectionName)
 	fmt.Printf("File: %s\n", result.FilePath)
 
-	if result.FolderCount > 0 || result.RequestCount > 0 {
+	if result.ImportType == "collection" || result.FolderCount > 0 || result.RequestCount > 0 {
 		fmt.Printf("Folders:  %d\n", result.FolderCount)
 		fmt.Printf("Requests: %d\n", result.RequestCount)
+	}
+
+	if result.ImportType == "environment" && result.VariableCount > 0 {
+		fmt.Printf("Variables: %d\n", result.VariableCount)
 	}
 
 	if len(result.Warnings) > 0 {

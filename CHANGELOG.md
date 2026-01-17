@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/kbrdn1/LazyCurl/compare/v1.0.0...v1.1.0) (2026-01-17)
+
+
+### Features
+
+* **api:** add cURL import/export functionality ✨ ([#63](https://github.com/kbrdn1/LazyCurl/issues/63)) ([1eb5dae](https://github.com/kbrdn1/LazyCurl/commit/1eb5daeff9f0d9f259920c277069f32ac6a34958))
+* **tools:** add CLAUDE.md copy to worktree setup ([92ac991](https://github.com/kbrdn1/LazyCurl/commit/92ac991ae9960c8104a766b775f7708ebd3eb3eb))
+* **tools:** add speckit integration and Claude launch to worktree manager ([0f0f027](https://github.com/kbrdn1/LazyCurl/commit/0f0f027c7d578ca03eb7e862468f60f5058f68d8))
+* **tools:** auto-copy .claude/commands directory in worktree setup ([4c332c8](https://github.com/kbrdn1/LazyCurl/commit/4c332c8b897cd21fadf839168fa28793281cfeda))
+* **tools:** auto-copy .specify directory in worktree setup ([10854e0](https://github.com/kbrdn1/LazyCurl/commit/10854e06f37f1a5713dd1871d97011247252c82b))
+* **ui:** add jump mode navigation (vim-easymotion style) ✨ ([#64](https://github.com/kbrdn1/LazyCurl/issues/64)) ([a3cf8f7](https://github.com/kbrdn1/LazyCurl/commit/a3cf8f7c66458dd7f7caca2f3a1a162197d7884a))
+
 ## 1.0.0 (2026-01-17)
 
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -133,15 +134,22 @@ func formatArg(arg interface{}) string {
 	}
 }
 
-// formatObject formats a map as a JSON-like string
+// formatObject formats a map as a JSON-like string with stable key ordering
 func formatObject(obj map[string]interface{}) string {
 	if len(obj) == 0 {
 		return "{}"
 	}
 
+	// Sort keys for stable, deterministic output
+	keys := make([]string, 0, len(obj))
+	for k := range obj {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	parts := make([]string, 0, len(obj))
-	for k, v := range obj {
-		parts = append(parts, fmt.Sprintf("%s: %s", k, formatArg(v)))
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s: %s", k, formatArg(obj[k])))
 	}
 	return "{ " + strings.Join(parts, ", ") + " }"
 }

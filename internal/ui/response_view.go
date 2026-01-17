@@ -526,7 +526,7 @@ func (r *ResponseView) renderTestsTab(width, height int) string {
 	if len(r.testResults) == 0 {
 		result.WriteString(summaryStyle.Render("No test assertions in scripts."))
 		result.WriteString("\n")
-		result.WriteString(summaryStyle.Render("Use lc.test.assert(name, condition) in your scripts to add tests."))
+		result.WriteString(summaryStyle.Render("Use lc.test(name, fn) with lc.expect(...) assertions."))
 		return result.String()
 	}
 

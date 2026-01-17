@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -546,13 +547,20 @@ func (e *gojaExecutor) setupLCTest(vm *goja.Runtime, lc *goja.Object, assertions
 func (e *gojaExecutor) createExpectation(vm *goja.Runtime, actual interface{}, assertions *AssertionCollector) goja.Value {
 	exp := vm.NewObject()
 
-	// toBe - strict equality
+	// toBe - strict equality (safe for non-comparable types)
 	exp.Set("toBe", func(call goja.FunctionCall) goja.Value {
 		var expected interface{}
 		if len(call.Arguments) > 0 {
 			expected = call.Arguments[0].Export()
 		}
-		passed := actual == expected
+		// Check if types are comparable to avoid panic
+		var passed bool
+		if isComparable(actual) && isComparable(expected) {
+			passed = actual == expected
+		} else {
+			// Fall back to deep equality for non-comparable types (maps, slices)
+			passed = reflect.DeepEqual(actual, expected)
+		}
 		if !passed {
 			// Throw an error to fail the test
 			panic(vm.ToValue("Expected " + formatArg(actual) + " to be " + formatArg(expected)))
@@ -736,10 +744,20 @@ func extractLineColumn(errStr string) (int, int) {
 	return 0, 0
 }
 
-// deepEqual performs deep equality comparison
+// deepEqual performs deep equality comparison using reflect.DeepEqual
+// This provides stable comparison for all types including maps and slices
 func deepEqual(a, b interface{}) bool {
-	// Simple implementation - could be improved
-	return formatArg(a) == formatArg(b)
+	return reflect.DeepEqual(a, b)
+}
+
+// isComparable checks if a value can be safely compared with ==
+// Returns false for maps, slices, and other non-comparable types
+func isComparable(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+	t := reflect.TypeOf(v)
+	return t.Comparable()
 }
 
 // isTruthy returns true if the value is truthy in JavaScript sense

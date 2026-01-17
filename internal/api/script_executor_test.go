@@ -1647,9 +1647,12 @@ func TestHelperFunction_DeepEqual(t *testing.T) {
 		{"different strings", "hello", "world", false},
 		{"same numbers", 42, 42, true},
 		{"different numbers", 42, 24, false},
-		// Note: deepEqual uses formatArg which converts to string, so "42" == "42" is true
-		{"int and string with same representation", 42, "42", true},
+		// Note: deepEqual uses reflect.DeepEqual for strict type-safe comparison
+		{"int and string with same representation", 42, "42", false},
 		{"nil values", nil, nil, true},
+		{"same slices", []interface{}{1, 2, 3}, []interface{}{1, 2, 3}, true},
+		{"different slices", []interface{}{1, 2, 3}, []interface{}{3, 2, 1}, false},
+		{"same maps", map[string]interface{}{"a": 1}, map[string]interface{}{"a": 1}, true},
 	}
 
 	for _, tt := range tests {

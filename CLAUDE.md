@@ -271,13 +271,34 @@ Examples:
 - YAML configuration (global + workspace)
 - Customizable keybindings and themes
 
-**Sprint 1 - MVP** 🔥 In Progress (see DEVELOPMENT_PLAN.md):
+**Sprint 1 - MVP** ✅ Complete:
 
 - Load/display collections from JSON files
 - Interactive request builder (method, URL, headers, body)
 - Send real HTTP requests with variable substitution
 - Format and display JSON/XML responses
 - Save requests to collections
+
+**Sprint 2 - UX Improvements** ✅ Complete:
+
+- Responsive panel layout, fullscreen toggle
+- Find in editors, console tab (request history)
+- Improved statusbar, session persistence
+
+**Sprint 3 - Competitive Parity** ✅ Complete (v1.2.0):
+
+- cURL import/export
+- Jump mode navigation (vim-easymotion)
+- External editor integration
+- OpenAPI 3.x import with security schemes
+- Postman import/export with CLI support
+
+**Sprint 4 - Competitive Advantage** 🔥 Current:
+
+- JavaScript scripting (Goja)
+- Request chaining
+- Test assertions
+- Collection runner
 
 ## Key Dependencies
 
@@ -346,40 +367,28 @@ URLs, headers, and body fields support `{{variable_name}}` interpolation from ac
 
 ## Recent Changes
 
+- v1.2.0: Added Postman import/export with CLI support (`lazycurl import postman`)
+- v1.2.0: Added OpenAPI security scheme import (Bearer, Basic, API Key)
+- v1.1.0: Added cURL import/export, jump mode navigation
 - 066-openapi-import: Added OpenAPI 3.x import via TUI (Ctrl+O) and CLI (`lazycurl import openapi`)
-- 001-vim-mode-workspace: Added Go 1.21+ + Bubble Tea (TUI), Lipgloss (styling), Bubble Zone (mouse), yaml.v3 (config)
 
-## Current Feature: Console Tab in Response Panel (Issue #9)
+## Completed Feature: Console Tab (Issue #9)
 
-**Branch**: `feat/#9-console-tab-in-response-panel`
-**Spec**: `specs/009-console-tab-in-response-panel/`
+### Overview
 
-### Feature Summary
+Console tab in Response Panel for HTTP request/response history logging with keyboard actions.
 
-Add Console tab to Response Panel for HTTP request/response history logging with keyboard actions.
+### Key Files
 
-### Key Implementation Points
-
-- **Data Layer**: `internal/api/console.go` - ConsoleEntry, ConsoleHistory types
-- **UI Component**: `internal/ui/console_view.go` - Console list view with vim navigation
-- **Integration**: Add "Console" as 4th tab in ResponseView
-- **Clipboard**: Use `golang.design/x/clipboard` package
+- `internal/api/console.go` - ConsoleEntry, ConsoleHistory types
+- `internal/ui/console_view.go` - Console list view with vim navigation
 
 ### Keybindings
 
-- `Ctrl+C`: Switch to Console tab
-- `Ctrl+R`: Switch to Response tab
+- `Tab` / `4`: Switch to Console tab
 - `j/k/g/G`: Navigate console list
 - `R`: Resend selected request
 - `H/B/E/A`: Copy headers/body/error/all to clipboard
-
-### Architecture Pattern
-
-```text
-Request sent → RequestCompleteMsg → Add to ConsoleHistory → ConsoleView updates
-```
-
-See `specs/009-console-tab-in-response-panel/quickstart.md` for implementation guide.
 
 ## Completed Feature: External Editor Integration (Issue #65)
 
@@ -530,7 +539,64 @@ OpenAPI File → OpenAPIImporter.Parse() → BuildV3Model() → ToCollection()
 - **Request Bodies**: JSON body with schema-generated examples
 - **$ref Resolution**: Automatic via libopenapi's BuildV3Model()
 - **Circular Refs**: Handled with depth limit (> 5 levels)
+- **Security Schemes**: Extracts Bearer, Basic, API Key auth from security definitions
+
+### Security Scheme Support (v1.2.0)
+
+| Scheme Type | OpenAPI Config | LazyCurl AuthConfig |
+|-------------|----------------|---------------------|
+| Bearer | `type: http, scheme: bearer` | `Type: "bearer", Token: ""` |
+| Basic | `type: http, scheme: basic` | `Type: "basic", Username: "", Password: ""` |
+| API Key Header | `type: apiKey, in: header` | `Type: "apikey", APIKeyLocation: "header"` |
+| API Key Query | `type: apiKey, in: query` | `Type: "apikey", APIKeyLocation: "query"` |
 
 ### Dependencies
 
 - `github.com/pb33f/libopenapi` - OpenAPI parsing and validation
+
+## Completed Feature: Postman Import/Export (Issue #14, #72)
+
+### Overview
+
+Import Postman collections and environments into LazyCurl via TUI modal (`Ctrl+P`) or CLI.
+
+### Key Files
+
+- `internal/import/postman/` - Postman import/export package
+  - `types.go` - Postman collection/environment types
+  - `importer.go` - Import logic with auto-detection
+  - `converter.go` - Conversion to LazyCurl format
+  - `exporter.go` - Export to Postman format
+- `internal/ui/postman_commands.go` - TUI import commands
+- `cmd/lazycurl/import.go` - CLI import subcommand
+
+### Supported Formats
+
+- Postman Collection v2.0 and v2.1
+- Postman Environment files
+- Auto-detection of file type
+
+### TUI Import (`Ctrl+P`)
+
+1. Opens import modal with file path input
+2. Auto-detects collection vs environment
+3. Preserves folder structure and request organization
+4. Converts variables to LazyCurl format
+
+### CLI Import
+
+```bash
+lazycurl import postman collection.json         # Import collection
+lazycurl import postman environment.json        # Import environment (auto-detected)
+lazycurl import collection.json                 # Auto-detect format (postman/openapi)
+lazycurl import postman collection.json --dry-run  # Preview without saving
+lazycurl import postman collection.json --json  # JSON output for scripting
+```
+
+### Conversion Features
+
+- **Folder Structure**: Preserves Postman folder hierarchy
+- **Variables**: Converts `{{var}}` syntax (same format)
+- **Authentication**: Imports Bearer, Basic, API Key settings
+- **Request Bodies**: Converts raw, form-data, urlencoded
+- **Headers**: Preserves all headers with enabled/disabled state

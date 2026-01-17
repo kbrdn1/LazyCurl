@@ -128,6 +128,7 @@ LazyCurl is designed for developers who live in the terminal. It combines:
   - Generates example request bodies from schemas
   - Extracts query parameters, headers, and path parameters
   - Resolves `$ref` references to schemas and components
+  - **Security Schemes**: Extracts Bearer, Basic, and API Key authentication from OpenAPI security definitions
 - **CLI Import**: Import from command line for automation
 
   ```bash
@@ -136,6 +137,27 @@ LazyCurl is designed for developers who live in the terminal. It combines:
   lazycurl import openapi spec.yaml --dry-run  # Preview without saving
   lazycurl import openapi spec.yaml --json     # JSON output for scripting
   ```
+
+### 📮 Postman Import/Export
+
+- **Import Collections/Environments** (`Ctrl+P`): Import Postman exports (JSON)
+  - Supports Postman Collection v2.0 and v2.1 formats
+  - Supports Postman Environment files
+  - Auto-detects file type (collection vs environment)
+  - Preserves folder structure and request organization
+  - Converts Postman variables to LazyCurl format
+  - Imports authentication settings (Bearer, Basic, API Key)
+- **CLI Import**: Import from command line for automation
+
+  ```bash
+  lazycurl import postman collection.json          # Import collection
+  lazycurl import postman environment.json         # Import environment (auto-detected)
+  lazycurl import collection.json                  # Auto-detect format (postman/openapi)
+  lazycurl import postman collection.json --dry-run  # Preview without saving
+  lazycurl import postman collection.json --json   # JSON output for scripting
+  ```
+
+- **Export to Postman**: Export LazyCurl collections to Postman format for sharing
 
 ### 💾 Session Persistence
 
@@ -376,6 +398,7 @@ LazyCurl automatically creates a `.lazycurl/` directory:
 |-----|--------|
 | `Ctrl+S` | Send request |
 | `Ctrl+O` | Import OpenAPI specification |
+| `Ctrl+P` | Import Postman collection/environment |
 | `Ctrl+I` | Import cURL command |
 | `Ctrl+E` | Export request as cURL (copy to clipboard) |
 | `?` | Show keybinding help (WhichKey) |
@@ -632,22 +655,22 @@ We use **Gitmoji + Conventional Commits**:
 - [x] Improved statusbar [#10](https://github.com/kbrdn1/LazyCurl/issues/10)
 - [x] Session persistence [#11](https://github.com/kbrdn1/LazyCurl/issues/11)
 
-### 🔥 Sprint 3 - Competitive Parity (Current)
+### ✅ Sprint 3 - Competitive Parity (Complete)
 
 **Goal**: Match posting's core features while leveraging Go advantages
 
 | Feature | Priority | Issue | Posting Equivalent |
 |---------|----------|-------|-------------------|
-| **cURL Import/Export** | 🔴 Critical | ✅ Done | ✅ Paste in URL bar |
-| **Jump Mode Navigation** | 🔴 Critical | ✅ Done | ✅ Ctrl+O jump |
+| **cURL Import/Export** | 🔴 Critical | ✅ [#60](https://github.com/kbrdn1/LazyCurl/issues/60) | ✅ Paste in URL bar |
+| **Jump Mode Navigation** | 🔴 Critical | ✅ [#61](https://github.com/kbrdn1/LazyCurl/issues/61) | ✅ Ctrl+O jump |
 | **External Editor Integration** | 🟡 High | ✅ [#65](https://github.com/kbrdn1/LazyCurl/issues/65) | ✅ $EDITOR support |
-| **OpenAPI 3.x Import** | 🟡 High | NEW | ✅ CLI import |
-| **Postman Import** | 🟡 High | [#14](https://github.com/kbrdn1/LazyCurl/issues/14) | ✅ CLI import |
+| **OpenAPI 3.x Import** | 🟡 High | ✅ [#66](https://github.com/kbrdn1/LazyCurl/issues/66), [#71](https://github.com/kbrdn1/LazyCurl/issues/71) | ✅ CLI import |
+| **Postman Import** | 🟡 High | ✅ [#14](https://github.com/kbrdn1/LazyCurl/issues/14), [#72](https://github.com/kbrdn1/LazyCurl/issues/72) | ✅ CLI import |
 | **Settings Panel** | 🟢 Medium | [#25](https://github.com/kbrdn1/LazyCurl/issues/25) | ✅ Config UI |
 | **Theme System** | 🟢 Medium | [#12](https://github.com/kbrdn1/LazyCurl/issues/12), [#13](https://github.com/kbrdn1/LazyCurl/issues/13) | ✅ Theme picker |
 | **Hot Reload Config** | 🟢 Medium | NEW | ✅ Auto-reload |
 
-### 🚀 Sprint 4 - Competitive Advantage
+### 🔥 Sprint 4 - Competitive Advantage (Current)
 
 **Goal**: Surpass posting with Go-powered features
 
@@ -704,7 +727,8 @@ We use **Gitmoji + Conventional Commits**:
 | **External Editor** | ✅ | ✅ | Tie |
 | **Jump Mode** | ✅ | ✅ | Tie |
 | **Scripting** | 🔜 JS (Sprint 4) | ✅ Python | TBD |
-| **OpenAPI Import** | 🔜 Sprint 3 | ✅ | posting |
+| **OpenAPI Import** | ✅ | ✅ | Tie |
+| **Postman Import** | ✅ | ❌ | 🏆 LazyCurl |
 | **Collection Format** | JSON | YAML | 🏆 LazyCurl (standard) |
 | **GraphQL** | 🔜 Sprint 5 | ❌ | 🏆 LazyCurl |
 | **WebSocket** | 🔜 Sprint 5 | ❌ | 🏆 LazyCurl |

@@ -60,16 +60,7 @@ func ExportCollectionToPostman(collection *api.CollectionFile, outputPath string
 			}
 		}
 
-		// Ensure directory exists
-		dir := filepath.Dir(outputPath)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return PostmanExportedMsg{
-				Success: false,
-				Error:   fmt.Errorf("failed to create directory: %w", err),
-			}
-		}
-
-		// Export to file
+		// Export to file (directory creation is handled by postman.ExportCollection)
 		if err := postman.ExportCollection(collection, outputPath); err != nil {
 			return PostmanExportedMsg{
 				Success: false,
@@ -94,16 +85,7 @@ func ExportEnvironmentToPostman(env *api.EnvironmentFile, outputPath string) tea
 			}
 		}
 
-		// Ensure directory exists
-		dir := filepath.Dir(outputPath)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return PostmanExportedMsg{
-				Success: false,
-				Error:   fmt.Errorf("failed to create directory: %w", err),
-			}
-		}
-
-		// Export to file
+		// Export to file (directory creation is handled by postman.ExportEnvironment)
 		if err := postman.ExportEnvironment(env, outputPath); err != nil {
 			return PostmanExportedMsg{
 				Success: false,
@@ -182,6 +164,18 @@ func sanitizeFilename(name string) string {
 
 	// Ensure non-empty filename
 	if len(result) == 0 {
+		return "untitled"
+	}
+
+	// Handle all-dots edge case (e.g., "...", "..")
+	allDots := true
+	for _, c := range result {
+		if c != '.' {
+			allDots = false
+			break
+		}
+	}
+	if allDots {
 		return "untitled"
 	}
 

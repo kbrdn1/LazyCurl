@@ -1,5 +1,7 @@
 package postman
 
+import "encoding/json"
+
 // Collection represents the root structure of a Postman Collection v2.1 file.
 type Collection struct {
 	Info     Info       `json:"info"`
@@ -48,6 +50,25 @@ type URL struct {
 	Host     []string     `json:"host,omitempty"`
 	Path     []string     `json:"path,omitempty"`
 	Query    []QueryParam `json:"query,omitempty"`
+}
+
+// UnmarshalJSON handles URL being either a string or an object in Postman collections.
+func (u *URL) UnmarshalJSON(data []byte) error {
+	// Try string first (simple URL)
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		u.Raw = str
+		return nil
+	}
+
+	// Fall back to object
+	type urlAlias URL
+	var alias urlAlias
+	if err := json.Unmarshal(data, &alias); err != nil {
+		return err
+	}
+	*u = URL(alias)
+	return nil
 }
 
 // Header represents a request header.

@@ -1623,8 +1623,12 @@ func (m Model) handleExportCommand(args []string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// Export the first collection (TODO: let user choose)
-		m.statusBar.Info("Exporting to " + outputPath + "...")
+		// Export the first collection
+		if len(collections) > 1 {
+			m.statusBar.Info("Warning: Multiple collections found, exporting first one: " + collections[0].Name)
+		} else {
+			m.statusBar.Info("Exporting to " + outputPath + "...")
+		}
 		return m, ExportCollectionToPostman(collections[0], outputPath)
 
 	default:

@@ -1,0 +1,338 @@
+openapi: "3.0.3"
+info:
+  title: Complex References API
+  version: "1.0.0"
+  description: OpenAPI spec with various $ref patterns for testing reference resolution
+
+servers:
+  - url: https://api.complex.example.com/v1
+
+paths:
+  /orders:
+    get:
+      operationId: listOrders
+      summary: List all orders
+      tags:
+        - Orders
+      parameters:
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/OffsetParam"
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      operationId: createOrder
+      summary: Create a new order
+      tags:
+        - Orders
+      requestBody:
+        $ref: "#/components/requestBodies/OrderBody"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{orderId}:
+    get:
+      operationId: getOrderById
+      summary: Get an order by ID
+      tags:
+        - Orders
+      parameters:
+        - $ref: "#/components/parameters/OrderIdParam"
+      responses:
+        "200":
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /customers:
+    get:
+      operationId: listCustomers
+      summary: List all customers
+      tags:
+        - Customers
+      responses:
+        "200":
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customer"
+
+  /products:
+    get:
+      operationId: listProducts
+      summary: List all products
+      tags:
+        - Products
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+components:
+  schemas:
+    Order:
+      type: object
+      required:
+        - id
+        - customer
+        - items
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        customer:
+          $ref: "#/components/schemas/Customer"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        total:
+          $ref: "#/components/schemas/Money"
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        createdAt:
+          type: string
+          format: date-time
+        shippingAddress:
+          $ref: "#/components/schemas/Address"
+
+    OrderItem:
+      type: object
+      required:
+        - product
+        - quantity
+      properties:
+        product:
+          $ref: "#/components/schemas/Product"
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          $ref: "#/components/schemas/Money"
+
+    Customer:
+      type: object
+      required:
+        - id
+        - name
+        - email
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          example: "Jane Doe"
+        email:
+          type: string
+          format: email
+          example: "jane@example.com"
+        billingAddress:
+          $ref: "#/components/schemas/Address"
+        shippingAddress:
+          $ref: "#/components/schemas/Address"
+
+    Product:
+      type: object
+      required:
+        - id
+        - name
+        - price
+      properties:
+        id:
+          type: string
+          example: "PROD-001"
+        name:
+          type: string
+          example: "Widget Pro"
+        description:
+          type: string
+        price:
+          $ref: "#/components/schemas/Money"
+        category:
+          $ref: "#/components/schemas/Category"
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        parent:
+          $ref: "#/components/schemas/Category"
+
+    Address:
+      type: object
+      required:
+        - street
+        - city
+        - country
+      properties:
+        street:
+          type: string
+          example: "123 Main St"
+        city:
+          type: string
+          example: "Springfield"
+        state:
+          type: string
+          example: "IL"
+        postalCode:
+          type: string
+          example: "62701"
+        country:
+          type: string
+          example: "USA"
+
+    Money:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: number
+          format: double
+          example: 99.99
+        currency:
+          type: string
+          enum: [USD, EUR, GBP]
+          example: "USD"
+
+    OrderStatus:
+      type: string
+      enum:
+        - pending
+        - confirmed
+        - processing
+        - shipped
+        - delivered
+        - cancelled
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      description: Maximum number of items to return
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    OffsetParam:
+      name: offset
+      in: query
+      description: Number of items to skip
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    OrderIdParam:
+      name: orderId
+      in: path
+      description: Order ID
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  requestBodies:
+    OrderBody:
+      description: Order to create
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - customerId
+              - items
+            properties:
+              customerId:
+                type: integer
+              items:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - productId
+                    - quantity
+                  properties:
+                    productId:
+                      type: string
+                    quantity:
+                      type: integer
+                      minimum: 1
+              shippingAddressId:
+                type: integer
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

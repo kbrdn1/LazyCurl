@@ -74,7 +74,7 @@ linters-settings:
     min-len: 3
     min-occurrences: 7  # Raised from 5 to reduce noise
     # Ignore common UI strings
-    ignore-strings: "tab|shift\\+tab|header|query|none|down|up|left|right"
+    ignore-strings: "tab|shift\\+tab|header|query|none|down|up|left|right|esc"
 
   misspell:
     locale: US

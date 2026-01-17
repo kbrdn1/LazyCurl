@@ -40,7 +40,7 @@
 - **Jump Mode** — vim-easymotion style quick navigation
 
 <p align="center">
-<img src="preview-app.png" alt="LazyCurl Preview" width="256" height="256" />
+<img src="preview-app.png" alt="LazyCurl Preview" width="100%" />
 <br />
 <em>LazyCurl main interface with request builder, response viewer, and collections panel</em>
 </p>

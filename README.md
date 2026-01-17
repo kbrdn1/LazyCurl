@@ -148,7 +148,7 @@ Open your favorite text editor (vim, nano, VS Code, etc.) to edit request bodies
 ```bash
 # Set your preferred editor
 export VISUAL="vim"        # For terminal editor
-export VISUAL="code -w"    # For VS Code (wait mode)
+export VISUAL="code --wait" # For VS Code (wait mode)
 export EDITOR="nano"       # Fallback if VISUAL not set
 ```
 

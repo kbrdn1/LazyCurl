@@ -7,25 +7,25 @@ import (
 
 func TestHeadersToText(t *testing.T) {
 	tests := []struct {
-		name    string
-		headers map[string]string
-		want    []string // Lines that should be present (order may vary)
+		name  string
+		input map[string]string
+		want  []string // Lines that should be present (order may vary)
 	}{
 		{
-			name:    "empty headers",
-			headers: map[string]string{},
-			want:    nil,
+			name:  "empty headers",
+			input: map[string]string{},
+			want:  nil,
 		},
 		{
 			name: "single header",
-			headers: map[string]string{
+			input: map[string]string{
 				"Content-Type": "application/json",
 			},
 			want: []string{"Content-Type: application/json"},
 		},
 		{
 			name: "multiple headers",
-			headers: map[string]string{
+			input: map[string]string{
 				"Content-Type":  "application/json",
 				"Authorization": "Bearer token123",
 			},
@@ -36,7 +36,7 @@ func TestHeadersToText(t *testing.T) {
 		},
 		{
 			name: "header with empty value",
-			headers: map[string]string{
+			input: map[string]string{
 				"X-Empty": "",
 			},
 			want: []string{"X-Empty: "},
@@ -45,9 +45,9 @@ func TestHeadersToText(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := HeadersToText(tt.headers)
+			got := HeadersToText(tt.input)
 
-			if len(tt.headers) == 0 {
+			if len(tt.input) == 0 {
 				if got != "" {
 					t.Errorf("HeadersToText() = %q, want empty string", got)
 				}
@@ -72,63 +72,63 @@ func TestHeadersToText(t *testing.T) {
 
 func TestTextToHeaders(t *testing.T) {
 	tests := []struct {
-		name string
-		text string
-		want map[string]string
+		name  string
+		input string
+		want  map[string]string
 	}{
 		{
-			name: "empty text",
-			text: "",
-			want: map[string]string{},
+			name:  "empty text",
+			input: "",
+			want:  map[string]string{},
 		},
 		{
-			name: "single header",
-			text: "Content-Type: application/json",
+			name:  "single header",
+			input: "Content-Type: application/json",
 			want: map[string]string{
 				"Content-Type": "application/json",
 			},
 		},
 		{
-			name: "multiple headers",
-			text: "Content-Type: application/json\nAuthorization: Bearer token",
+			name:  "multiple headers",
+			input: "Content-Type: application/json\nAuthorization: Bearer token",
 			want: map[string]string{
 				"Content-Type":  "application/json",
 				"Authorization": "Bearer token",
 			},
 		},
 		{
-			name: "header with value containing colon",
-			text: "X-Custom: value:with:colons",
+			name:  "header with value containing colon",
+			input: "X-Custom: value:with:colons",
 			want: map[string]string{
 				"X-Custom": "value:with:colons",
 			},
 		},
 		{
-			name: "skip blank lines",
-			text: "Content-Type: application/json\n\nAuthorization: Bearer token\n",
+			name:  "skip blank lines",
+			input: "Content-Type: application/json\n\nAuthorization: Bearer token\n",
 			want: map[string]string{
 				"Content-Type":  "application/json",
 				"Authorization": "Bearer token",
 			},
 		},
 		{
-			name: "trim whitespace",
-			text: "  Content-Type  :   application/json  ",
+			name:  "trim whitespace",
+			input: "  Content-Type  :   application/json  ",
 			want: map[string]string{
 				"Content-Type": "application/json",
 			},
 		},
 		{
-			name: "skip malformed lines",
-			text: "Content-Type: application/json\nmalformed line without colon\nAuthorization: Bearer token",
+			name:  "skip malformed lines",
+			input: "Content-Type: application/json\nmalformed line without colon\nAuthorization: Bearer token",
 			want: map[string]string{
 				"Content-Type":  "application/json",
 				"Authorization": "Bearer token",
 			},
 		},
 		{
-			name: "skip line with only colon",
-			text: ":\nContent-Type: application/json",
+			name:  "skip line with only colon",
+			input: ":\nContent-Type: application/json",
 			want: map[string]string{
 				"Content-Type": "application/json",
 			},
@@ -137,7 +137,7 @@ func TestTextToHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := TextToHeaders(tt.text)
+			got := TextToHeaders(tt.input)
 
 			if len(got) != len(tt.want) {
 				t.Errorf("TextToHeaders() has %d headers, want %d", len(got), len(tt.want))
@@ -189,49 +189,49 @@ func TestHeadersRoundTrip(t *testing.T) {
 func TestValidateHeaderText(t *testing.T) {
 	tests := []struct {
 		name         string
-		text         string
+		input        string
 		wantWarnings int
 	}{
 		{
 			name:         "valid headers",
-			text:         "Content-Type: application/json\nAuthorization: Bearer token",
+			input:        "Content-Type: application/json\nAuthorization: Bearer token",
 			wantWarnings: 0,
 		},
 		{
 			name:         "empty text",
-			text:         "",
+			input:        "",
 			wantWarnings: 0,
 		},
 		{
 			name:         "missing separator",
-			text:         "Content-Type application/json",
+			input:        "Content-Type application/json",
 			wantWarnings: 1,
 		},
 		{
 			name:         "empty key",
-			text:         ": application/json",
+			input:        ": application/json",
 			wantWarnings: 1,
 		},
 		{
 			name:         "multiple issues",
-			text:         "valid: header\nmissing separator\n: empty key",
+			input:        "valid: header\nmissing separator\n: empty key",
 			wantWarnings: 2,
 		},
 		{
 			name:         "blank lines ignored",
-			text:         "Content-Type: application/json\n\n\nAuthorization: Bearer token",
+			input:        "Content-Type: application/json\n\n\nAuthorization: Bearer token",
 			wantWarnings: 0,
 		},
 		{
 			name:         "whitespace-only lines ignored",
-			text:         "Content-Type: application/json\n   \nAuthorization: Bearer token",
+			input:        "Content-Type: application/json\n   \nAuthorization: Bearer token",
 			wantWarnings: 0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			warnings := ValidateHeaderText(tt.text)
+			warnings := ValidateHeaderText(tt.input)
 			if len(warnings) != tt.wantWarnings {
 				t.Errorf("ValidateHeaderText() returned %d warnings, want %d: %v", len(warnings), tt.wantWarnings, warnings)
 			}

@@ -2,6 +2,7 @@ package api
 
 import (
 	"os"
+	"runtime"
 	"testing"
 )
 
@@ -92,14 +93,19 @@ func TestGetEditorConfig(t *testing.T) {
 }
 
 func TestEditorConfig_Validate(t *testing.T) {
+	// Skip on Windows - sh is not available
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping Unix-specific test on Windows")
+	}
+
 	tests := []struct {
 		name    string
-		config  EditorConfig
+		input   EditorConfig
 		wantErr bool
 	}{
 		{
 			name: "valid editor",
-			config: EditorConfig{
+			input: EditorConfig{
 				Binary: "sh", // sh should exist on all Unix systems
 				Args:   []string{"-c", "true"},
 				Source: EditorSourceVisual,
@@ -108,7 +114,7 @@ func TestEditorConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "non-existent editor",
-			config: EditorConfig{
+			input: EditorConfig{
 				Binary: "definitely-not-a-real-editor-12345",
 				Args:   nil,
 				Source: EditorSourceVisual,
@@ -117,7 +123,7 @@ func TestEditorConfig_Validate(t *testing.T) {
 		},
 		{
 			name: "empty binary",
-			config: EditorConfig{
+			input: EditorConfig{
 				Binary: "",
 				Args:   nil,
 				Source: EditorSourceVisual,
@@ -128,7 +134,7 @@ func TestEditorConfig_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.config.Validate()
+			err := tt.input.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -138,70 +144,70 @@ func TestEditorConfig_Validate(t *testing.T) {
 
 func TestDetectContentType(t *testing.T) {
 	tests := []struct {
-		name    string
-		content string
-		want    ContentType
+		name  string
+		input string
+		want  ContentType
 	}{
 		{
-			name:    "JSON object",
-			content: `{"key": "value"}`,
-			want:    ContentTypeJSON,
+			name:  "JSON object",
+			input: `{"key": "value"}`,
+			want:  ContentTypeJSON,
 		},
 		{
-			name:    "JSON array",
-			content: `[1, 2, 3]`,
-			want:    ContentTypeJSON,
+			name:  "JSON array",
+			input: `[1, 2, 3]`,
+			want:  ContentTypeJSON,
 		},
 		{
-			name:    "JSON with whitespace",
-			content: `  { "name": "test" }  `,
-			want:    ContentTypeJSON,
+			name:  "JSON with whitespace",
+			input: `  { "name": "test" }  `,
+			want:  ContentTypeJSON,
 		},
 		{
-			name:    "XML declaration",
-			content: `<?xml version="1.0" encoding="UTF-8"?>`,
-			want:    ContentTypeXML,
+			name:  "XML declaration",
+			input: `<?xml version="1.0" encoding="UTF-8"?>`,
+			want:  ContentTypeXML,
 		},
 		{
-			name:    "XML root element",
-			content: `<root><child>value</child></root>`,
-			want:    ContentTypeXML,
+			name:  "XML root element",
+			input: `<root><child>value</child></root>`,
+			want:  ContentTypeXML,
 		},
 		{
-			name:    "HTML doctype",
-			content: `<!DOCTYPE html><html></html>`,
-			want:    ContentTypeHTML,
+			name:  "HTML doctype",
+			input: `<!DOCTYPE html><html></html>`,
+			want:  ContentTypeHTML,
 		},
 		{
-			name:    "HTML tag",
-			content: `<html><body>Hello</body></html>`,
-			want:    ContentTypeHTML,
+			name:  "HTML tag",
+			input: `<html><body>Hello</body></html>`,
+			want:  ContentTypeHTML,
 		},
 		{
-			name:    "Plain text",
-			content: `Hello, World!`,
-			want:    ContentTypeText,
+			name:  "Plain text",
+			input: `Hello, World!`,
+			want:  ContentTypeText,
 		},
 		{
-			name:    "Empty string",
-			content: ``,
-			want:    ContentTypeText,
+			name:  "Empty string",
+			input: ``,
+			want:  ContentTypeText,
 		},
 		{
-			name:    "Whitespace only",
-			content: `   `,
-			want:    ContentTypeText,
+			name:  "Whitespace only",
+			input: `   `,
+			want:  ContentTypeText,
 		},
 		{
-			name:    "Multiline JSON",
-			content: "{\n  \"key\": \"value\"\n}",
-			want:    ContentTypeJSON,
+			name:  "Multiline JSON",
+			input: "{\n  \"key\": \"value\"\n}",
+			want:  ContentTypeJSON,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := DetectContentType(tt.content)
+			got := DetectContentType(tt.input)
 			if got != tt.want {
 				t.Errorf("DetectContentType() = %v, want %v", got, tt.want)
 			}
@@ -211,21 +217,22 @@ func TestDetectContentType(t *testing.T) {
 
 func TestGetExtensionForContentType(t *testing.T) {
 	tests := []struct {
-		contentType ContentType
-		want        string
+		name  string
+		input ContentType
+		want  string
 	}{
-		{ContentTypeJSON, ".json"},
-		{ContentTypeXML, ".xml"},
-		{ContentTypeHTML, ".html"},
-		{ContentTypeText, ".txt"},
-		{"unknown", ".txt"},
+		{name: "JSON type", input: ContentTypeJSON, want: ".json"},
+		{name: "XML type", input: ContentTypeXML, want: ".xml"},
+		{name: "HTML type", input: ContentTypeHTML, want: ".html"},
+		{name: "Text type", input: ContentTypeText, want: ".txt"},
+		{name: "Unknown type", input: "unknown", want: ".txt"},
 	}
 
 	for _, tt := range tests {
-		t.Run(string(tt.contentType), func(t *testing.T) {
-			got := GetExtensionForContentType(tt.contentType)
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetExtensionForContentType(tt.input)
 			if got != tt.want {
-				t.Errorf("GetExtensionForContentType(%v) = %v, want %v", tt.contentType, got, tt.want)
+				t.Errorf("GetExtensionForContentType(%v) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
 	}
@@ -233,35 +240,35 @@ func TestGetExtensionForContentType(t *testing.T) {
 
 func TestParseEditorCommand(t *testing.T) {
 	tests := []struct {
-		name    string
-		command string
-		want    []string
+		name  string
+		input string
+		want  []string
 	}{
 		{
-			name:    "simple command",
-			command: "vim",
-			want:    []string{"vim"},
+			name:  "simple command",
+			input: "vim",
+			want:  []string{"vim"},
 		},
 		{
-			name:    "command with one arg",
-			command: "code --wait",
-			want:    []string{"code", "--wait"},
+			name:  "command with one arg",
+			input: "code --wait",
+			want:  []string{"code", "--wait"},
 		},
 		{
-			name:    "command with multiple args",
-			command: "emacs -nw --no-splash",
-			want:    []string{"emacs", "-nw", "--no-splash"},
+			name:  "command with multiple args",
+			input: "emacs -nw --no-splash",
+			want:  []string{"emacs", "-nw", "--no-splash"},
 		},
 		{
-			name:    "command with extra whitespace",
-			command: "  vim   -u  NONE  ",
-			want:    []string{"vim", "-u", "NONE"},
+			name:  "command with extra whitespace",
+			input: "  vim   -u  NONE  ",
+			want:  []string{"vim", "-u", "NONE"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseEditorCommand(tt.command)
+			got := parseEditorCommand(tt.input)
 			if len(got) != len(tt.want) {
 				t.Errorf("parseEditorCommand() len = %d, want %d", len(got), len(tt.want))
 				return

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"os"
 	"time"
 )
@@ -65,7 +66,11 @@ func CreateTempFile(content string, contentType ContentType) (*TempFileInfo, err
 // ReadTempFile reads the current content of a temp file.
 //
 // Returns the content as string, or error if file is unreadable.
+// Returns error if info is nil.
 func ReadTempFile(info *TempFileInfo) (string, error) {
+	if info == nil {
+		return "", fmt.Errorf("temp file info is nil")
+	}
 	content, err := os.ReadFile(info.Path)
 	if err != nil {
 		return "", err
@@ -75,7 +80,11 @@ func ReadTempFile(info *TempFileInfo) (string, error) {
 
 // CleanupTempFile removes the temporary file.
 // Safe to call multiple times; ignores "file not found" errors.
+// Safe to call with nil info (no-op).
 func CleanupTempFile(info *TempFileInfo) error {
+	if info == nil {
+		return nil
+	}
 	err := os.Remove(info.Path)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -85,7 +94,11 @@ func CleanupTempFile(info *TempFileInfo) error {
 
 // HasContentChanged compares original content with current file content.
 // Returns true if content has been modified.
+// Returns error if info is nil.
 func HasContentChanged(info *TempFileInfo) (bool, error) {
+	if info == nil {
+		return false, fmt.Errorf("temp file info is nil")
+	}
 	currentContent, err := ReadTempFile(info)
 	if err != nil {
 		return false, err

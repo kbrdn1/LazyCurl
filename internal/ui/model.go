@@ -2444,10 +2444,9 @@ func (m *Model) openExternalEditor(msg components.ExternalEditorRequestMsg) (tea
 	// Update status bar
 	m.statusBar.Info("Opening external editor...")
 
-	// Build editor command args
-	cmdArgs := make([]string, len(editorConfig.Args)+1)
-	copy(cmdArgs, editorConfig.Args)
-	cmdArgs[len(editorConfig.Args)] = tempInfo.Path
+	// Build editor command args - append temp file path to editor args
+	cmdArgs := append([]string{}, editorConfig.Args...)
+	cmdArgs = append(cmdArgs, tempInfo.Path)
 
 	// Create the external editor command
 	startTime := time.Now()

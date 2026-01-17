@@ -87,86 +87,127 @@ func TestCreateTempFile(t *testing.T) {
 }
 
 func TestReadTempFile(t *testing.T) {
-	// Create a temp file
-	originalContent := "test content"
-	info, err := CreateTempFile(originalContent, ContentTypeText)
-	if err != nil {
-		t.Fatalf("CreateTempFile() error = %v", err)
+	tests := []struct {
+		name           string
+		setup          func() (*TempFileInfo, func())
+		modifyContent  string
+		wantContent    string
+		wantErr        bool
+		wantErrContain string
+	}{
+		{
+			name: "read original content",
+			setup: func() (*TempFileInfo, func()) {
+				info, _ := CreateTempFile("test content", ContentTypeText)
+				return info, func() { CleanupTempFile(info) }
+			},
+			wantContent: "test content",
+			wantErr:     false,
+		},
+		{
+			name: "read modified content",
+			setup: func() (*TempFileInfo, func()) {
+				info, _ := CreateTempFile("original", ContentTypeText)
+				return info, func() { CleanupTempFile(info) }
+			},
+			modifyContent: "modified content",
+			wantContent:   "modified content",
+			wantErr:       false,
+		},
+		{
+			name: "non-existent file",
+			setup: func() (*TempFileInfo, func()) {
+				return &TempFileInfo{Path: "/nonexistent/path/file.txt"}, func() {}
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil info",
+			setup: func() (*TempFileInfo, func()) {
+				return nil, func() {}
+			},
+			wantErr:        true,
+			wantErrContain: "nil",
+		},
 	}
-	defer CleanupTempFile(info)
 
-	// Read the content
-	content, err := ReadTempFile(info)
-	if err != nil {
-		t.Fatalf("ReadTempFile() error = %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info, cleanup := tt.setup()
+			defer cleanup()
 
-	if content != originalContent {
-		t.Errorf("ReadTempFile() = %q, want %q", content, originalContent)
-	}
+			// Apply modification if specified
+			if tt.modifyContent != "" && info != nil {
+				if err := os.WriteFile(info.Path, []byte(tt.modifyContent), 0644); err != nil {
+					t.Fatalf("failed to modify temp file: %v", err)
+				}
+			}
 
-	// Modify the file
-	newContent := "modified content"
-	if err := os.WriteFile(info.Path, []byte(newContent), 0644); err != nil {
-		t.Fatalf("failed to modify temp file: %v", err)
-	}
-
-	// Read again
-	content, err = ReadTempFile(info)
-	if err != nil {
-		t.Fatalf("ReadTempFile() after modification error = %v", err)
-	}
-
-	if content != newContent {
-		t.Errorf("ReadTempFile() after modification = %q, want %q", content, newContent)
-	}
-}
-
-func TestReadTempFile_NonExistent(t *testing.T) {
-	info := &TempFileInfo{
-		Path: "/nonexistent/path/file.txt",
-	}
-
-	_, err := ReadTempFile(info)
-	if err == nil {
-		t.Error("ReadTempFile() expected error for non-existent file")
+			content, err := ReadTempFile(info)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReadTempFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErrContain != "" && err != nil {
+				if !strings.Contains(err.Error(), tt.wantErrContain) {
+					t.Errorf("ReadTempFile() error = %v, want error containing %q", err, tt.wantErrContain)
+				}
+			}
+			if !tt.wantErr && content != tt.wantContent {
+				t.Errorf("ReadTempFile() = %q, want %q", content, tt.wantContent)
+			}
+		})
 	}
 }
 
 func TestCleanupTempFile(t *testing.T) {
-	// Create a temp file
-	info, err := CreateTempFile("test", ContentTypeText)
-	if err != nil {
-		t.Fatalf("CreateTempFile() error = %v", err)
+	tests := []struct {
+		name    string
+		setup   func() *TempFileInfo
+		wantErr bool
+	}{
+		{
+			name: "cleanup existing file",
+			setup: func() *TempFileInfo {
+				info, _ := CreateTempFile("test", ContentTypeText)
+				return info
+			},
+			wantErr: false,
+		},
+		{
+			name: "cleanup already deleted file",
+			setup: func() *TempFileInfo {
+				info, _ := CreateTempFile("test", ContentTypeText)
+				os.Remove(info.Path)
+				return info
+			},
+			wantErr: false,
+		},
+		{
+			name: "cleanup nil info",
+			setup: func() *TempFileInfo {
+				return nil
+			},
+			wantErr: false, // Should be no-op for nil
+		},
 	}
 
-	// Verify it exists
-	if _, err := os.Stat(info.Path); os.IsNotExist(err) {
-		t.Fatal("temp file was not created")
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info := tt.setup()
 
-	// Cleanup
-	if err := CleanupTempFile(info); err != nil {
-		t.Fatalf("CleanupTempFile() error = %v", err)
-	}
+			err := CleanupTempFile(info)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CleanupTempFile() error = %v, wantErr %v", err, tt.wantErr)
+			}
 
-	// Verify it's gone
-	if _, err := os.Stat(info.Path); !os.IsNotExist(err) {
-		t.Error("temp file was not deleted")
-	}
-}
-
-func TestCleanupTempFile_AlreadyDeleted(t *testing.T) {
-	// Create and immediately delete
-	info, err := CreateTempFile("test", ContentTypeText)
-	if err != nil {
-		t.Fatalf("CreateTempFile() error = %v", err)
-	}
-	os.Remove(info.Path)
-
-	// Cleanup should not error
-	if err := CleanupTempFile(info); err != nil {
-		t.Errorf("CleanupTempFile() should not error for already deleted file: %v", err)
+			// Verify file is gone (only if info is not nil and had a real path)
+			if info != nil && info.Path != "" {
+				if _, statErr := os.Stat(info.Path); !os.IsNotExist(statErr) {
+					t.Error("temp file was not deleted")
+				}
+			}
+		})
 	}
 }
 
@@ -238,26 +279,37 @@ func TestHasContentChanged(t *testing.T) {
 
 func TestTempFileInfo_Extension(t *testing.T) {
 	tests := []struct {
-		contentType ContentType
-		wantExt     string
+		name  string
+		input ContentType
+		want  string
 	}{
-		{ContentTypeJSON, ".json"},
-		{ContentTypeXML, ".xml"},
-		{ContentTypeHTML, ".html"},
-		{ContentTypeText, ".txt"},
+		{name: "JSON extension", input: ContentTypeJSON, want: ".json"},
+		{name: "XML extension", input: ContentTypeXML, want: ".xml"},
+		{name: "HTML extension", input: ContentTypeHTML, want: ".html"},
+		{name: "Text extension", input: ContentTypeText, want: ".txt"},
 	}
 
 	for _, tt := range tests {
-		t.Run(string(tt.contentType), func(t *testing.T) {
-			info, err := CreateTempFile("content", tt.contentType)
+		t.Run(tt.name, func(t *testing.T) {
+			info, err := CreateTempFile("content", tt.input)
 			if err != nil {
 				t.Fatalf("CreateTempFile() error = %v", err)
 			}
 			defer CleanupTempFile(info)
 
-			if info.Extension != tt.wantExt {
-				t.Errorf("Extension = %q, want %q", info.Extension, tt.wantExt)
+			if info.Extension != tt.want {
+				t.Errorf("Extension = %q, want %q", info.Extension, tt.want)
 			}
 		})
+	}
+}
+
+func TestHasContentChanged_NilInfo(t *testing.T) {
+	_, err := HasContentChanged(nil)
+	if err == nil {
+		t.Error("HasContentChanged(nil) expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "nil") {
+		t.Errorf("HasContentChanged(nil) error = %v, want error containing 'nil'", err)
 	}
 }

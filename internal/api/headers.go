@@ -23,11 +23,18 @@ func HeadersToText(headers map[string]string) string {
 		return ""
 	}
 
-	var lines []string
-	for key, value := range headers {
-		lines = append(lines, fmt.Sprintf("%s: %s", key, value))
+	// Extract and sort keys for deterministic output
+	keys := make([]string, 0, len(headers))
+	for key := range headers {
+		keys = append(keys, key)
 	}
-	sort.Strings(lines) // Consistent ordering
+	sort.Strings(keys)
+
+	// Build lines in sorted key order
+	var lines []string
+	for _, key := range keys {
+		lines = append(lines, fmt.Sprintf("%s: %s", key, headers[key]))
+	}
 	return strings.Join(lines, "\n")
 }
 

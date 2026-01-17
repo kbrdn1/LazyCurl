@@ -1,14 +1,16 @@
-<p align="center">
-  <pre style="font-size: 10px; line-height: 1.2;">
+<div align="center">
+
+```
 ██╗      █████╗ ███████╗██╗   ██╗ ██████╗██╗   ██╗██████╗ ██╗
 ██║     ██╔══██╗╚══███╔╝╚██╗ ██╔╝██╔════╝██║   ██║██╔══██╗██║
 ██║     ███████║  ███╔╝  ╚████╔╝ ██║     ██║   ██║██████╔╝██║
 ██║     ██╔══██║ ███╔╝    ╚██╔╝  ██║     ██║   ██║██╔══██╗██║
 ███████╗██║  ██║███████╗   ██║   ╚██████╗╚██████╔╝██║  ██║███████╗
 ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
-  </pre>
-  <strong>HTTP TUI Client</strong>
-</p>
+                         HTTP TUI Client
+```
+
+</div>
 
 <p align="center">
   <strong>A powerful Terminal User Interface (TUI) HTTP client</strong><br />

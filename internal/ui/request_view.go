@@ -224,6 +224,9 @@ type RequestView struct {
 
 	// Clipboard for yank/paste
 	clipboard *KeyValueClipboard
+
+	// Cache for environment variable sync optimization
+	lastEnvVarsLen int
 }
 
 // KeyValueClipboard holds copied key-value data
@@ -2066,7 +2069,14 @@ func (r *RequestView) GetBodyContent() string {
 }
 
 // SetEnvironmentVariables sets the environment variables for body preview mode
+// Uses length comparison as optimization to avoid redundant updates on every render
 func (r *RequestView) SetEnvironmentVariables(vars map[string]string) {
+	// Skip update if variables haven't changed (length heuristic)
+	if len(vars) == r.lastEnvVarsLen && r.lastEnvVarsLen > 0 {
+		return
+	}
+	r.lastEnvVarsLen = len(vars)
+
 	if r.bodyEditor != nil {
 		r.bodyEditor.SetVariableValues(vars)
 	}

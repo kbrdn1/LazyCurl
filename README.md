@@ -1,7 +1,13 @@
 <h1 align="center">
-  <img src="LazyCurl.png" alt="LazyCurl Logo" width="128" height="128" />
-  <br />
-  LazyCurl
+  <pre align="center">
+██╗      █████╗ ███████╗██╗   ██╗ ██████╗██╗   ██╗██████╗ ██╗
+██║     ██╔══██╗╚══███╔╝╚██╗ ██╔╝██╔════╝██║   ██║██╔══██╗██║
+██║     ███████║  ███╔╝  ╚████╔╝ ██║     ██║   ██║██████╔╝██║
+██║     ██╔══██║ ███╔╝    ╚██╔╝  ██║     ██║   ██║██╔══██╗██║
+███████╗██║  ██║███████╗   ██║   ╚██████╗╚██████╔╝██║  ██║███████╗
+╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
+                           HTTP TUI Client
+  </pre>
 </h1>
 
 <p align="center">
@@ -33,20 +39,11 @@
 - **Session Persistence** — Auto-save/restore your workspace state
 - **Jump Mode** — vim-easymotion style quick navigation
 
-```
-┌─Collections────────┬─Request──────────────────────────┐
-│                    │ POST    {{base_url}}/api/users   │
-│ ▼ My API           │──────────────────────────────────│
-│   ▶ Users          │ Params │ Auth │ Headers │ Body   │
-│     GET  /users    │──────────────────────────────────│
-│     POST /users    │ {                                │
-│   ▶ Products       │   "name": "{{user_name}}"        │
-│                    │ }                                │
-│                    ├─Response─────────────────────────┤
-│                    │ 201 Created  │ 142ms │ 1.2 KB    │
-└────────────────────┴──────────────────────────────────┘
- NORMAL │ POST │ My API > Users │ dev │ ?:help
-```
+<p align="center">
+<img src="preview-app.png" alt="LazyCurl Preview" width="256" height="256" />
+<br />
+<em>LazyCurl main interface with request builder, response viewer, and collections panel</em>
+</p>
 
 ---
 

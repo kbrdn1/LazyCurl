@@ -34,7 +34,17 @@ linters:
     goconst:
       min-len: 3
       min-occurrences: 7
-      ignore-string-values: tab|shift\+tab|header|query|none|down|up|left|right|esc
+      ignore-string-values:
+        - tab
+        - shift+tab
+        - header
+        - query
+        - none
+        - down
+        - up
+        - left
+        - right
+        - esc
     gocritic:
       disabled-checks:
         - dupImport

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -19,6 +20,9 @@ import (
 	"github.com/kbrdn1/LazyCurl/internal/ui/components"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
+
+// execCommand is a variable to allow mocking in tests
+var execCommand = exec.Command
 
 // HTTPResponseMsg is sent when an HTTP request completes
 type HTTPResponseMsg struct {
@@ -114,6 +118,10 @@ type Model struct {
 	// Import modal
 	importModal        *ImportModalModel
 	openAPIImportModal *OpenAPIImportModal
+
+	// External editor state
+	externalEditorActive bool              // Whether external editor is currently open
+	externalEditorInfo   *api.TempFileInfo // Temp file info for cleanup
 }
 
 // NewModel creates a new application model
@@ -287,6 +295,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case components.EditorQuitMsg:
 		// Editor requested to quit the application (Q key in NORMAL mode)
 		return m.saveSessionAndQuit()
+
+	case components.ExternalEditorRequestMsg:
+		// Handle external editor request
+		return m.openExternalEditor(msg)
+
+	case components.ExternalEditorFinishedMsg:
+		// Handle external editor finished
+		m.externalEditorActive = false
+		// Cleanup temp file
+		if m.externalEditorInfo != nil {
+			_ = api.CleanupTempFile(m.externalEditorInfo)
+			m.externalEditorInfo = nil
+		}
+		// Show status message
+		if msg.Err != nil {
+			m.statusBar.Error(msg.Err)
+		} else if msg.Changed {
+			m.statusBar.Success("Editor", "Content updated")
+		} else {
+			m.statusBar.Info("Editor closed (no changes)")
+		}
+		// Forward to request panel to update content
+		var cmd tea.Cmd
+		*m.requestPanel, cmd = m.requestPanel.Update(msg, m.globalConfig)
+		return m, cmd
+
+	case components.ExternalEditorErrorMsg:
+		// Handle external editor error
+		m.externalEditorActive = false
+		// Cleanup temp file if present
+		if m.externalEditorInfo != nil {
+			_ = api.CleanupTempFile(m.externalEditorInfo)
+			m.externalEditorInfo = nil
+		}
+		// Show error in status bar
+		m.statusBar.Error(msg.Err)
+		return m, nil
 
 	case SessionSaveTickMsg:
 		// Handle debounced session save
@@ -2518,4 +2563,86 @@ func (m *Model) jumpToTarget(target JumpTarget) (Model, tea.Cmd) {
 	}
 
 	return *m, m.markSessionDirty()
+}
+
+// openExternalEditor opens an external editor for editing content
+func (m *Model) openExternalEditor(msg components.ExternalEditorRequestMsg) (tea.Model, tea.Cmd) {
+	// Get editor configuration
+	editorConfig, err := api.GetEditorConfig()
+	if err != nil {
+		return *m, func() tea.Msg {
+			return components.ExternalEditorErrorMsg{
+				Field:     msg.Field,
+				Err:       err,
+				ErrorType: components.EditorErrorNoEditor,
+			}
+		}
+	}
+
+	// Validate editor exists
+	if err := editorConfig.Validate(); err != nil {
+		return *m, func() tea.Msg {
+			return components.ExternalEditorErrorMsg{
+				Field:     msg.Field,
+				Err:       err,
+				ErrorType: components.EditorErrorNotFound,
+			}
+		}
+	}
+
+	// Create temp file with content
+	tempInfo, err := api.CreateTempFile(msg.Content, msg.ContentType)
+	if err != nil {
+		return *m, func() tea.Msg {
+			return components.ExternalEditorErrorMsg{
+				Field:     msg.Field,
+				Err:       err,
+				ErrorType: components.EditorErrorTempFile,
+			}
+		}
+	}
+
+	// Store temp file info for cleanup
+	m.externalEditorActive = true
+	m.externalEditorInfo = tempInfo
+
+	// Update status bar
+	m.statusBar.Info("Opening external editor...")
+
+	// Build editor command args - append temp file path to editor args
+	cmdArgs := append([]string{}, editorConfig.Args...)
+	cmdArgs = append(cmdArgs, tempInfo.Path)
+
+	// Create the external editor command
+	startTime := time.Now()
+	cmd := execCommand(editorConfig.Binary, cmdArgs...)
+
+	c := tea.ExecProcess(cmd, func(err error) tea.Msg {
+		duration := time.Since(startTime)
+
+		// Read content from temp file
+		content, readErr := api.ReadTempFile(tempInfo)
+		if readErr != nil {
+			return components.ExternalEditorErrorMsg{
+				Field:     msg.Field,
+				Err:       readErr,
+				ErrorType: components.EditorErrorReadContent,
+			}
+		}
+
+		// Determine if content changed
+		changed := content != msg.Content
+
+		// Return finished message (error might be nil for normal exit)
+		return components.ExternalEditorFinishedMsg{
+			Field:           msg.Field,
+			Content:         content,
+			OriginalContent: msg.Content,
+			Changed:         changed,
+			Err:             err,
+			Duration:        duration,
+		}
+	})
+
+	return *m, c
 }

@@ -89,6 +89,44 @@ make build-all      # Cross-compile for Linux/macOS/Windows (AMD64 & ARM64)
 - **HTTP Client**: Request execution with variable interpolation
 - **Response Formatting**: JSON/XML/HTML formatting via `internal/format/`
 
+**External Editor Integration** (`internal/api/`, `internal/ui/components/`):
+
+- **Editor Detection** (`external_editor.go`): Auto-detect from `$VISUAL` → `$EDITOR` → fallback (`nano`, `vi`)
+- **Temp File Management** (`temp_file.go`): Create temp files with smart extensions (`.json`, `.xml`, `.html`, `.txt`)
+- **Content Type Detection**: Heuristic analysis based on content prefix (`{`/`[` → JSON, `<?xml` → XML, `<!doctype` → HTML)
+- **Message Types** (`editor_messages.go`): `ExternalEditorRequestMsg`, `ExternalEditorFinishedMsg`, `ExternalEditorErrorMsg`
+- **Error Categorization**: Typed errors (`EditorErrorNoEditor`, `EditorErrorNotFound`, `EditorErrorTempFile`, `EditorErrorReadContent`)
+
+**External Editor Message Flow**:
+
+```text
+User presses Ctrl+E (INSERT mode)
+    ↓
+Editor.handleInsertMode() → ExternalEditorRequestMsg{Field, Content, ContentType}
+    ↓
+RequestView.Update() → forwards message unchanged
+    ↓
+Model.openExternalEditor():
+  1. GetEditorConfig() → detect editor from env vars
+  2. EditorConfig.Validate() → verify binary exists
+  3. CreateTempFile() → write content with smart extension
+  4. tea.ExecProcess() → suspend TUI, launch editor
+    ↓
+External editor opens (vim, code --wait, nano...)
+User edits and saves
+    ↓
+Callback:
+  1. ReadTempFile() → read modified content
+  2. Compare with original
+  3. Return ExternalEditorFinishedMsg{Content, Changed, Duration}
+    ↓
+Model.Update():
+  1. CleanupTempFile() → delete temp file
+  2. Forward to RequestView
+    ↓
+RequestView.Update() → bodyEditor.SetContent(newContent)
+```
+
 **Session Layer** (`internal/session/`):
 
 - **Session Persistence**: Auto-save/restore of application state to `.lazycurl/session.yml`
@@ -342,6 +380,53 @@ Request sent → RequestCompleteMsg → Add to ConsoleHistory → ConsoleView up
 ```
 
 See `specs/009-console-tab-in-response-panel/quickstart.md` for implementation guide.
+
+## Completed Feature: External Editor Integration (Issue #65)
+
+### Overview
+
+External editor integration allows users to edit request body/headers in their preferred text editor (vim, VS Code, etc.) by pressing `Ctrl+E` in INSERT mode.
+
+### Key Files
+
+- `internal/api/external_editor.go` - Editor detection, content type analysis, validation
+- `internal/api/temp_file.go` - Temp file lifecycle management
+- `internal/api/headers.go` - Header text serialization for editor
+- `internal/ui/components/editor.go` - Editor component with external edit trigger
+- `internal/ui/components/editor_messages.go` - Message type definitions
+- `internal/ui/model.go` - Process orchestration via `tea.ExecProcess`
+
+### Configuration
+
+External editor is configured via environment variables (not config file):
+
+```bash
+export VISUAL="vim"           # Primary (preferred)
+export EDITOR="nano"          # Fallback
+export VISUAL="code --wait"   # GUI editors need --wait flag
+```
+
+### Keybindings
+
+- `Ctrl+E` (INSERT mode): Open current field in external editor
+
+### Architecture Pattern
+
+```text
+Ctrl+E → ExternalEditorRequestMsg → CreateTempFile → tea.ExecProcess
+       → Editor process → ExternalEditorFinishedMsg → CleanupTempFile → Update content
+```
+
+### Content Type Detection
+
+| Content | Extension | Detection |
+|---------|-----------|-----------|
+| JSON | `.json` | Starts with `{` or `[` |
+| XML | `.xml` | Starts with `<?xml` or `<tag>` |
+| HTML | `.html` | Starts with `<!doctype` or `<html>` |
+| Text | `.txt` | Default fallback |
+
+---
 
 ## Completed Feature: Session Persistence (Issue #11)
 

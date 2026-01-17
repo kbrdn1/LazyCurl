@@ -61,9 +61,6 @@ keybindings:
   delete_request: ["d"]
   toggle_envs: ["e"]
 
-# Default editor for external editing
-editor: "vim"
-
 # Recent workspaces list
 workspaces:
   - "/home/user/projects/api-project"
@@ -94,20 +91,6 @@ global_environments:
 | `accent_color` | hex | `"#f5c2e7"` | Accent highlights (Pink) |
 | `border_color` | hex | `"#45475a"` | Border color (Surface0) |
 | `active_color` | hex | `"#a6e3a1"` | Active state color (Green) |
-
-#### Editor Option
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `editor` | string | `"vim"` | External editor command |
-
-Supported editors:
-
-- `vim`, `nvim` - Vim/Neovim
-- `nano` - GNU Nano
-- `code` - VS Code
-- `emacs` - Emacs
-- Any executable in PATH
 
 ---
 
@@ -287,20 +270,44 @@ LazyCurl respects these system environment variables:
 
 | Variable | Description |
 |----------|-------------|
+| `VISUAL` | **Primary** external editor (preferred for GUI editors) |
+| `EDITOR` | **Fallback** external editor (used if `VISUAL` not set) |
 | `LAZYCURL_CONFIG` | Override global config path |
 | `LAZYCURL_WORKSPACE` | Override workspace path |
-| `EDITOR` | Fallback editor if not configured |
 | `HOME` | User home directory for config location |
+
+### External Editor Configuration
+
+LazyCurl uses the `$VISUAL` and `$EDITOR` environment variables to determine which editor to use when pressing `Ctrl+E` in INSERT mode. The detection order is:
+
+1. `$VISUAL` (preferred - designed for graphical/full-screen editors)
+2. `$EDITOR` (fallback - traditional editor variable)
+3. Auto-detection of common editors: `nano`, `vi`
+
+**Supported Editors:**
+
+| Editor | Terminal | Configuration Example |
+|--------|----------|----------------------|
+| Vim/Neovim | Yes | `export VISUAL="vim"` or `export VISUAL="nvim"` |
+| Nano | Yes | `export VISUAL="nano"` |
+| Emacs | Yes | `export VISUAL="emacs -nw"` |
+| Micro | Yes | `export VISUAL="micro"` |
+| VS Code | No | `export VISUAL="code --wait"` |
+| Sublime Text | No | `export VISUAL="subl --wait"` |
+| Zed | No | `export VISUAL="zed --wait"` |
+
+> **Important**: GUI editors (VS Code, Sublime, etc.) require a `--wait` flag to block until the file is closed.
 
 ### Setting Environment Variables
 
 ```bash
-# Linux/macOS
-export LAZYCURL_CONFIG="/custom/path/config.yaml"
-export EDITOR="nvim"
+# Linux/macOS - Add to ~/.bashrc or ~/.zshrc
+export VISUAL="vim"                    # For terminal editor
+export VISUAL="code --wait"            # For VS Code (wait mode required)
+export EDITOR="nano"                   # Fallback if VISUAL not set
 
-# Windows PowerShell
-$env:LAZYCURL_CONFIG = "C:\custom\path\config.yaml"
+# Windows PowerShell - Add to $PROFILE
+$env:VISUAL = "code --wait"
 $env:EDITOR = "notepad"
 ```
 
@@ -313,8 +320,10 @@ $env:EDITOR = "notepad"
 LazyCurl works out of the box. Only customize what you need:
 
 ```yaml
-# Minimal config - just change the editor
-editor: "nvim"
+# Minimal config - just change the theme
+theme:
+  name: "my-theme"
+  primary_color: "#7c3aed"
 ```
 
 ### 2. Version Control Workspace Config

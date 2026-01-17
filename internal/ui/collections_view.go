@@ -457,3 +457,49 @@ func (c *CollectionsView) GetFolderPathIncluding(node *components.TreeNode) []st
 	path := c.GetFolderPath(node.Parent)
 	return append(path, node.Name)
 }
+
+// SelectIndex selects an item by its visual index in the tree
+func (c *CollectionsView) SelectIndex(index int) {
+	if c.tree != nil {
+		c.tree.SelectIndex(index)
+	}
+}
+
+// GetJumpTargets returns jump targets for all visible items in the tree.
+// startRow and startCol define the offset for label positioning in the panel.
+func (c *CollectionsView) GetJumpTargets(startRow, startCol int) []JumpTarget {
+	if c.tree == nil {
+		return nil
+	}
+
+	items := c.tree.GetVisibleItems()
+	scrollOffset := c.tree.GetScrollOffset()
+
+	targets := make([]JumpTarget, 0, len(items))
+
+	for i, node := range items {
+		// Calculate visible row (accounting for scroll offset and panel header)
+		visibleIdx := i - scrollOffset
+		if visibleIdx < 0 {
+			continue // Item is scrolled above view
+		}
+
+		// Determine action based on node type
+		action := JumpSelect
+		if node.Type == components.FolderNode || node.Type == components.CollectionNode {
+			action = JumpActivate // Expand/collapse folders
+		}
+
+		target := JumpTarget{
+			Panel:     CollectionsPanel,
+			Row:       startRow + visibleIdx + 1,   // +1 for header row
+			Col:       startCol + (node.Depth * 2), // Indent by depth
+			Index:     i,
+			ElementID: node.ID,
+			Action:    action,
+		}
+		targets = append(targets, target)
+	}
+
+	return targets
+}

@@ -2372,6 +2372,9 @@ func (r *RequestView) GetJumpTargets(startRow, startCol int) []JumpTarget {
 	tabLabels := []string{"Params", "Authorization", "Headers", "Body", "Scripts"}
 	tabCol := startCol + 1 // Start after border
 
+	// Tab separator width: " | " = 3 characters between tabs
+	const tabSeparatorWidth = 3
+
 	for i, tabID := range tabNames {
 		targets = append(targets, JumpTarget{
 			Panel:     RequestPanel,
@@ -2381,15 +2384,18 @@ func (r *RequestView) GetJumpTargets(startRow, startCol int) []JumpTarget {
 			ElementID: tabID,
 			Action:    JumpActivate,
 		})
-		tabCol += len(tabLabels[i]) + 3 // Tab width + separators
+		tabCol += len(tabLabels[i]) + tabSeparatorWidth
 	}
 
 	// URL field target - Row 0 is URL bar (in header area)
+	// Method selector offset: "│ GET " = 10 characters (border + space + method + space)
+	const methodSelectorOffset = 10
+
 	targets = append(targets, JumpTarget{
 		Panel:     RequestPanel,
-		Row:       startRow,      // Header row with URL
-		Col:       startCol + 10, // After method selector
-		Index:     -1,            // Special index for URL
+		Row:       startRow, // Header row with URL
+		Col:       startCol + methodSelectorOffset,
+		Index:     -1, // Special index for URL
 		ElementID: "url",
 		Action:    JumpFocus,
 	})

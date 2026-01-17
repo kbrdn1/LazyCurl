@@ -350,7 +350,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.jumpMode.IsActive() {
 			// Tab cycles through panel scope (only in single-panel mode)
 			if msg.String() == "tab" {
-				m.jumpMode.CycleScopePanel()
+				newScope := m.jumpMode.CycleScopePanel()
+				// Refresh targets for the new scope panel
+				m.refreshJumpTargetsForScope(newScope)
 				return m, nil
 			}
 

@@ -631,6 +631,9 @@ func (r *ResponseView) GetJumpTargets(startRow, startCol int) []JumpTarget {
 	tabLabels := []string{"Body", "Cookies", "Headers", "Console"}
 	tabCol := startCol + 1 // Start after border
 
+	// Tab separator width: " | " = 3 characters between tabs
+	const tabSeparatorWidth = 3
+
 	for i, tabID := range tabNames {
 		targets = append(targets, JumpTarget{
 			Panel:     ResponsePanel,
@@ -640,7 +643,7 @@ func (r *ResponseView) GetJumpTargets(startRow, startCol int) []JumpTarget {
 			ElementID: tabID,
 			Action:    JumpActivate,
 		})
-		tabCol += len(tabLabels[i]) + 3 // Tab width + separators
+		tabCol += len(tabLabels[i]) + tabSeparatorWidth
 	}
 
 	return targets

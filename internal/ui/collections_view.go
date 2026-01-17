@@ -465,8 +465,9 @@ func (c *CollectionsView) SelectIndex(index int) {
 	}
 }
 
-// GetJumpTargets returns jump targets for all visible items in the tree.
+// GetJumpTargets returns jump targets for visible items in the tree viewport.
 // startRow and startCol define the offset for label positioning in the panel.
+// Only items within the visible viewport height are included as targets.
 func (c *CollectionsView) GetJumpTargets(startRow, startCol int) []JumpTarget {
 	if c.tree == nil {
 		return nil
@@ -474,6 +475,7 @@ func (c *CollectionsView) GetJumpTargets(startRow, startCol int) []JumpTarget {
 
 	items := c.tree.GetVisibleItems()
 	scrollOffset := c.tree.GetScrollOffset()
+	viewportHeight := c.tree.GetHeight()
 
 	targets := make([]JumpTarget, 0, len(items))
 
@@ -482,6 +484,11 @@ func (c *CollectionsView) GetJumpTargets(startRow, startCol int) []JumpTarget {
 		visibleIdx := i - scrollOffset
 		if visibleIdx < 0 {
 			continue // Item is scrolled above view
+		}
+
+		// Stop if item is below the visible viewport
+		if viewportHeight > 0 && visibleIdx >= viewportHeight {
+			break
 		}
 
 		// Determine action based on node type

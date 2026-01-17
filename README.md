@@ -537,47 +537,114 @@ We use **Gitmoji + Conventional Commits**:
 
 ## 🗺️ Roadmap
 
+> **Competitive Target**: [posting](https://github.com/darrenburns/posting) (11K+ ⭐)
+>
+> LazyCurl differentiates with: **Single Go binary** (no Python), **Lazygit UX**, **Authentic vim modes**, **JSON collections** (Postman-compatible), **Superior performance**
+
 ### ✅ Phase 1 - Foundation (Complete)
 
-- Lazygit-style multi-panel interface
-- Vim-style navigation and modes
-- Workspace system with file-based storage
-- Configuration system (global + workspace)
-- Collections and environments management
+- [x] Lazygit-style multi-panel interface
+- [x] Vim-style navigation and modes (NORMAL, INSERT, VIEW, COMMAND)
+- [x] Workspace system with file-based storage
+- [x] Configuration system (global + workspace)
+- [x] Collections and environments management
 
-### 🔥 Sprint 1 - MVP (Complete)
+### ✅ Sprint 1 - MVP (Complete)
 
 - [x] Collection tree view with folders
 - [x] Environment management with variables
-- [x] Request builder UI
-- [x] Search functionality
-- [x] WhichKey keybinding hints
+- [x] Request builder UI (URL, Headers, Body, Auth)
+- [x] Search functionality with `/`
+- [x] WhichKey keybinding hints (`?`)
 - [x] HTTP request execution
-- [x] Response formatting
+- [x] Response formatting (JSON/XML)
 - [x] CI/CD pipeline
 
-### 📋 Sprint 2 - UX Improvements
+### ✅ Sprint 2 - UX Improvements (Complete)
 
-- [x] Responsive panel layout (horizontal on 80x24 terminals) [#7](https://github.com/kbrdn1/LazyCurl/issues/7)
-- [x] Fullscreen panel toggle (`F` in NORMAL mode, `h/l` to navigate) [#8](https://github.com/kbrdn1/LazyCurl/issues/8)
-- [x] Find in editors (`/` in NORMAL mode) [#24](https://github.com/kbrdn1/LazyCurl/issues/24)
-- [ ] Settings Panel (`Ctrl+;` fullscreen with Global/Workspace tabs) [#25](https://github.com/kbrdn1/LazyCurl/issues/25)
-- [x] Console tab in Response Panel (request/response history) [#9](https://github.com/kbrdn1/LazyCurl/issues/9)
-- [x] Improved statusbar rendering and display [#10](https://github.com/kbrdn1/LazyCurl/issues/10)
-- [x] Session persistence (`.lazycurl/session.yml`) [#11](https://github.com/kbrdn1/LazyCurl/issues/11)
-- [ ] Theme system refactoring [#12](https://github.com/kbrdn1/LazyCurl/issues/12)
-- [ ] Theme management and custom themes [#13](https://github.com/kbrdn1/LazyCurl/issues/13)
+- [x] Responsive panel layout [#7](https://github.com/kbrdn1/LazyCurl/issues/7)
+- [x] Fullscreen panel toggle (`F`) [#8](https://github.com/kbrdn1/LazyCurl/issues/8)
+- [x] Find in editors (`/`) [#24](https://github.com/kbrdn1/LazyCurl/issues/24)
+- [x] Console tab (request history) [#9](https://github.com/kbrdn1/LazyCurl/issues/9)
+- [x] Improved statusbar [#10](https://github.com/kbrdn1/LazyCurl/issues/10)
+- [x] Session persistence [#11](https://github.com/kbrdn1/LazyCurl/issues/11)
 
-### 🔮 Future
+### 🔥 Sprint 3 - Competitive Parity (Current)
 
-- Import/export Postman collections [#14](https://github.com/kbrdn1/LazyCurl/issues/14)
-- Request history [#15](https://github.com/kbrdn1/LazyCurl/issues/15)
-- Pre-request & post-response scripting (JavaScript via Goja) [#35](https://github.com/kbrdn1/LazyCurl/issues/35)
-- Authentication helpers (OAuth2, AWS Sig) [#17](https://github.com/kbrdn1/LazyCurl/issues/17)
-- GraphQL support [#18](https://github.com/kbrdn1/LazyCurl/issues/18)
-- WebSocket testing [#19](https://github.com/kbrdn1/LazyCurl/issues/19)
-- gRPC support [#20](https://github.com/kbrdn1/LazyCurl/issues/20)
-- CLI commands architecture [#26](https://github.com/kbrdn1/LazyCurl/issues/26)
+**Goal**: Match posting's core features while leveraging Go advantages
+
+| Feature | Priority | Issue | Posting Equivalent |
+|---------|----------|-------|-------------------|
+| **cURL Import/Export** | 🔴 Critical | NEW | ✅ Paste in URL bar |
+| **Jump Mode Navigation** | 🔴 Critical | NEW | ✅ Ctrl+O jump |
+| **External Editor Integration** | 🟡 High | NEW | ✅ $EDITOR support |
+| **OpenAPI 3.x Import** | 🟡 High | NEW | ✅ CLI import |
+| **Postman Import** | 🟡 High | [#14](https://github.com/kbrdn1/LazyCurl/issues/14) | ✅ CLI import |
+| **Settings Panel** | 🟢 Medium | [#25](https://github.com/kbrdn1/LazyCurl/issues/25) | ✅ Config UI |
+| **Theme System** | 🟢 Medium | [#12](https://github.com/kbrdn1/LazyCurl/issues/12), [#13](https://github.com/kbrdn1/LazyCurl/issues/13) | ✅ Theme picker |
+| **Hot Reload Config** | 🟢 Medium | NEW | ✅ Auto-reload |
+
+### 🚀 Sprint 4 - Competitive Advantage
+
+**Goal**: Surpass posting with Go-powered features
+
+| Feature | Priority | Issue | LazyCurl Advantage |
+|---------|----------|-------|-------------------|
+| **JavaScript Scripting (Goja)** | 🔴 Critical | [#35](https://github.com/kbrdn1/LazyCurl/issues/35) | JS > Python (API ecosystem) |
+| **Request Chaining** | 🔴 Critical | NEW | Extract & reuse response data |
+| **Test Assertions** | 🟡 High | NEW | Built-in response testing |
+| **Collection Runner** | 🟡 High | NEW | Run all requests in sequence |
+| **Fuzzy Finder (fzf-style)** | 🟡 High | NEW | Better than jump mode |
+| **Request Diff** | 🟢 Medium | NEW | Compare responses |
+| **Request Templates** | 🟢 Medium | NEW | Reusable request patterns |
+
+### 🔮 Sprint 5 - Protocol Expansion
+
+| Feature | Priority | Issue | Notes |
+|---------|----------|-------|-------|
+| **GraphQL Support** | 🔴 Critical | [#18](https://github.com/kbrdn1/LazyCurl/issues/18) | Schema explorer, variables |
+| **WebSocket Testing** | 🟡 High | [#19](https://github.com/kbrdn1/LazyCurl/issues/19) | Interactive WS client |
+| **gRPC Support** | 🟡 High | [#20](https://github.com/kbrdn1/LazyCurl/issues/20) | Proto reflection |
+| **SSE (Server-Sent Events)** | 🟢 Medium | NEW | Real-time event viewer |
+
+### 🎯 Sprint 6 - Enterprise Features
+
+| Feature | Priority | Issue | Notes |
+|---------|----------|-------|-------|
+| **OAuth2 Flows** | 🔴 Critical | [#17](https://github.com/kbrdn1/LazyCurl/issues/17) | Auth code, client credentials |
+| **AWS Signature v4** | 🟡 High | [#17](https://github.com/kbrdn1/LazyCurl/issues/17) | AWS API auth |
+| **mTLS/Client Certs** | 🟡 High | NEW | Enterprise security |
+| **Proxy Support** | 🟡 High | NEW | HTTP/SOCKS proxy |
+| **Request Retry** | 🟢 Medium | NEW | Auto-retry with backoff |
+| **Rate Limiting** | 🟢 Medium | NEW | Respect API limits |
+
+### 🌟 Sprint 7 - CLI & Automation
+
+| Feature | Priority | Issue | Notes |
+|---------|----------|-------|-------|
+| **CLI Mode** | 🔴 Critical | [#26](https://github.com/kbrdn1/LazyCurl/issues/26) | `lazycurl run collection.json` |
+| **CI/CD Integration** | 🔴 Critical | NEW | Exit codes, JSON output |
+| **Request Export** | 🟡 High | NEW | Go, Python, JS, cURL |
+| **Mock Server** | 🟢 Medium | NEW | Local mock from collection |
+| **API Documentation Gen** | 🟢 Medium | NEW | Generate docs from collection |
+
+### 📊 Feature Comparison Matrix
+
+| Feature | LazyCurl | posting | Winner |
+|---------|----------|---------|--------|
+| **Installation** | Single binary | Python 3.12+ | 🏆 LazyCurl |
+| **Performance** | Go/Bubble Tea | Python/Textual | 🏆 LazyCurl |
+| **Vim Modes** | 4 modes | Limited | 🏆 LazyCurl |
+| **WhichKey Help** | ✅ | ❌ | 🏆 LazyCurl |
+| **Session Persistence** | ✅ | ❌ | 🏆 LazyCurl |
+| **cURL Import** | 🔜 Sprint 3 | ✅ | posting |
+| **Scripting** | 🔜 JS (Sprint 4) | ✅ Python | TBD |
+| **OpenAPI Import** | 🔜 Sprint 3 | ✅ | posting |
+| **Collection Format** | JSON | YAML | 🏆 LazyCurl (standard) |
+| **Jump Mode** | 🔜 Sprint 3 | ✅ | posting |
+| **GraphQL** | 🔜 Sprint 5 | ❌ | 🏆 LazyCurl |
+| **WebSocket** | 🔜 Sprint 5 | ❌ | 🏆 LazyCurl |
+| **gRPC** | 🔜 Sprint 5 | ❌ | 🏆 LazyCurl |
 
 ---
 

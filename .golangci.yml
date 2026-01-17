@@ -47,25 +47,14 @@ linters:
         - esc
     gocritic:
       disabled-checks:
-        - dupImport
         - ifElseChain
-        - octalLiteral
-        - whyNoLint
         - hugeParam
-        - evalOrder
-        - emptyStringTest
         - rangeValCopy
         - appendCombine
         - assignOp
-        - paramTypeCombine
-        - typeAssertChain
         - singleCaseSwitch
-        - unnamedResult
         - elseif
-        - nestingReduce
-        - builtinShadowDecl
         - dupBranchBody
-        - equalFold
       enabled-tags:
         - diagnostic
         - performance
@@ -100,7 +89,7 @@ linters:
         - name: exported
         - name: if-return
         - name: increment-decrement
-        - name: var-naming
+        # - name: var-naming  # Disabled - false positives for short package names like "api"
         - name: var-declaration
         - name: package-comments
         - name: range
@@ -116,6 +105,7 @@ linters:
         - -SA1019
         - -SA4006
         - -SA9003
+        - -QF1003
   exclusions:
     generated: lax
     presets:
@@ -128,6 +118,7 @@ linters:
           - dupl
           - goconst
           - gosec
+          - revive
         path: _test\.go
       - linters:
           - dupl
@@ -153,7 +144,7 @@ linters:
         path: internal/ui/
       - linters:
           - prealloc
-        text: Consider pre-allocating
+        text: Consider preallocating
       - linters:
           - errcheck
         text: Error return value of `os.MkdirAll` is not checked

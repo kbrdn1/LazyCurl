@@ -65,7 +65,13 @@ func GenerateCurlCommandWithOptions(req *CollectionRequest, opts CurlGeneratorOp
 	if req.Body != nil && req.Body.Content != nil {
 		bodyStr := formatBody(req.Body)
 		if bodyStr != "" {
-			parts = append(parts, "-d", quote(bodyStr, opts.QuoteStyle))
+			// Use appropriate flag based on body type
+			// --data-raw for raw content, -d for json/form-urlencoded
+			bodyFlag := "-d"
+			if req.Body.Type == "raw" {
+				bodyFlag = "--data-raw"
+			}
+			parts = append(parts, bodyFlag, quote(bodyStr, opts.QuoteStyle))
 		}
 	}
 

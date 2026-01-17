@@ -88,7 +88,7 @@ func TestGenerateCurlCommand(t *testing.T) {
 					Content: "name=test",
 				},
 			},
-			want: "curl -X POST -d 'name=test' 'https://api.example.com'",
+			want: "curl -X POST --data-raw 'name=test' 'https://api.example.com'",
 		},
 		{
 			name: "with JSON body",

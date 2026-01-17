@@ -70,6 +70,7 @@ type BasicAuthCreds struct {
 }
 
 // normalizeMultiline joins lines with backslash or backtick continuation
+// while preserving whitespace inside quoted strings
 func normalizeMultiline(cmd string) string {
 	// Handle Unix backslash continuation
 	cmd = strings.ReplaceAll(cmd, "\\\n", " ")
@@ -77,8 +78,67 @@ func normalizeMultiline(cmd string) string {
 	// Handle PowerShell backtick continuation
 	cmd = strings.ReplaceAll(cmd, "`\n", " ")
 	cmd = strings.ReplaceAll(cmd, "`\r\n", " ")
-	// Normalize whitespace
-	return strings.Join(strings.Fields(cmd), " ")
+	// Normalize whitespace outside of quotes
+	return normalizeWhitespacePreservingQuotes(cmd)
+}
+
+// normalizeWhitespacePreservingQuotes collapses whitespace runs to single space
+// but preserves whitespace inside single or double quoted strings
+func normalizeWhitespacePreservingQuotes(s string) string {
+	var result strings.Builder
+	inSingleQuote := false
+	inDoubleQuote := false
+	lastWasSpace := false
+	escaped := false
+
+	for _, ch := range s {
+		if escaped {
+			result.WriteRune(ch)
+			escaped = false
+			lastWasSpace = false
+			continue
+		}
+
+		if ch == '\\' && inDoubleQuote {
+			result.WriteRune(ch)
+			escaped = true
+			continue
+		}
+
+		if ch == '\'' && !inDoubleQuote {
+			inSingleQuote = !inSingleQuote
+			result.WriteRune(ch)
+			lastWasSpace = false
+			continue
+		}
+
+		if ch == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+			result.WriteRune(ch)
+			lastWasSpace = false
+			continue
+		}
+
+		// Inside quotes - preserve all characters
+		if inSingleQuote || inDoubleQuote {
+			result.WriteRune(ch)
+			lastWasSpace = false
+			continue
+		}
+
+		// Outside quotes - collapse whitespace
+		if unicode.IsSpace(ch) {
+			if !lastWasSpace {
+				result.WriteRune(' ')
+				lastWasSpace = true
+			}
+		} else {
+			result.WriteRune(ch)
+			lastWasSpace = false
+		}
+	}
+
+	return strings.TrimSpace(result.String())
 }
 
 // tokenize splits the cURL command into tokens
@@ -573,12 +633,25 @@ func looksLikeURL(s string) bool {
 
 // ToCollectionRequest converts ParsedCurlCommand to CollectionRequest
 func (p *ParsedCurlCommand) ToCollectionRequest() *CollectionRequest {
+	// Convert shell variables ($VAR, ${VAR}) to LazyCurl variables ({{VAR}})
+	url := detectAndConvertVariables(p.URL)
+
+	// Convert variables in headers
+	headers := make([]KeyValueEntry, len(p.Headers))
+	for i, h := range p.Headers {
+		headers[i] = KeyValueEntry{
+			Key:     h.Key,
+			Value:   detectAndConvertVariables(h.Value),
+			Enabled: h.Enabled,
+		}
+	}
+
 	req := &CollectionRequest{
 		ID:      GenerateID(),
 		Name:    extractNameFromURL(p.URL),
 		Method:  p.Method,
-		URL:     p.URL,
-		Headers: p.Headers,
+		URL:     url,
+		Headers: headers,
 	}
 
 	// Set body if present
@@ -592,7 +665,7 @@ func (p *ParsedCurlCommand) ToCollectionRequest() *CollectionRequest {
 		}
 		req.Body = &BodyConfig{
 			Type:    bodyType,
-			Content: p.Body,
+			Content: detectAndConvertVariables(p.Body),
 		}
 	}
 

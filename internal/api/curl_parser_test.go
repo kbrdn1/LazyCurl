@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -246,7 +247,7 @@ func TestParseCurlCommand(t *testing.T) {
 				if tt.errMsg != "" && err != nil {
 					var parseErr *ParseError
 					if errors.As(err, &parseErr) {
-						if parseErr.Message != tt.errMsg && !contains(parseErr.Message, tt.errMsg) {
+						if parseErr.Message != tt.errMsg && !strings.Contains(parseErr.Message, tt.errMsg) {
 							t.Errorf("ParseCurlCommand() error message = %q, want containing %q", parseErr.Message, tt.errMsg)
 						}
 					}
@@ -622,10 +623,10 @@ func TestParseError_FormatWithContext(t *testing.T) {
 	if formatted == "" {
 		t.Error("FormatWithContext() returned empty string")
 	}
-	if !contains(formatted, "unclosed quote") {
+	if !strings.Contains(formatted, "unclosed quote") {
 		t.Error("FormatWithContext() should contain error message")
 	}
-	if !contains(formatted, "^") {
+	if !strings.Contains(formatted, "^") {
 		t.Error("FormatWithContext() should contain position indicator")
 	}
 }
@@ -766,18 +767,4 @@ func TestCookieHeader(t *testing.T) {
 	if !found {
 		t.Error("Expected Cookie header from -b flag")
 	}
-}
-
-// Helper function
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

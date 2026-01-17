@@ -176,3 +176,18 @@ func (l *LeftPanel) GetSessionState() session.CollectionsPanelState {
 
 	return state
 }
+
+// GetJumpTargets returns jump targets for the left panel.
+// Delegates to Collections or Environments based on active tab.
+func (l *LeftPanel) GetJumpTargets(startRow, startCol int) []JumpTarget {
+	switch l.activeTab {
+	case CollectionsTab:
+		return l.collections.GetJumpTargets(startRow, startCol)
+	case EnvironmentsTab:
+		// Environments view doesn't have jump targets yet
+		// Could be extended to support environment variable rows
+		return nil
+	default:
+		return nil
+	}
+}

@@ -49,6 +49,16 @@ var (
 	ModeCommandFg = lipgloss.Color("#FFFFFF") // White
 	ModeInsertBg  = lipgloss.Color("#b8bcc2") // Light gray
 	ModeInsertFg  = lipgloss.Color("#000000") // Black
+	ModeJumpBg    = lipgloss.Color("#FF6600") // Orange (high visibility)
+	ModeJumpFg    = lipgloss.Color("#FFFFFF") // White
+
+	// Jump label colors
+	JumpLabelBg      = lipgloss.Color("#FF6600") // High visibility orange
+	JumpLabelFg      = lipgloss.Color("#FFFFFF") // White text (bold)
+	JumpLabelDimBg   = lipgloss.Color("#444444") // Dimmed for non-matching
+	JumpLabelDimFg   = lipgloss.Color("#888888") // Gray text
+	JumpLabelMatchBg = lipgloss.Color("#00FF00") // Green for matching chars
+	JumpLabelMatchFg = lipgloss.Color("#000000") // Black text on green
 
 	// HTTP method colors - text always white
 	MethodHeadBg    = lipgloss.Color("#4c8c49") // Green

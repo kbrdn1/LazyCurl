@@ -2342,3 +2342,63 @@ func (r *RequestView) GetSessionState() session.RequestPanelState {
 
 	return state
 }
+
+// JumpTo jumps to a specific element by its ID (tab name, field, etc.)
+func (r *RequestView) JumpTo(elementID string) {
+	// Handle tab navigation (indices: 0=Params, 1=Authorization, 2=Headers, 3=Body, 4=Scripts)
+	switch elementID {
+	case "tab-params":
+		r.tabs.SetActive(0)
+	case "tab-auth":
+		r.tabs.SetActive(1)
+	case "tab-headers":
+		r.tabs.SetActive(2)
+	case "tab-body":
+		r.tabs.SetActive(3)
+	case "tab-scripts":
+		r.tabs.SetActive(4)
+	case "url":
+		r.editingURL = true
+	}
+}
+
+// GetJumpTargets returns jump targets for the request view.
+// Includes tabs and URL field.
+func (r *RequestView) GetJumpTargets(startRow, startCol int) []JumpTarget {
+	var targets []JumpTarget
+
+	// Tab targets - Row 1 is the tabs row (after panel header)
+	tabNames := []string{"tab-params", "tab-auth", "tab-headers", "tab-body", "tab-scripts"}
+	tabLabels := []string{"Params", "Authorization", "Headers", "Body", "Scripts"}
+	tabCol := startCol + 1 // Start after border
+
+	// Tab separator width: " | " = 3 characters between tabs
+	const tabSeparatorWidth = 3
+
+	for i, tabID := range tabNames {
+		targets = append(targets, JumpTarget{
+			Panel:     RequestPanel,
+			Row:       startRow + 1, // First content row (tabs)
+			Col:       tabCol,
+			Index:     i,
+			ElementID: tabID,
+			Action:    JumpActivate,
+		})
+		tabCol += len(tabLabels[i]) + tabSeparatorWidth
+	}
+
+	// URL field target - Row 0 is URL bar (in header area)
+	// Method selector offset: "│ GET " = 10 characters (border + space + method + space)
+	const methodSelectorOffset = 10
+
+	targets = append(targets, JumpTarget{
+		Panel:     RequestPanel,
+		Row:       startRow, // Header row with URL
+		Col:       startCol + methodSelectorOffset,
+		Index:     -1, // Special index for URL
+		ElementID: "url",
+		Action:    JumpFocus,
+	})
+
+	return targets
+}

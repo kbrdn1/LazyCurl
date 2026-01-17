@@ -605,3 +605,46 @@ func (r *ResponseView) GetSessionState() session.ResponsePanelState {
 
 	return state
 }
+
+// JumpTo jumps to a specific element by its ID (tab name, field, etc.)
+func (r *ResponseView) JumpTo(elementID string) {
+	// Handle tab navigation (uses tabs component)
+	switch elementID {
+	case "tab-body":
+		r.tabs.SetActive(0)
+	case "tab-cookies":
+		r.tabs.SetActive(1)
+	case "tab-headers":
+		r.tabs.SetActive(2)
+	case "tab-console":
+		r.tabs.SetActive(3)
+	}
+}
+
+// GetJumpTargets returns jump targets for the response view.
+// Includes tabs (Body, Cookies, Headers, Console).
+func (r *ResponseView) GetJumpTargets(startRow, startCol int) []JumpTarget {
+	var targets []JumpTarget
+
+	// Tab targets - Row 1 is the tabs row (after panel header)
+	tabNames := []string{"tab-body", "tab-cookies", "tab-headers", "tab-console"}
+	tabLabels := []string{"Body", "Cookies", "Headers", "Console"}
+	tabCol := startCol + 1 // Start after border
+
+	// Tab separator width: " | " = 3 characters between tabs
+	const tabSeparatorWidth = 3
+
+	for i, tabID := range tabNames {
+		targets = append(targets, JumpTarget{
+			Panel:     ResponsePanel,
+			Row:       startRow + 1, // First content row (tabs)
+			Col:       tabCol,
+			Index:     i,
+			ElementID: tabID,
+			Action:    JumpActivate,
+		})
+		tabCol += len(tabLabels[i]) + tabSeparatorWidth
+	}
+
+	return targets
+}

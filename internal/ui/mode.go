@@ -14,6 +14,7 @@ const (
 	ViewMode                // Read-only viewing mode
 	CommandMode             // Command input mode
 	InsertMode              // Text input mode
+	JumpMode                // Jump navigation mode (vim-easymotion style)
 )
 
 // String returns the display name for the mode
@@ -27,6 +28,8 @@ func (m Mode) String() string {
 		return "COMMAND"
 	case InsertMode:
 		return "INSERT"
+	case JumpMode:
+		return "JUMP"
 	default:
 		return "NORMAL"
 	}
@@ -45,6 +48,8 @@ func (m Mode) Color() lipgloss.Style {
 		return base.Background(styles.ModeCommandBg).Foreground(styles.ModeCommandFg)
 	case InsertMode:
 		return base.Background(styles.ModeInsertBg).Foreground(styles.ModeInsertFg)
+	case JumpMode:
+		return base.Background(styles.ModeJumpBg).Foreground(styles.ModeJumpFg)
 	default:
 		return base.Background(styles.ModeNormalBg).Foreground(styles.ModeNormalFg)
 	}

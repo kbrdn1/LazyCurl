@@ -265,6 +265,74 @@ func (m *JumpModeState) AssignLabels(targets []JumpTarget) {
 	}
 }
 
+// insertAtVisualPosition inserts text at a visual column position in an ANSI-colored string.
+// It properly handles ANSI escape sequences by tracking visual vs byte positions.
+func insertAtVisualPosition(line string, visualCol int, insertText string, replaceLen int) string {
+	visualPos := 0
+	bytePos := 0
+	lineBytes := []byte(line)
+	inEscape := false
+
+	// Find the byte position corresponding to the visual column
+	startBytePos := -1
+	endBytePos := -1
+
+	for bytePos < len(lineBytes) {
+		b := lineBytes[bytePos]
+
+		// Check for start of ANSI escape sequence
+		if b == '\x1b' && bytePos+1 < len(lineBytes) && lineBytes[bytePos+1] == '[' {
+			inEscape = true
+			bytePos++
+			continue
+		}
+
+		if inEscape {
+			// Continue until we hit 'm' which ends the escape sequence
+			if b == 'm' {
+				inEscape = false
+			}
+			bytePos++
+			continue
+		}
+
+		// This is a visible character
+		if visualPos == visualCol && startBytePos == -1 {
+			startBytePos = bytePos
+		}
+
+		visualPos++
+
+		// Advance byte position, handling UTF-8
+		charLen := 1
+		if b >= 0xF0 {
+			charLen = 4
+		} else if b >= 0xE0 {
+			charLen = 3
+		} else if b >= 0xC0 {
+			charLen = 2
+		}
+		bytePos += charLen
+
+		if startBytePos != -1 && visualPos == visualCol+replaceLen {
+			endBytePos = bytePos
+			break
+		}
+	}
+
+	// If we couldn't find the start position, append at end
+	if startBytePos == -1 {
+		return line + " " + insertText
+	}
+
+	if endBytePos == -1 {
+		endBytePos = len(lineBytes)
+	}
+
+	// Build new line: before + insert + after
+	return string(lineBytes[:startBytePos]) + insertText + string(lineBytes[endBytePos:])
+}
+
 // RenderOverlay overlays jump labels onto the base view.
 // It places styled labels at the Row/Col positions of visible targets.
 //
@@ -309,13 +377,13 @@ func (m *JumpModeState) RenderOverlay(baseView string, width, height int) string
 		}
 
 		line := lines[row]
-		lineRunes := []rune(line)
 
-		// Ensure column is in bounds
-		if col < 0 || col >= len(lineRunes) {
-			// Try to place at end of line if col is out of bounds
-			if col >= len(lineRunes) && len(lineRunes) > 0 {
-				col = len(lineRunes) - len(target.Label)
+		// Check visual width of the line (without ANSI codes)
+		visualWidth := lipgloss.Width(line)
+		if col < 0 || col >= visualWidth {
+			// Adjust column if out of bounds
+			if col >= visualWidth && visualWidth > 0 {
+				col = visualWidth - len(target.Label)
 				if col < 0 {
 					col = 0
 				}
@@ -338,23 +406,8 @@ func (m *JumpModeState) RenderOverlay(baseView string, width, height int) string
 			styledLabel = activeLabelStyle.Render(label)
 		}
 
-		// Replace characters at position with styled label
-		// We need to handle ANSI codes properly - for simplicity, we'll prepend label
-		// A more sophisticated approach would parse ANSI codes
-
-		// Simple approach: insert label at beginning of visible content
-		// For MVP, we'll place labels at the start of the line if within panel bounds
-		if col == 0 {
-			lines[row] = styledLabel + " " + string(lineRunes)
-		} else if col+len(label) <= len(lineRunes) {
-			// Replace characters at position
-			before := string(lineRunes[:col])
-			after := string(lineRunes[col+len(label):])
-			lines[row] = before + styledLabel + after
-		} else {
-			// Append at end
-			lines[row] = string(lineRunes) + " " + styledLabel
-		}
+		// Insert the label at the visual position, handling ANSI codes
+		lines[row] = insertAtVisualPosition(line, col, styledLabel, len(label))
 	}
 
 	return strings.Join(lines, "\n")

@@ -54,6 +54,7 @@ type KeyBindings struct {
 	ToggleEnvs       []string `yaml:"toggle_envs"`
 	ImportCurl       []string `yaml:"import_curl"`
 	ExportCurl       []string `yaml:"export_curl"`
+	ImportOpenAPI    []string `yaml:"import_openapi"`
 }
 
 // Environment represents an environment with variables
@@ -100,6 +101,7 @@ func DefaultKeyBindings() KeyBindings {
 		ToggleEnvs:       []string{"e"},
 		ImportCurl:       []string{"ctrl+i"},
 		ExportCurl:       []string{"ctrl+e"},
+		ImportOpenAPI:    []string{"ctrl+o"},
 	}
 }
 

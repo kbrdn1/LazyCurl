@@ -1,0 +1,127 @@
+openapi: "3.0.3"
+info:
+  title: No Tags API
+  version: "1.0.0"
+  description: OpenAPI spec without any tags to test "Untagged" folder creation
+
+servers:
+  - url: https://api.notags.example.com/v1
+
+paths:
+  /items:
+    get:
+      operationId: listItems
+      summary: List all items
+      description: Returns a list of items without any tag categorization
+      responses:
+        "200":
+          description: A list of items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+
+    post:
+      operationId: createItem
+      summary: Create a new item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: "New Item"
+      responses:
+        "201":
+          description: Item created
+
+  /items/{itemId}:
+    get:
+      operationId: getItemById
+      summary: Get an item by ID
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Item found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+        "404":
+          description: Item not found
+
+    put:
+      operationId: updateItem
+      summary: Update an item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        "200":
+          description: Item updated
+
+    delete:
+      operationId: deleteItem
+      summary: Delete an item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Item deleted
+
+  /status:
+    get:
+      operationId: getStatus
+      summary: Get API status
+      responses:
+        "200":
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "running"
+                  uptime:
+                    type: integer
+                    description: Uptime in seconds

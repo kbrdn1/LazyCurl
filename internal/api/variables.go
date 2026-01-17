@@ -35,7 +35,7 @@ func ReplaceVariables(text string, env *EnvironmentFile) string {
 
 		// Check for system variables first
 		if strings.HasPrefix(varName, "$") {
-			if value := getSystemVariable(varName); value != "" {
+			if value := GetSystemVariable(varName); value != "" {
 				return value
 			}
 		}
@@ -105,8 +105,9 @@ func replaceVariablesInBody(body interface{}, env *EnvironmentFile) interface{} 
 	}
 }
 
-// getSystemVariable returns the value of a system variable
-func getSystemVariable(name string) string {
+// GetSystemVariable returns the value of a system variable
+// Exported for use by preview mode in editor
+func GetSystemVariable(name string) string {
 	now := time.Now()
 
 	switch name {

@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/kbrdn1/LazyCurl/internal/api"
 	"github.com/kbrdn1/LazyCurl/pkg/styles"
 )
 
@@ -1180,9 +1181,28 @@ func (e *Editor) highlightJSON(line string) string {
 			varText := line[varStart:varEnd]
 
 			// In preview mode, show resolved value
-			if e.previewMode && e.variableValues != nil {
+			if e.previewMode {
 				varName := extractVariableName(varText)
-				if value, exists := e.variableValues[varName]; exists {
+				var resolved bool
+				var value string
+
+				// Check system variables first
+				if strings.HasPrefix(varName, "$") {
+					if sysValue := api.GetSystemVariable(varName); sysValue != "" {
+						value = sysValue
+						resolved = true
+					}
+				}
+
+				// Check environment variables if not resolved
+				if !resolved && e.variableValues != nil {
+					if envValue, exists := e.variableValues[varName]; exists {
+						value = envValue
+						resolved = true
+					}
+				}
+
+				if resolved {
 					result.WriteString(previewStyle.Render(value))
 				} else {
 					result.WriteString(variableStyle.Render(varText))
@@ -1538,18 +1558,28 @@ func (e *Editor) GetPreviewContent() string {
 }
 
 // replaceVariables replaces {{var}} patterns with their values
+// Supports both environment variables and system variables ($timestamp, $uuid, etc.)
 func (e *Editor) replaceVariables(text string) string {
-	if e.variableValues == nil {
-		return text
-	}
 	return editorVariablePattern.ReplaceAllStringFunc(text, func(match string) string {
 		varName := extractVariableName(match)
 		if varName == "" {
 			return match
 		}
-		if value, exists := e.variableValues[varName]; exists {
-			return value
+
+		// Check for system variables first (e.g., $timestamp, $uuid)
+		if strings.HasPrefix(varName, "$") {
+			if value := api.GetSystemVariable(varName); value != "" {
+				return value
+			}
 		}
+
+		// Check environment variables
+		if e.variableValues != nil {
+			if value, exists := e.variableValues[varName]; exists {
+				return value
+			}
+		}
+
 		return match // Keep original if not found
 	})
 }

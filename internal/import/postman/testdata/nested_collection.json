@@ -17,7 +17,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\"email\": \"test@example.com\", \"password\": \"secret\"}",
+              "raw": "{\"email\": \"test@example.com\", \"password\": \"test_placeholder\"}",
               "options": {"raw": {"language": "json"}}
             },
             "url": {

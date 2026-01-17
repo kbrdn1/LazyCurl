@@ -74,7 +74,7 @@
           "mode": "urlencoded",
           "urlencoded": [
             {"key": "username", "value": "john", "disabled": false},
-            {"key": "password", "value": "secret", "disabled": false},
+            {"key": "password", "value": "test_placeholder", "disabled": false},
             {"key": "remember", "value": "true", "disabled": true}
           ]
         },

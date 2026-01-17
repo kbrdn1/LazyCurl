@@ -48,7 +48,7 @@
             },
             {
               "key": "password",
-              "value": "secret123",
+              "value": "test_password_placeholder",
               "type": "string"
             }
           ]
@@ -149,7 +149,7 @@
           "oauth2": [
             {
               "key": "accessToken",
-              "value": "oauth_token_here",
+              "value": "test_oauth_token_placeholder",
               "type": "string"
             }
           ]

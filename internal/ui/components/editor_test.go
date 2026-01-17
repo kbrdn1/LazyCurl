@@ -385,3 +385,348 @@ func TestSearch_LoopBoundary(t *testing.T) {
 		})
 	}
 }
+
+// TestExtractVariableName verifies variable name extraction from {{variable}} patterns
+func TestExtractVariableName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple variable",
+			input:    "{{test}}",
+			expected: "test",
+		},
+		{
+			name:     "variable with underscore",
+			input:    "{{my_var}}",
+			expected: "my_var",
+		},
+		{
+			name:     "variable with dollar sign",
+			input:    "{{$timestamp}}",
+			expected: "$timestamp",
+		},
+		{
+			name:     "variable with numbers",
+			input:    "{{var123}}",
+			expected: "var123",
+		},
+		{
+			name:     "empty variable",
+			input:    "{{}}",
+			expected: "",
+		},
+		{
+			name:     "too short input",
+			input:    "{{",
+			expected: "",
+		},
+		{
+			name:     "minimal valid",
+			input:    "{{a}}",
+			expected: "a",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractVariableName(tt.input)
+			if result != tt.expected {
+				t.Errorf("extractVariableName(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestEditorVariablePattern verifies the regex pattern matches valid variables
+func TestEditorVariablePattern(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		wantMatch  bool
+		wantGroups []string
+	}{
+		{
+			name:       "simple variable",
+			input:      "{{test}}",
+			wantMatch:  true,
+			wantGroups: []string{"{{test}}", "test"},
+		},
+		{
+			name:       "variable with underscore",
+			input:      "{{my_var}}",
+			wantMatch:  true,
+			wantGroups: []string{"{{my_var}}", "my_var"},
+		},
+		{
+			name:       "variable with dollar",
+			input:      "{{$uuid}}",
+			wantMatch:  true,
+			wantGroups: []string{"{{$uuid}}", "$uuid"},
+		},
+		{
+			name:       "variable with numbers",
+			input:      "{{var123}}",
+			wantMatch:  true,
+			wantGroups: []string{"{{var123}}", "var123"},
+		},
+		{
+			name:      "invalid - spaces inside",
+			input:     "{{ test }}",
+			wantMatch: false,
+		},
+		{
+			name:      "invalid - special chars",
+			input:     "{{test-var}}",
+			wantMatch: false,
+		},
+		{
+			name:      "invalid - empty",
+			input:     "{{}}",
+			wantMatch: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			matches := editorVariablePattern.FindStringSubmatch(tt.input)
+			if tt.wantMatch {
+				if matches == nil {
+					t.Errorf("expected match for %q but got none", tt.input)
+					return
+				}
+				for i, want := range tt.wantGroups {
+					if i >= len(matches) || matches[i] != want {
+						t.Errorf("group %d: got %q, want %q", i, matches[i], want)
+					}
+				}
+			} else {
+				if matches != nil {
+					t.Errorf("expected no match for %q but got %v", tt.input, matches)
+				}
+			}
+		})
+	}
+}
+
+// TestEditorPreviewMode verifies preview mode toggle and content resolution
+func TestEditorPreviewMode(t *testing.T) {
+	editor := NewEditor(`{"url": "{{base_url}}/api"}`, "json")
+	editor.SetVariableValues(map[string]string{
+		"base_url": "https://api.test.com",
+	})
+
+	// Initial state - preview off
+	if editor.IsPreviewMode() {
+		t.Error("preview mode should be off by default")
+	}
+
+	// Content should be unchanged
+	content := editor.GetContent()
+	if content != `{"url": "{{base_url}}/api"}` {
+		t.Errorf("unexpected content: %s", content)
+	}
+
+	// Toggle preview on
+	editor.TogglePreviewMode()
+	if !editor.IsPreviewMode() {
+		t.Error("preview mode should be on after toggle")
+	}
+
+	// Preview content should have resolved values
+	previewContent := editor.GetPreviewContent()
+	expected := `{"url": "https://api.test.com/api"}`
+	if previewContent != expected {
+		t.Errorf("preview content = %q, want %q", previewContent, expected)
+	}
+
+	// Original content should still be unchanged
+	content = editor.GetContent()
+	if content != `{"url": "{{base_url}}/api"}` {
+		t.Errorf("original content was modified: %s", content)
+	}
+
+	// Toggle preview off
+	editor.TogglePreviewMode()
+	if editor.IsPreviewMode() {
+		t.Error("preview mode should be off after second toggle")
+	}
+}
+
+// TestEditorPreviewMode_UnresolvedVariables verifies unresolved variables remain unchanged
+func TestEditorPreviewMode_UnresolvedVariables(t *testing.T) {
+	editor := NewEditor(`{"token": "{{auth_token}}"}`, "json")
+	editor.SetVariableValues(map[string]string{
+		"other_var": "value", // Different variable
+	})
+
+	editor.TogglePreviewMode()
+	previewContent := editor.GetPreviewContent()
+
+	// Unresolved variable should remain as-is
+	if previewContent != `{"token": "{{auth_token}}"}` {
+		t.Errorf("unresolved variable was incorrectly replaced: %s", previewContent)
+	}
+}
+
+// TestEditorPreviewMode_NoVariables verifies preview mode works with no variables set
+func TestEditorPreviewMode_NoVariables(t *testing.T) {
+	editor := NewEditor(`{"key": "value"}`, "json")
+
+	editor.TogglePreviewMode()
+	previewContent := editor.GetPreviewContent()
+
+	if previewContent != `{"key": "value"}` {
+		t.Errorf("content with no variables was modified: %s", previewContent)
+	}
+}
+
+// TestEditorPreviewMode_KeybindingP verifies P key toggles preview mode
+func TestEditorPreviewMode_KeybindingP(t *testing.T) {
+	editor := NewEditor(`{"url": "{{base_url}}"}`, "json")
+	editor.SetVariableValues(map[string]string{"base_url": "https://api.com"})
+
+	// Initial state
+	if editor.IsPreviewMode() {
+		t.Error("preview mode should be off initially")
+	}
+
+	// Press P key in normal mode
+	editor, _ = editor.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'P'}}, true)
+
+	if !editor.IsPreviewMode() {
+		t.Error("preview mode should be on after P key")
+	}
+
+	// Press P again
+	editor, _ = editor.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'P'}}, true)
+
+	if editor.IsPreviewMode() {
+		t.Error("preview mode should be off after second P key")
+	}
+}
+
+// TestEditorPreviewMode_SystemVariables verifies system variables ($uuid, $timestamp) are resolved
+func TestEditorPreviewMode_SystemVariables(t *testing.T) {
+	tests := []struct {
+		name          string
+		content       string
+		checkResolved func(preview string) bool
+	}{
+		{
+			name:    "timestamp variable",
+			content: `{"ts": "{{$timestamp}}"}`,
+			checkResolved: func(preview string) bool {
+				// Should be replaced with a numeric timestamp (Unix seconds)
+				// The original {{$timestamp}} should NOT appear in preview
+				return !contains(preview, "{{$timestamp}}") && containsDigits(preview)
+			},
+		},
+		{
+			name:    "uuid variable",
+			content: `{"id": "{{$uuid}}"}`,
+			checkResolved: func(preview string) bool {
+				// Should be replaced with a UUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+				return !contains(preview, "{{$uuid}}") && containsUUID(preview)
+			},
+		},
+		{
+			name:    "guid variable (alias for uuid)",
+			content: `{"id": "{{$guid}}"}`,
+			checkResolved: func(preview string) bool {
+				return !contains(preview, "{{$guid}}") && containsUUID(preview)
+			},
+		},
+		{
+			name:    "datetime variable",
+			content: `{"dt": "{{$datetime}}"}`,
+			checkResolved: func(preview string) bool {
+				// Should be replaced with RFC3339 format
+				return !contains(preview, "{{$datetime}}") && containsRFC3339(preview)
+			},
+		},
+		{
+			name:    "date variable",
+			content: `{"d": "{{$date}}"}`,
+			checkResolved: func(preview string) bool {
+				// Should be replaced with YYYY-MM-DD format
+				return !contains(preview, "{{$date}}") && containsDateFormat(preview)
+			},
+		},
+		{
+			name:    "mixed system and env variables",
+			content: `{"url": "{{base_url}}", "ts": "{{$timestamp}}"}`,
+			checkResolved: func(preview string) bool {
+				// base_url should remain unresolved (no env vars set)
+				// $timestamp should be resolved
+				return contains(preview, "{{base_url}}") && !contains(preview, "{{$timestamp}}")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			editor := NewEditor(tt.content, "json")
+			// Don't set any environment variables - only testing system vars
+			editor.TogglePreviewMode()
+
+			preview := editor.GetPreviewContent()
+			if !tt.checkResolved(preview) {
+				t.Errorf("system variable not properly resolved in preview: %s", preview)
+			}
+		})
+	}
+}
+
+// Helper functions for TestEditorPreviewMode_SystemVariables
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+func containsDigits(s string) bool {
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			return true
+		}
+	}
+	return false
+}
+
+func containsUUID(s string) bool {
+	// Simple check for UUID format: contains 4 dashes and is ~36 chars segment
+	dashCount := 0
+	for _, r := range s {
+		if r == '-' {
+			dashCount++
+		}
+	}
+	return dashCount >= 4
+}
+
+func containsRFC3339(s string) bool {
+	// RFC3339 contains 'T' separator and timezone indicator
+	return findSubstring(s, "T") && (findSubstring(s, "Z") || findSubstring(s, "+") || findSubstring(s, "-"))
+}
+
+func containsDateFormat(s string) bool {
+	// YYYY-MM-DD format contains exactly 2 dashes in date portion
+	dashCount := 0
+	for _, r := range s {
+		if r == '-' {
+			dashCount++
+		}
+	}
+	return dashCount >= 2
+}

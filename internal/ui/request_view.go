@@ -224,6 +224,9 @@ type RequestView struct {
 
 	// Clipboard for yank/paste
 	clipboard *KeyValueClipboard
+
+	// Cache for environment variable sync optimization
+	lastEnvVars map[string]string
 }
 
 // KeyValueClipboard holds copied key-value data
@@ -2063,6 +2066,52 @@ func (r *RequestView) GetBodyContent() string {
 		return ""
 	}
 	return r.bodyEditor.GetContent()
+}
+
+// SetEnvironmentVariables sets the environment variables for body preview mode
+// Uses content-based comparison to avoid redundant updates on every render
+func (r *RequestView) SetEnvironmentVariables(vars map[string]string) {
+	// Skip update if variables haven't changed (content comparison)
+	if envVarsEqual(vars, r.lastEnvVars) {
+		return
+	}
+
+	// Store a copy of the current vars for next comparison
+	r.lastEnvVars = make(map[string]string, len(vars))
+	for k, v := range vars {
+		r.lastEnvVars[k] = v
+	}
+
+	if r.bodyEditor != nil {
+		r.bodyEditor.SetVariableValues(vars)
+	}
+	if r.preRequestEditor != nil {
+		r.preRequestEditor.SetVariableValues(vars)
+	}
+	if r.postRequestEditor != nil {
+		r.postRequestEditor.SetVariableValues(vars)
+	}
+}
+
+// envVarsEqual compares two environment variable maps for equality
+func envVarsEqual(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if bv, ok := b[k]; !ok || bv != v {
+			return false
+		}
+	}
+	return true
+}
+
+// IsBodyPreviewMode returns true if the body editor is in preview mode
+func (r *RequestView) IsBodyPreviewMode() bool {
+	if r.bodyEditor == nil {
+		return false
+	}
+	return r.bodyEditor.IsPreviewMode()
 }
 
 // LoadCollectionRequest loads a full CollectionRequest with all its data

@@ -1246,7 +1246,12 @@ func (m Model) renderPanel(title string, content string, width, height int, acti
 
 func (m Model) renderStatusBar() string {
 	// Update environment display
-	m.statusBar.SetEnvironment(m.leftPanel.GetEnvironments().GetActiveEnvironmentName())
+	envName := m.leftPanel.GetEnvironments().GetActiveEnvironmentName()
+	m.statusBar.SetEnvironment(envName)
+
+	// Update environment variables in request panel for preview mode
+	envVars := m.leftPanel.GetEnvironments().GetActiveEnvironmentVariables()
+	m.requestPanel.SetEnvironmentVariables(envVars)
 
 	// Update fullscreen state
 	m.statusBar.SetFullscreen(m.isFullscreen)

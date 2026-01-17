@@ -90,6 +90,10 @@ type Editor struct {
 	// Variable preview state
 	previewMode    bool              // Toggle preview mode (show resolved values)
 	variableValues map[string]string // Current variable values for preview
+
+	// External editor state
+	externalEditorEnabled bool              // Whether external editor is enabled for this editor
+	externalEditorField   api.EditableField // Which field this editor represents (body/headers)
 }
 
 // NewEditor creates a new editor component
@@ -455,6 +459,19 @@ func (e *Editor) handleNormalMode(msg tea.KeyMsg) (*Editor, tea.Cmd) {
 
 // handleInsertMode handles keyboard input in INSERT mode
 func (e *Editor) handleInsertMode(msg tea.KeyMsg) (*Editor, tea.Cmd) {
+	// Handle Ctrl+E for external editor
+	if msg.String() == "ctrl+e" && e.externalEditorEnabled {
+		content := e.GetContent()
+		contentType := api.DetectContentType(content)
+		return e, func() tea.Msg {
+			return ExternalEditorRequestMsg{
+				Field:       e.externalEditorField,
+				Content:     content,
+				ContentType: contentType,
+			}
+		}
+	}
+
 	switch msg.Type {
 	case tea.KeyEsc:
 		// Exit INSERT mode, go to NORMAL mode
@@ -1126,7 +1143,12 @@ func (e *Editor) renderModeIndicator(width int, active bool) string {
 			helpText = " i:insert  /:search  F:format  P:preview  u:undo "
 		}
 	} else {
-		helpText = " Esc:normal  Type to insert "
+		// INSERT mode - show Ctrl+E hint if external editor is enabled
+		if e.externalEditorEnabled {
+			helpText = " Esc:normal  Ctrl+E:editor  Type to insert "
+		} else {
+			helpText = " Esc:normal  Type to insert "
+		}
 	}
 
 	// Build the bar
@@ -1536,6 +1558,26 @@ func (e *Editor) SetCursorPosition(row, col int) {
 // SetVariableValues sets the variable values for preview mode
 func (e *Editor) SetVariableValues(values map[string]string) {
 	e.variableValues = values
+}
+
+// SetExternalEditorField sets which field this editor represents for external editing
+func (e *Editor) SetExternalEditorField(field api.EditableField) {
+	e.externalEditorField = field
+}
+
+// EnableExternalEditor enables external editor support for this editor
+func (e *Editor) EnableExternalEditor(enabled bool) {
+	e.externalEditorEnabled = enabled
+}
+
+// IsExternalEditorEnabled returns whether external editor is enabled
+func (e *Editor) IsExternalEditorEnabled() bool {
+	return e.externalEditorEnabled
+}
+
+// GetExternalEditorField returns the field type for external editing
+func (e *Editor) GetExternalEditorField() api.EditableField {
+	return e.externalEditorField
 }
 
 // TogglePreviewMode toggles the preview mode on/off

@@ -109,6 +109,17 @@ LazyCurl is designed for developers who live in the terminal. It combines:
 - **Quick Actions**: Resend requests, copy headers/body/error to clipboard
 - **Vim Navigation**: Browse history with j/k, expand entries with Enter/l
 
+### 📋 cURL Import/Export
+
+- **Import cURL Commands** (`Ctrl+I`): Paste cURL commands to create requests
+  - Supports multiline commands (backslash or backtick continuation)
+  - Parses method, URL, headers, body, and authentication
+  - Converts shell variables (`$VAR`, `${VAR}`) to LazyCurl syntax (`{{VAR}}`)
+  - Handles `-u`/`--user` for Basic authentication
+- **Export as cURL** (`Ctrl+E`): Copy current request as a cURL command to clipboard
+  - Generates valid cURL with proper quoting
+  - Includes headers, body, and authentication
+
 ### 💾 Session Persistence
 
 - **Automatic State Saving**: Application state is saved automatically on changes
@@ -315,6 +326,8 @@ LazyCurl automatically creates a `.lazycurl/` directory:
 | Key | Action |
 |-----|--------|
 | `Ctrl+S` | Send request |
+| `Ctrl+I` | Import cURL command |
+| `Ctrl+E` | Export request as cURL (copy to clipboard) |
 | `?` | Show keybinding help (WhichKey) |
 | `:` | Enter command mode |
 | `Esc` | Return to NORMAL mode |

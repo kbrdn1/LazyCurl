@@ -248,6 +248,12 @@ setup_worktree() {
         echo -e "  ${GREEN}✓${NC} Copied .speckit/ templates"
     fi
 
+    # Copy CLAUDE.md if it exists
+    if [ -f "${MAIN_REPO}/CLAUDE.md" ]; then
+        cp "${MAIN_REPO}/CLAUDE.md" "${worktree_path}/"
+        echo -e "  ${GREEN}✓${NC} Copied CLAUDE.md"
+    fi
+
     # Create spec folder for this issue
     local spec_folder="${worktree_path}/specs/0${issue_number}-${description}"
     if [ ! -d "$spec_folder" ]; then

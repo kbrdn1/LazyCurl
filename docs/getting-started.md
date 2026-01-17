@@ -261,6 +261,26 @@ Edit `~/.config/lazycurl/config.yaml` to:
 
 See [Configuration Guide](configuration.md).
 
+### Import Existing APIs
+
+Import from existing tools:
+
+- **cURL**: Press `Ctrl+I` to paste a cURL command
+- **OpenAPI**: Press `Ctrl+O` to import OpenAPI specs
+- **Postman**: Press `Ctrl+P` to import Postman collections
+
+See [Import/Export Guide](import-export.md).
+
+### External Editor
+
+Edit request bodies in your favorite editor:
+
+1. Set `$VISUAL` environment variable
+2. Press `Ctrl+E` in INSERT mode
+3. Edit in vim, VS Code, etc.
+
+See [External Editor Guide](external-editor.md).
+
 ---
 
 ## Troubleshooting
@@ -307,3 +327,12 @@ See [Configuration Guide](configuration.md).
 | Switch to Environments | `2` |
 | Show help | `?` |
 | Quit | `q` |
+
+---
+
+## See Also
+
+- [Documentation Index](index.md) - All documentation
+- [Keybindings](keybindings.md) - Complete keyboard reference
+- [Import/Export](import-export.md) - Import from cURL, OpenAPI, Postman
+- [Console](console.md) - Request history and logging

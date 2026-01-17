@@ -10,13 +10,13 @@
     },
     {
       "key": "api_key",
-      "value": "sk-test-12345",
+      "value": "fake-api-key-for-testing-only",
       "type": "secret",
       "enabled": true
     },
     {
       "key": "access_token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+      "value": "fake-access-token-for-testing-only",
       "type": "secret",
       "enabled": true
     },

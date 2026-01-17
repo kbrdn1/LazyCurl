@@ -775,7 +775,8 @@ func (e *Editor) View(width, height int, active bool) string {
 		var content string
 
 		// Handle cursor rendering on the current line
-		if active && i == e.cursorRow {
+		// Hide cursor in preview mode to avoid position desync (resolved values have different lengths)
+		if active && i == e.cursorRow && !e.previewMode {
 			content = e.renderLineWithCursorAndMatches(displayContent, i, displayStart, adjustedCursorCol, normalCursorStyle, insertCursorStyle)
 		} else {
 			// Render with search highlights

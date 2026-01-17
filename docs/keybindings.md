@@ -28,6 +28,7 @@ LazyCurl uses vim-style modes for different interaction contexts. The current mo
 | **INSERT** | `INSERT` | Light Gray (#b8bcc2) | Black | Text input mode for editing fields |
 | **VIEW** | `VIEW` | Green (#4c8c49) | White | Read-only browsing mode |
 | **COMMAND** | `COMMAND` | Orange (#a45e0e) | White | Command line mode (`:` prefix) |
+| **JUMP** | `JUMP` | Orange (#FF6600) | White | Quick navigation with labels (vim-easymotion style) |
 
 For detailed StatusBar information, see [StatusBar Documentation](statusbar.md).
 
@@ -38,21 +39,70 @@ For detailed StatusBar information, see [StatusBar Documentation](statusbar.md).
          Esc        │   NORMAL    │        :
     ┌───────────────│   (default) │───────────────┐
     │               └─────────────┘               │
-    │                   │     │                   │
-    │              i    │     │    v              │
-    │                   ▼     ▼                   ▼
-┌───┴────┐        ┌─────────┐ ┌─────────┐   ┌─────────┐
-│ INSERT │        │ INSERT  │ │  VIEW   │   │ COMMAND │
-│        │◄───────│         │ │         │   │         │
-└────────┘   Esc  └─────────┘ └─────────┘   └─────────┘
-                       │           │             │
-                       └─────┬─────┘             │
-                             │ Esc               │ Esc/Enter
-                             ▼                   ▼
-                       ┌─────────────┐     ┌─────────────┐
-                       │   NORMAL    │     │   NORMAL    │
-                       └─────────────┘     └─────────────┘
+    │               │   │     │   │               │
+    │          f/F  │   │ i   │ v │               │
+    │               ▼   ▼     ▼   ▼               ▼
+┌───┴────┐   ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+│  JUMP  │   │ INSERT  │ │  VIEW   │ │ COMMAND │ │  JUMP   │
+│        │◄──│         │ │         │ │         │ │         │
+└────────┘   └─────────┘ └─────────┘ └─────────┘ └─────────┘
+    │             │           │             │          │
+    │ Esc/key     └─────┬─────┘             │          │ label
+    ▼                   │ Esc               │ Esc/Enter ▼
+┌───────────────────────▼───────────────────▼────────────────┐
+│                        NORMAL                               │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Jump Mode Navigation
+
+Jump mode provides vim-easymotion/vimium-style navigation using letter labels. Press a letter to instantly jump to that element.
+
+### Activation
+
+| Key | Action |
+|-----|--------|
+| `f` | Activate jump mode (current panel only) |
+| `F` | Activate jump mode (all panels) |
+
+### During Jump Mode
+
+| Key | Action |
+|-----|--------|
+| `a-z` | Type label character(s) to jump |
+| `Tab` | Cycle to next panel scope (single-panel mode only) |
+| `Esc` | Cancel jump mode |
+
+### How It Works
+
+1. Press `f` to show letter labels on interactive elements in the current panel
+2. Press `F` (Shift+f) to show labels across all panels
+3. Type the displayed letter(s) to jump directly to that element
+4. For many targets (>26), use two-letter combinations (e.g., `aa`, `as`, `ad`)
+
+### Label Priority
+
+Labels are assigned using home-row priority for faster access:
+
+1. **Home row first**: `a`, `s`, `d`, `f`, `j`, `k`, `l`
+2. **Other keys**: `g`, `h`, `q`, `w`, `e`, `r`, `t`, `y`, `u`, `i`, `o`, `p`, `z`, `x`, `c`, `v`, `b`, `n`, `m`
+3. **Two-letter combos**: When >26 targets exist, combinations like `aa`, `as`, etc.
+
+### Visual Feedback
+
+- **Orange labels** (#FF6600): Available jump targets
+- **Green highlight**: Matched prefix when typing two-letter combos
+- **Dimmed labels**: Non-matching labels during filtering
+
+### Jumpable Elements
+
+| Panel | Elements |
+|-------|----------|
+| Collections | Tree items (requests, folders, collections) |
+| Request | Tabs (Params, Auth, Headers, Body, Scripts), URL field |
+| Response | Tabs (Body, Cookies, Headers, Console) |
 
 ---
 
@@ -388,6 +438,8 @@ WhichKey shows different hints based on your current context:
 |--------|------|
 | Navigate between panels | `h` / `l` |
 | Move in list | `j` / `k` |
+| **Jump mode (current panel)** | `f` |
+| **Jump mode (all panels)** | `F` |
 | Create new item | `n` |
 | Edit item | `c` or `i` |
 | Delete item | `d` |

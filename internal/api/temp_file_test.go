@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCreateTempFile(t *testing.T) {
@@ -311,5 +312,150 @@ func TestHasContentChanged_NilInfo(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "nil") {
 		t.Errorf("HasContentChanged(nil) error = %v, want error containing 'nil'", err)
+	}
+}
+
+func TestHasContentChanged_FileDeleted(t *testing.T) {
+	// Create a temp file
+	info, err := CreateTempFile("test content", ContentTypeText)
+	if err != nil {
+		t.Fatalf("CreateTempFile() error = %v", err)
+	}
+
+	// Delete the file before checking for changes
+	if err := os.Remove(info.Path); err != nil {
+		t.Fatalf("failed to delete temp file: %v", err)
+	}
+
+	// HasContentChanged should return error when file is deleted
+	_, err = HasContentChanged(info)
+	if err == nil {
+		t.Error("HasContentChanged() expected error for deleted file, got nil")
+	}
+}
+
+func TestCleanupTempFile_EmptyPath(t *testing.T) {
+	// Test with empty path in TempFileInfo
+	info := &TempFileInfo{Path: ""}
+
+	// Should not panic and return the os.Remove error for empty path
+	err := CleanupTempFile(info)
+	// Empty path removal behavior varies by OS, but shouldn't panic
+	// On most systems, this will return an error (path does not exist)
+	_ = err // Just verify no panic
+}
+
+func TestCleanupTempFile_DirectoryNotEmpty(t *testing.T) {
+	// Create a temp directory with a file inside
+	tmpDir, err := os.MkdirTemp("", "lazycurl-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir) // Clean up at the end
+
+	// Create a file inside the directory
+	tmpFile := filepath.Join(tmpDir, "testfile.txt")
+	if err := os.WriteFile(tmpFile, []byte("test"), 0644); err != nil {
+		t.Fatalf("failed to create file in temp dir: %v", err)
+	}
+
+	// Try to cleanup the directory (should fail because it's not empty)
+	info := &TempFileInfo{Path: tmpDir}
+	err = CleanupTempFile(info)
+
+	// Should return an error because os.Remove can't delete non-empty directory
+	if err == nil {
+		t.Error("CleanupTempFile() expected error for non-empty directory, got nil")
+	}
+}
+
+func TestCreateTempFile_AllContentTypes(t *testing.T) {
+	// Ensure all content types create files correctly
+	contentTypes := []struct {
+		contentType ContentType
+		wantExt     string
+	}{
+		{ContentTypeJSON, ".json"},
+		{ContentTypeXML, ".xml"},
+		{ContentTypeHTML, ".html"},
+		{ContentTypeText, ".txt"},
+		{ContentType("unknown"), ".txt"}, // Unknown defaults to .txt
+	}
+
+	for _, tt := range contentTypes {
+		t.Run(string(tt.contentType), func(t *testing.T) {
+			info, err := CreateTempFile("test", tt.contentType)
+			if err != nil {
+				t.Fatalf("CreateTempFile() error = %v", err)
+			}
+			defer CleanupTempFile(info)
+
+			if info.Extension != tt.wantExt {
+				t.Errorf("Extension = %q, want %q", info.Extension, tt.wantExt)
+			}
+
+			if info.ContentType != tt.contentType {
+				t.Errorf("ContentType = %v, want %v", info.ContentType, tt.contentType)
+			}
+
+			if info.CreatedAt.IsZero() {
+				t.Error("CreatedAt should not be zero")
+			}
+		})
+	}
+}
+
+func TestReadTempFile_EmptyPath(t *testing.T) {
+	// Test with empty path in TempFileInfo
+	info := &TempFileInfo{Path: ""}
+
+	_, err := ReadTempFile(info)
+	if err == nil {
+		t.Error("ReadTempFile() expected error for empty path, got nil")
+	}
+}
+
+func TestReadTempFile_NonExistentPath(t *testing.T) {
+	// Test with non-existent path
+	info := &TempFileInfo{Path: "/nonexistent/path/that/does/not/exist.txt"}
+
+	_, err := ReadTempFile(info)
+	if err == nil {
+		t.Error("ReadTempFile() expected error for non-existent path, got nil")
+	}
+}
+
+func TestTempFileInfo_FieldsPopulated(t *testing.T) {
+	content := "test content for field validation"
+	info, err := CreateTempFile(content, ContentTypeJSON)
+	if err != nil {
+		t.Fatalf("CreateTempFile() error = %v", err)
+	}
+	defer CleanupTempFile(info)
+
+	// Verify all fields are properly populated
+	if info.Path == "" {
+		t.Error("Path should not be empty")
+	}
+
+	if info.OriginalContent != content {
+		t.Errorf("OriginalContent = %q, want %q", info.OriginalContent, content)
+	}
+
+	if info.ContentType != ContentTypeJSON {
+		t.Errorf("ContentType = %v, want %v", info.ContentType, ContentTypeJSON)
+	}
+
+	if info.Extension != ".json" {
+		t.Errorf("Extension = %q, want %q", info.Extension, ".json")
+	}
+
+	if info.CreatedAt.IsZero() {
+		t.Error("CreatedAt should not be zero")
+	}
+
+	// CreatedAt should be recent (within last minute)
+	if time.Since(info.CreatedAt) > time.Minute {
+		t.Error("CreatedAt should be recent")
 	}
 }

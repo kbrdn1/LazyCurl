@@ -54,7 +54,7 @@ var variablePattern = regexp.MustCompile(`\{\{([^}]+)\}\}`)
    - Apply variable style to each match
    - Return highlighted line
 
-### Phase 2: Preview Mode (Ctrl+P toggle)
+### Phase 2: Preview Mode (P in NORMAL mode)
 
 **File: `internal/ui/components/editor.go`**
 
@@ -94,7 +94,7 @@ type Editor struct {
 
 Show resolved value as a "ghost" text after the variable:
 
-```
+```text
 "token": "{{auth_token}}" → eyJhbGciOiJIUzI1NiI...
 ```
 
@@ -117,19 +117,19 @@ Show resolved value as a "ghost" text after the variable:
 
 ### Variable Highlighting
 
-```
+```json
 {
-  "url": "{{base_url}}/api/users",  <- {{base_url}} in orange
-  "token": "{{auth_token}}"          <- {{auth_token}} in orange
+  "url": "{{base_url}}/api/users",  // {{base_url}} in orange
+  "token": "{{auth_token}}"          // {{auth_token}} in orange
 }
 ```
 
 ### Preview Mode (P toggle)
 
-```
+```json
 {
-  "url": "https://api.example.com/api/users",  <- resolved, green bg
-  "token": "Bearer eyJhbG..."                   <- resolved, green bg
+  "url": "https://api.example.com/api/users",  // resolved, green bg
+  "token": "Bearer eyJhbG..."                   // resolved, green bg
 }
 ```
 

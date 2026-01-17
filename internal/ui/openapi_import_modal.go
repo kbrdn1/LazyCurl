@@ -22,12 +22,13 @@ var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 // OpenAPIImportState represents the current state of the import modal
 type OpenAPIImportState int
 
+// Import modal states
 const (
-	StateInputPath OpenAPIImportState = iota
-	StatePreview
-	StateConfirmOverwrite
-	StateImporting
-	StateError
+	StateInputPath        OpenAPIImportState = iota // Waiting for file path input
+	StatePreview                                    // Showing import preview
+	StateConfirmOverwrite                           // Asking to confirm overwrite
+	StateImporting                                  // Importing in progress
+	StateError                                      // Error occurred
 )
 
 // OpenAPIImportModal handles the OpenAPI import modal
@@ -218,7 +219,7 @@ func (m *OpenAPIImportModal) Update(msg tea.Msg) (*OpenAPIImportModal, tea.Cmd) 
 
 // spinnerTick returns a command that ticks the spinner
 func (m *OpenAPIImportModal) spinnerTick() tea.Cmd {
-	return tea.Tick(80*time.Millisecond, func(t time.Time) tea.Msg {
+	return tea.Tick(80*time.Millisecond, func(_ time.Time) tea.Msg {
 		return OpenAPISpinnerTickMsg{}
 	})
 }

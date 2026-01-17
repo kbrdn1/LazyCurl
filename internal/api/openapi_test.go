@@ -537,18 +537,14 @@ func TestOpenAPIImporter_RefResolution(t *testing.T) {
 		t.Error("expected Products folder from tags")
 	}
 
-	// Verify that $ref parameters are resolved
-	// complex-refs.yaml uses $ref for LimitParam, OffsetParam, OrderIdParam
+	// Verify that requests were generated from the spec
+	// complex-refs.yaml defines operations that should be converted
+	totalRequests := 0
 	for _, folder := range collection.Folders {
-		for _, req := range folder.Requests {
-			// GET /orders should have limit and offset params from $ref
-			if req.Name == "List all orders" || strings.Contains(req.URL, "/orders") {
-				if req.Method == GET && len(req.Params) == 0 {
-					// Some operations may not have query params extracted
-					// This is acceptable if the schema doesn't define them
-				}
-			}
-		}
+		totalRequests += len(folder.Requests)
+	}
+	if totalRequests == 0 {
+		t.Error("Expected requests to be generated from spec with $ref parameters")
 	}
 }
 
@@ -574,10 +570,8 @@ func TestOpenAPIImporter_RefResolution_RequestBody(t *testing.T) {
 				// Should have a body from the $ref
 				if req.Body == nil {
 					t.Error("POST /orders should have a body from $ref requestBodies/OrderBody")
-				} else {
-					if req.Body.Type == "" {
-						t.Error("POST /orders body should have a type set")
-					}
+				} else if req.Body.Type == "" {
+					t.Error("POST /orders body should have a type set")
 				}
 				// Should have Content-Type header
 				hasContentType := false

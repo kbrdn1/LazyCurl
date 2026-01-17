@@ -412,15 +412,9 @@ func TestConvertPathsToFolders_ComplexRefs(t *testing.T) {
 		t.Errorf("expected at least 3 folders, got %d", len(collection.Folders))
 	}
 
-	// Verify refs are resolved (requests should have proper body examples)
-	for _, folder := range collection.Folders {
-		for _, req := range folder.Requests {
-			// POST requests should have body
-			if req.Method == POST && req.Body == nil {
-				// This is OK if IncludeExamples didn't generate one
-				// Just verify structure is correct
-			}
-		}
+	// Verify refs are resolved - collection should have folders with requests
+	if len(collection.Folders) == 0 {
+		t.Error("Expected collection to have folders")
 	}
 }
 

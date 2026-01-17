@@ -1,0 +1,72 @@
+openapi: "3.0.3"
+info:
+  title: "Security Test API"
+  version: "1.0.0"
+servers:
+  - url: "https://api.example.com"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    basicAuth:
+      type: http
+      scheme: basic
+    apiKeyHeader:
+      type: apiKey
+      name: X-API-Key
+      in: header
+    apiKeyQuery:
+      type: apiKey
+      name: api_key
+      in: query
+security:
+  - bearerAuth: []
+paths:
+  /users:
+    get:
+      summary: "Get users (uses global bearer)"
+      tags:
+        - Users
+      responses:
+        '200':
+          description: OK
+  /admin:
+    get:
+      summary: "Admin endpoint (uses basic)"
+      tags:
+        - Admin
+      security:
+        - basicAuth: []
+      responses:
+        '200':
+          description: OK
+  /public:
+    get:
+      summary: "Public endpoint (no auth)"
+      tags:
+        - Public
+      security: []
+      responses:
+        '200':
+          description: OK
+  /api-key-header:
+    get:
+      summary: "API Key in header"
+      tags:
+        - API
+      security:
+        - apiKeyHeader: []
+      responses:
+        '200':
+          description: OK
+  /api-key-query:
+    get:
+      summary: "API Key in query"
+      tags:
+        - API
+      security:
+        - apiKeyQuery: []
+      responses:
+        '200':
+          description: OK

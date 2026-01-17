@@ -583,3 +583,327 @@ func TestSchemaToExample_DepthLimit(t *testing.T) {
 		t.Error("expected collection, got nil")
 	}
 }
+
+// T071: Test security scheme extraction
+func TestSecuritySchemeExtraction(t *testing.T) {
+	data := readTestFixture(t, "with-security.yaml")
+	importer, err := NewOpenAPIImporter(data)
+	if err != nil {
+		t.Fatalf("failed to create importer: %v", err)
+	}
+
+	collection, err := importer.ToCollection(ImportOptions{
+		IncludeExamples: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to convert: %v", err)
+	}
+
+	tests := []struct {
+		name         string
+		requestName  string
+		wantAuthType string
+		wantAPIKey   string
+		wantLocation string
+	}{
+		{
+			name:         "bearer token from global security",
+			requestName:  "Get users (uses global bearer)",
+			wantAuthType: "bearer",
+		},
+		{
+			name:         "basic auth from operation security",
+			requestName:  "Admin endpoint (uses basic)",
+			wantAuthType: "basic",
+		},
+		{
+			name:         "public endpoint with no auth",
+			requestName:  "Public endpoint (no auth)",
+			wantAuthType: "",
+		},
+		{
+			name:         "api key in header",
+			requestName:  "API Key in header",
+			wantAuthType: "api_key",
+			wantAPIKey:   "X-API-Key",
+			wantLocation: "header",
+		},
+		{
+			name:         "api key in query",
+			requestName:  "API Key in query",
+			wantAuthType: "api_key",
+			wantAPIKey:   "api_key",
+			wantLocation: "query",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var foundReq *CollectionRequest
+			for _, folder := range collection.Folders {
+				for i := range folder.Requests {
+					if folder.Requests[i].Name == tt.requestName {
+						foundReq = &folder.Requests[i]
+						break
+					}
+				}
+				if foundReq != nil {
+					break
+				}
+			}
+
+			if foundReq == nil {
+				t.Fatalf("request %q not found", tt.requestName)
+			}
+
+			if tt.wantAuthType == "" {
+				if foundReq.Auth != nil {
+					t.Errorf("expected no auth, got auth type %q", foundReq.Auth.Type)
+				}
+			} else {
+				if foundReq.Auth == nil {
+					t.Fatalf("expected auth type %q, got nil", tt.wantAuthType)
+				}
+				if foundReq.Auth.Type != tt.wantAuthType {
+					t.Errorf("expected auth type %q, got %q", tt.wantAuthType, foundReq.Auth.Type)
+				}
+
+				if tt.wantAuthType == "api_key" {
+					if foundReq.Auth.APIKeyName != tt.wantAPIKey {
+						t.Errorf("expected API key name %q, got %q", tt.wantAPIKey, foundReq.Auth.APIKeyName)
+					}
+					if foundReq.Auth.APIKeyLocation != tt.wantLocation {
+						t.Errorf("expected API key location %q, got %q", tt.wantLocation, foundReq.Auth.APIKeyLocation)
+					}
+				}
+			}
+		})
+	}
+}
+
+// T071: Test bearer token extraction
+func TestBearerTokenExtraction(t *testing.T) {
+	data := readTestFixture(t, "with-security.yaml")
+	importer, err := NewOpenAPIImporter(data)
+	if err != nil {
+		t.Fatalf("failed to create importer: %v", err)
+	}
+
+	collection, err := importer.ToCollection(ImportOptions{
+		IncludeExamples: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to convert: %v", err)
+	}
+
+	// Find the request that uses bearer token
+	var foundReq *CollectionRequest
+	for _, folder := range collection.Folders {
+		for i := range folder.Requests {
+			if folder.Requests[i].Name == "Get users (uses global bearer)" {
+				foundReq = &folder.Requests[i]
+				break
+			}
+		}
+	}
+
+	if foundReq == nil {
+		t.Fatal("bearer token request not found")
+	}
+
+	if foundReq.Auth == nil {
+		t.Fatal("expected auth config, got nil")
+	}
+
+	if foundReq.Auth.Type != "bearer" {
+		t.Errorf("expected auth type 'bearer', got %q", foundReq.Auth.Type)
+	}
+
+	if foundReq.Auth.Token != "" {
+		t.Errorf("expected empty token, got %q", foundReq.Auth.Token)
+	}
+}
+
+// T071: Test basic auth extraction
+func TestBasicAuthExtraction(t *testing.T) {
+	data := readTestFixture(t, "with-security.yaml")
+	importer, err := NewOpenAPIImporter(data)
+	if err != nil {
+		t.Fatalf("failed to create importer: %v", err)
+	}
+
+	collection, err := importer.ToCollection(ImportOptions{
+		IncludeExamples: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to convert: %v", err)
+	}
+
+	// Find the request that uses basic auth
+	var foundReq *CollectionRequest
+	for _, folder := range collection.Folders {
+		for i := range folder.Requests {
+			if folder.Requests[i].Name == "Admin endpoint (uses basic)" {
+				foundReq = &folder.Requests[i]
+				break
+			}
+		}
+	}
+
+	if foundReq == nil {
+		t.Fatal("basic auth request not found")
+	}
+
+	if foundReq.Auth == nil {
+		t.Fatal("expected auth config, got nil")
+	}
+
+	if foundReq.Auth.Type != "basic" {
+		t.Errorf("expected auth type 'basic', got %q", foundReq.Auth.Type)
+	}
+}
+
+// T071: Test API key extraction
+func TestAPIKeyExtraction(t *testing.T) {
+	data := readTestFixture(t, "with-security.yaml")
+	importer, err := NewOpenAPIImporter(data)
+	if err != nil {
+		t.Fatalf("failed to create importer: %v", err)
+	}
+
+	collection, err := importer.ToCollection(ImportOptions{
+		IncludeExamples: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to convert: %v", err)
+	}
+
+	tests := []struct {
+		name         string
+		requestName  string
+		wantKeyName  string
+		wantLocation string
+	}{
+		{
+			name:         "api key in header",
+			requestName:  "API Key in header",
+			wantKeyName:  "X-API-Key",
+			wantLocation: "header",
+		},
+		{
+			name:         "api key in query",
+			requestName:  "API Key in query",
+			wantKeyName:  "api_key",
+			wantLocation: "query",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var foundReq *CollectionRequest
+			for _, folder := range collection.Folders {
+				for i := range folder.Requests {
+					if folder.Requests[i].Name == tt.requestName {
+						foundReq = &folder.Requests[i]
+						break
+					}
+				}
+			}
+
+			if foundReq == nil {
+				t.Fatalf("request %q not found", tt.requestName)
+			}
+
+			if foundReq.Auth == nil {
+				t.Fatal("expected auth config, got nil")
+			}
+
+			if foundReq.Auth.Type != "api_key" {
+				t.Errorf("expected auth type 'api_key', got %q", foundReq.Auth.Type)
+			}
+
+			if foundReq.Auth.APIKeyName != tt.wantKeyName {
+				t.Errorf("expected API key name %q, got %q", tt.wantKeyName, foundReq.Auth.APIKeyName)
+			}
+
+			if foundReq.Auth.APIKeyLocation != tt.wantLocation {
+				t.Errorf("expected API key location %q, got %q", tt.wantLocation, foundReq.Auth.APIKeyLocation)
+			}
+		})
+	}
+}
+
+// T071: Test operation-level security override
+func TestOperationLevelSecurityOverride(t *testing.T) {
+	data := readTestFixture(t, "with-security.yaml")
+	importer, err := NewOpenAPIImporter(data)
+	if err != nil {
+		t.Fatalf("failed to create importer: %v", err)
+	}
+
+	collection, err := importer.ToCollection(ImportOptions{
+		IncludeExamples: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to convert: %v", err)
+	}
+
+	// Find the admin request that overrides global security
+	var adminReq *CollectionRequest
+	for _, folder := range collection.Folders {
+		for i := range folder.Requests {
+			if folder.Requests[i].Name == "Admin endpoint (uses basic)" {
+				adminReq = &folder.Requests[i]
+				break
+			}
+		}
+	}
+
+	if adminReq == nil {
+		t.Fatal("admin request not found")
+	}
+
+	if adminReq.Auth == nil {
+		t.Fatal("expected auth config, got nil")
+	}
+
+	// Should use basic auth, not global bearer
+	if adminReq.Auth.Type != "basic" {
+		t.Errorf("expected operation-level 'basic' auth, got %q", adminReq.Auth.Type)
+	}
+}
+
+// T071: Test empty security (public endpoint)
+func TestEmptySecurityPublicEndpoint(t *testing.T) {
+	data := readTestFixture(t, "with-security.yaml")
+	importer, err := NewOpenAPIImporter(data)
+	if err != nil {
+		t.Fatalf("failed to create importer: %v", err)
+	}
+
+	collection, err := importer.ToCollection(ImportOptions{
+		IncludeExamples: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to convert: %v", err)
+	}
+
+	// Find the public endpoint
+	var publicReq *CollectionRequest
+	for _, folder := range collection.Folders {
+		for i := range folder.Requests {
+			if folder.Requests[i].Name == "Public endpoint (no auth)" {
+				publicReq = &folder.Requests[i]
+				break
+			}
+		}
+	}
+
+	if publicReq == nil {
+		t.Fatal("public request not found")
+	}
+
+	if publicReq.Auth != nil {
+		t.Errorf("expected no auth for public endpoint, got auth type %q", publicReq.Auth.Type)
+	}
+}

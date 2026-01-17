@@ -10,8 +10,103 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 )
 
+// extractSecuritySchemes extracts security schemes from OpenAPI document
+func extractSecuritySchemes(doc *v3.Document) map[string]*AuthConfig {
+	schemes := make(map[string]*AuthConfig)
+
+	if doc.Components == nil || doc.Components.SecuritySchemes == nil {
+		return schemes
+	}
+
+	for pair := doc.Components.SecuritySchemes.First(); pair != nil; pair = pair.Next() {
+		schemeName := pair.Key()
+		scheme := pair.Value()
+
+		if scheme == nil {
+			continue
+		}
+
+		schemeType := strings.ToLower(scheme.Type)
+
+		switch schemeType {
+		case "http":
+			httpScheme := strings.ToLower(scheme.Scheme)
+			if httpScheme == "bearer" {
+				schemes[schemeName] = &AuthConfig{
+					Type:  "bearer",
+					Token: "",
+				}
+			} else if httpScheme == "basic" {
+				schemes[schemeName] = &AuthConfig{
+					Type: "basic",
+				}
+			}
+		case "apikey":
+			schemes[schemeName] = &AuthConfig{
+				Type:           "api_key",
+				APIKeyName:     scheme.Name,
+				APIKeyLocation: scheme.In,
+			}
+		case "oauth2":
+			// OAuth2 not supported, skip silently
+			continue
+		}
+	}
+
+	return schemes
+}
+
+// getOperationSecurity determines the security for an operation
+func getOperationSecurity(op *v3.Operation, globalSecurity []*base.SecurityRequirement, schemes map[string]*AuthConfig) *AuthConfig {
+	// Check operation-level security first
+	security := op.Security
+
+	// If operation has explicit empty security, it's public
+	if security != nil && len(security) == 0 {
+		return nil
+	}
+
+	// If no operation-level security, use global security
+	if security == nil {
+		security = globalSecurity
+	}
+
+	// No security defined
+	if len(security) == 0 {
+		return nil
+	}
+
+	// Use first security requirement
+	firstReq := security[0]
+	if firstReq.Requirements == nil || firstReq.Requirements.Len() == 0 {
+		return nil
+	}
+
+	// Get first scheme from the requirement
+	firstPair := firstReq.Requirements.First()
+	if firstPair == nil {
+		return nil
+	}
+
+	schemeName := firstPair.Key()
+	if authConfig, exists := schemes[schemeName]; exists {
+		return authConfig
+	}
+
+	return nil
+}
+
 // convertPathsToFolders converts OpenAPI paths to folders and requests organized by tags
-func convertPathsToFolders(paths *v3.Paths, baseURL string, includeExamples bool) []Folder {
+func convertPathsToFolders(paths *v3.Paths, doc *v3.Document, baseURL string, includeExamples bool) []Folder {
+	// Extract security schemes from document
+	schemes := extractSecuritySchemes(doc)
+
+	// Get global security requirements
+	var globalSecurity []*base.SecurityRequirement
+	if doc.Security != nil {
+		globalSecurity = doc.Security
+	}
+
 	// Map to organize requests by tag
 	tagRequests := make(map[string][]CollectionRequest)
 	var untaggedRequests []CollectionRequest
@@ -22,7 +117,7 @@ func convertPathsToFolders(paths *v3.Paths, baseURL string, includeExamples bool
 		pathItem := pair.Value()
 
 		// Convert each operation
-		requests := pathItemToRequests(path, pathItem, baseURL, includeExamples)
+		requests := pathItemToRequests(path, pathItem, baseURL, includeExamples, globalSecurity, schemes)
 
 		for _, req := range requests {
 			// Determine tag for this request (stored in description temporarily during conversion)
@@ -58,7 +153,7 @@ func convertPathsToFolders(paths *v3.Paths, baseURL string, includeExamples bool
 }
 
 // pathItemToRequests converts a path's operations to requests
-func pathItemToRequests(path string, item *v3.PathItem, baseURL string, includeExamples bool) []CollectionRequest {
+func pathItemToRequests(path string, item *v3.PathItem, baseURL string, includeExamples bool, globalSecurity []*base.SecurityRequirement, schemes map[string]*AuthConfig) []CollectionRequest {
 	var requests []CollectionRequest
 
 	methodOps := map[HTTPMethod]*v3.Operation{
@@ -73,7 +168,7 @@ func pathItemToRequests(path string, item *v3.PathItem, baseURL string, includeE
 
 	for method, op := range methodOps {
 		if op != nil {
-			req := operationToRequest(path, method, op, baseURL, includeExamples)
+			req := operationToRequest(path, method, op, baseURL, includeExamples, globalSecurity, schemes)
 			requests = append(requests, req)
 		}
 	}
@@ -82,7 +177,7 @@ func pathItemToRequests(path string, item *v3.PathItem, baseURL string, includeE
 }
 
 // operationToRequest converts a single operation to a request
-func operationToRequest(path string, method HTTPMethod, op *v3.Operation, baseURL string, includeExamples bool) CollectionRequest {
+func operationToRequest(path string, method HTTPMethod, op *v3.Operation, baseURL string, includeExamples bool, globalSecurity []*base.SecurityRequirement, schemes map[string]*AuthConfig) CollectionRequest {
 	// Build URL from base URL and path
 	url := buildURL(baseURL, path)
 
@@ -107,6 +202,9 @@ func operationToRequest(path string, method HTTPMethod, op *v3.Operation, baseUR
 		body, headers = requestBodyToBodyConfig(op.RequestBody, headers)
 	}
 
+	// Determine security for this operation
+	auth := getOperationSecurity(op, globalSecurity, schemes)
+
 	req := CollectionRequest{
 		ID:          GenerateID(),
 		Name:        name,
@@ -116,6 +214,7 @@ func operationToRequest(path string, method HTTPMethod, op *v3.Operation, baseUR
 		Params:      queryParams,
 		Headers:     headers,
 		Body:        body,
+		Auth:        auth,
 	}
 
 	// Store tag for folder organization (will be extracted later)

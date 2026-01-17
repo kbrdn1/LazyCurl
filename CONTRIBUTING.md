@@ -276,12 +276,27 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 ### Format
 
 ```bash
-<emoji> <type>(<scope>)<!>: <subject>
+<type>(<scope>)<!>: <subject> <emoji>
+```
+
+> **⚠️ Important**: Emoji must be at the **END** of the commit message for release-please compatibility.
+
+### Examples
+
+```bash
+# ✅ Correct - emoji at the end
+feat(api): add cURL import functionality ✨
+fix(ui): resolve panel resize issue 🐛
+docs: update installation guide 📝
+
+# ❌ Incorrect - emoji at the start (breaks release-please)
+✨ feat(api): add cURL import functionality
+🐛 fix(ui): resolve panel resize issue
 ```
 
 ### Emojis
 
-Use [Gitmoji](https://gitmoji.dev/) prefixes for commit messages:
+Use [Gitmoji](https://gitmoji.dev/) suffixes for commit messages:
 
 | Emoji | Code | Description |
 |-------|------|-------------|

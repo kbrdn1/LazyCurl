@@ -243,6 +243,13 @@ func convertBody(body *Body, summary *ImportSummary, reqName string) *api.BodyCo
 
 	case "file":
 		summary.AddWarningf("Request '%s' uses file body mode (limited support)", reqName)
+		if body.File == nil {
+			summary.AddWarningf("Request '%s' has file body mode but missing file info", reqName)
+			return &api.BodyConfig{
+				Type:    "binary",
+				Content: "",
+			}
+		}
 		return &api.BodyConfig{
 			Type:    "binary",
 			Content: body.File.Src,
@@ -250,13 +257,32 @@ func convertBody(body *Body, summary *ImportSummary, reqName string) *api.BodyCo
 
 	case "graphql":
 		summary.AddWarningf("Request '%s' uses GraphQL body (imported as raw JSON)", reqName)
-		// Convert GraphQL to JSON format
-		graphqlContent := fmt.Sprintf(`{"query": %q, "variables": %s}`,
-			body.GraphQL.Query,
-			body.GraphQL.Variables)
+		if body.GraphQL == nil {
+			summary.AddWarningf("Request '%s' missing GraphQL payload", reqName)
+			return nil
+		}
+		// Convert GraphQL to JSON format using proper marshaling
+		payload := map[string]interface{}{"query": body.GraphQL.Query}
+		vars := strings.TrimSpace(body.GraphQL.Variables)
+		if vars != "" && vars != "null" {
+			var raw json.RawMessage
+			if err := json.Unmarshal([]byte(vars), &raw); err != nil {
+				summary.AddWarningf("Request '%s' has invalid GraphQL variables JSON (omitted)", reqName)
+			} else {
+				payload["variables"] = raw
+			}
+		}
+		graphqlBytes, err := json.Marshal(payload)
+		if err != nil {
+			summary.AddWarningf("Request '%s' GraphQL body could not be marshaled", reqName)
+			return &api.BodyConfig{
+				Type:    "json",
+				Content: fmt.Sprintf(`{"query": %q}`, body.GraphQL.Query),
+			}
+		}
 		return &api.BodyConfig{
 			Type:    "json",
-			Content: graphqlContent,
+			Content: string(graphqlBytes),
 		}
 
 	default:

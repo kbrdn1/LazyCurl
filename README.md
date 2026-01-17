@@ -129,6 +129,29 @@ LazyCurl is designed for developers who live in the terminal. It combines:
 - **Atomic Writes**: Safe file operations using temp file + rename pattern
 - **Graceful Degradation**: Missing or invalid session files are handled silently
 
+### ✏️ External Editor Integration
+
+Open your favorite text editor (vim, nano, VS Code, etc.) to edit request bodies with full editor capabilities:
+
+- **Environment Detection**: Automatically detects your preferred editor from `$VISUAL` or `$EDITOR`
+- **Smart File Extensions**: Creates temp files with appropriate extensions (`.json`, `.xml`, `.txt`) based on content type
+- **Seamless Flow**: Press `Ctrl+E` in INSERT mode → Edit in your editor → Save and exit → Content updated
+- **Error Handling**: Clear error messages if editor not found or process fails
+
+**Supported Editors**:
+
+- Terminal editors: `vim`, `nvim`, `nano`, `emacs`, `micro`
+- GUI editors: `code` (VS Code), `subl` (Sublime Text), `atom`, `gedit`
+
+**Setup** (if not already configured):
+
+```bash
+# Set your preferred editor
+export VISUAL="vim"        # For terminal editor
+export VISUAL="code -w"    # For VS Code (wait mode)
+export EDITOR="nano"       # Fallback if VISUAL not set
+```
+
 ### 🌍 Environment System
 
 ```json
@@ -275,6 +298,15 @@ LazyCurl automatically creates a `.lazycurl/` directory:
 | `s` | Toggle secret |
 | `S` / `Enter` | Select environment |
 | `/` | Search |
+
+### Request Panel (INSERT Mode)
+
+| Key | Action |
+|-----|--------|
+| `Esc` | Return to NORMAL mode |
+| `Ctrl+E` | Open external editor (body/headers) |
+| `Tab` | Next field/tab |
+| `Shift+Tab` | Previous field/tab |
 
 ### Response Panel
 
@@ -588,9 +620,9 @@ We use **Gitmoji + Conventional Commits**:
 
 | Feature | Priority | Issue | Posting Equivalent |
 |---------|----------|-------|-------------------|
-| **cURL Import/Export** | 🔴 Critical | NEW | ✅ Paste in URL bar |
-| **Jump Mode Navigation** | 🔴 Critical | NEW | ✅ Ctrl+O jump |
-| **External Editor Integration** | 🟡 High | NEW | ✅ $EDITOR support |
+| **cURL Import/Export** | 🔴 Critical | ✅ Done | ✅ Paste in URL bar |
+| **Jump Mode Navigation** | 🔴 Critical | ✅ Done | ✅ Ctrl+O jump |
+| **External Editor Integration** | 🟡 High | ✅ [#65](https://github.com/kbrdn1/LazyCurl/issues/65) | ✅ $EDITOR support |
 | **OpenAPI 3.x Import** | 🟡 High | NEW | ✅ CLI import |
 | **Postman Import** | 🟡 High | [#14](https://github.com/kbrdn1/LazyCurl/issues/14) | ✅ CLI import |
 | **Settings Panel** | 🟢 Medium | [#25](https://github.com/kbrdn1/LazyCurl/issues/25) | ✅ Config UI |
@@ -650,11 +682,12 @@ We use **Gitmoji + Conventional Commits**:
 | **Vim Modes** | 4 modes | Limited | 🏆 LazyCurl |
 | **WhichKey Help** | ✅ | ❌ | 🏆 LazyCurl |
 | **Session Persistence** | ✅ | ❌ | 🏆 LazyCurl |
-| **cURL Import** | 🔜 Sprint 3 | ✅ | posting |
+| **cURL Import** | ✅ | ✅ | Tie |
+| **External Editor** | ✅ | ✅ | Tie |
+| **Jump Mode** | ✅ | ✅ | Tie |
 | **Scripting** | 🔜 JS (Sprint 4) | ✅ Python | TBD |
 | **OpenAPI Import** | 🔜 Sprint 3 | ✅ | posting |
 | **Collection Format** | JSON | YAML | 🏆 LazyCurl (standard) |
-| **Jump Mode** | 🔜 Sprint 3 | ✅ | posting |
 | **GraphQL** | 🔜 Sprint 5 | ❌ | 🏆 LazyCurl |
 | **WebSocket** | 🔜 Sprint 5 | ❌ | 🏆 LazyCurl |
 | **gRPC** | 🔜 Sprint 5 | ❌ | 🏆 LazyCurl |

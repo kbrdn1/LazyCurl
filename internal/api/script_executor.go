@@ -175,6 +175,8 @@ func (e *gojaExecutor) executeWithTimeout(vm *goja.Runtime, script string) error
 
 // setupConsole binds console object to the runtime
 //
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
+//
 //nolint:errcheck // Goja Set operations are safe in this context
 func (e *gojaExecutor) setupConsole(vm *goja.Runtime, console *ScriptConsole) error {
 	consoleObj := vm.NewObject()
@@ -214,6 +216,8 @@ func (e *gojaExecutor) setupConsole(vm *goja.Runtime, console *ScriptConsole) er
 
 // setupLCObject creates the main `lc` global object
 //
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
+//
 //nolint:errcheck // Goja Set operations are safe in this context
 func (e *gojaExecutor) setupLCObject(vm *goja.Runtime, req *ScriptRequest, resp *ScriptResponse, env *ScriptEnvironment, assertions *AssertionCollector, isPreRequest bool) error {
 	lc := vm.NewObject()
@@ -244,6 +248,8 @@ func (e *gojaExecutor) setupLCObject(vm *goja.Runtime, req *ScriptRequest, resp 
 }
 
 // setupLCRequest creates the lc.request object
+//
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
 //
 //nolint:errcheck // Goja Set operations are safe in this context
 func (e *gojaExecutor) setupLCRequest(vm *goja.Runtime, lc *goja.Object, req *ScriptRequest, isMutable bool) error {
@@ -362,6 +368,8 @@ func (e *gojaExecutor) setupLCRequest(vm *goja.Runtime, lc *goja.Object, req *Sc
 
 // setupLCResponse creates the lc.response object
 //
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
+//
 //nolint:errcheck // Goja Set operations are safe in this context
 func (e *gojaExecutor) setupLCResponse(vm *goja.Runtime, lc *goja.Object, resp *ScriptResponse) error {
 	respObj := vm.NewObject()
@@ -441,6 +449,8 @@ func (e *gojaExecutor) setupLCResponse(vm *goja.Runtime, lc *goja.Object, resp *
 
 // setupLCEnvironment creates the lc.environment object
 //
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
+//
 //nolint:errcheck // Goja Set operations are safe in this context
 func (e *gojaExecutor) setupLCEnvironment(vm *goja.Runtime, lc *goja.Object, env *ScriptEnvironment) error {
 	envObj := vm.NewObject()
@@ -488,6 +498,8 @@ func (e *gojaExecutor) setupLCEnvironment(vm *goja.Runtime, lc *goja.Object, env
 
 // setupLCTest creates lc.test() and lc.expect() functions
 //
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
+//
 //nolint:errcheck // Goja Set operations are safe in this context
 func (e *gojaExecutor) setupLCTest(vm *goja.Runtime, lc *goja.Object, assertions *AssertionCollector) error {
 	// lc.test(name, fn)
@@ -527,6 +539,8 @@ func (e *gojaExecutor) setupLCTest(vm *goja.Runtime, lc *goja.Object, assertions
 }
 
 // createExpectation creates an expectation object with matcher methods
+//
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
 //
 //nolint:errcheck,unparam // Goja Set operations safe; assertions reserved for future use
 func (e *gojaExecutor) createExpectation(vm *goja.Runtime, actual interface{}, assertions *AssertionCollector) goja.Value {

@@ -85,6 +85,7 @@ type Model struct {
 
 	// Mode system
 	mode         Mode
+	jumpMode     *JumpModeState
 	statusBar    *StatusBar
 	commandInput *CommandInput
 
@@ -174,6 +175,7 @@ func NewModel(globalConfig *config.GlobalConfig, workspaceConfig *config.Workspa
 		requestPanel:    requestPanel,
 		responsePanel:   responsePanel,
 		mode:            NormalMode,
+		jumpMode:        NewJumpMode(),
 		statusBar:       statusBar,
 		commandInput:    NewCommandInput(),
 		dialog:          components.NewDialog(),
@@ -319,9 +321,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// Handle Escape key - exit fullscreen or return to NORMAL mode
+		// Handle Escape key - exit fullscreen, jump mode, or return to NORMAL mode
 		if msg.String() == "esc" {
-			// Exit fullscreen mode first if active
+			// Exit jump mode first if active
+			if m.jumpMode.IsActive() {
+				m.jumpMode.Deactivate()
+				m.mode = NormalMode
+				m.statusBar.SetMode(NormalMode)
+				return m, nil
+			}
+			// Exit fullscreen mode if active
 			if m.isFullscreen {
 				m.isFullscreen = false
 				return m, nil
@@ -335,6 +344,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return ModeChangeMsg{From: oldMode, To: NormalMode}
 				}
 			}
+		}
+
+		// Handle Jump mode key input
+		if m.jumpMode.IsActive() {
+			// Tab cycles through panel scope (only in single-panel mode)
+			if msg.String() == "tab" {
+				m.jumpMode.CycleScopePanel()
+				return m, nil
+			}
+
+			target, shouldCancel := m.jumpMode.HandleKey(msg.String())
+			if target != nil {
+				return m.jumpToTarget(*target)
+			}
+			if shouldCancel {
+				m.jumpMode.Deactivate()
+				m.mode = NormalMode
+				m.statusBar.SetMode(NormalMode)
+			}
+			return m, nil
 		}
 
 		// Check if request panel is editing URL - if so, forward all keys to it
@@ -400,8 +429,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-			// F to toggle fullscreen for current panel
+			// f to activate jump mode (current panel only)
+			if msg.String() == "f" {
+				return m.activateJumpMode(false)
+			}
+
+			// F (Shift+f) to activate cross-panel jump mode
 			if msg.String() == "F" {
+				return m.activateJumpMode(true)
+			}
+
+			// Z to toggle fullscreen (zoom) for current panel
+			if msg.String() == "Z" {
 				m.toggleFullscreen()
 				return m, nil
 			}
@@ -1158,6 +1197,11 @@ func (m Model) View() string {
 
 	// Join without extra spacing
 	result := mainContent + "\n" + bottomBar
+
+	// Apply jump mode overlay if active
+	if m.jumpMode.IsActive() {
+		result = m.jumpMode.RenderOverlay(result, m.width, m.height)
+	}
 
 	// Overlay dialog if visible
 	if m.dialog.IsVisible() {
@@ -2115,4 +2159,196 @@ func (m *Model) buildCollectionRequest() *api.CollectionRequest {
 		Body:    body,
 		Auth:    auth,
 	}
+}
+
+// activateJumpMode activates jump mode and collects targets from panels
+func (m *Model) activateJumpMode(allPanels bool) (Model, tea.Cmd) {
+	if allPanels {
+		m.jumpMode.ActivateAllPanels()
+	} else {
+		m.jumpMode.Activate(m.activePanel)
+	}
+
+	// Collect targets from relevant panels
+	var targets []JumpTarget
+
+	if allPanels {
+		// Cross-panel mode: collect from all panels
+		targets = append(targets, m.collectCollectionTargets()...)
+		targets = append(targets, m.collectRequestTargets()...)
+		targets = append(targets, m.collectResponseTargets()...)
+	} else {
+		// Single panel mode: collect from current panel only
+		switch m.activePanel {
+		case CollectionsPanel:
+			targets = m.collectCollectionTargets()
+		case RequestPanel:
+			targets = m.collectRequestTargets()
+		case ResponsePanel:
+			targets = m.collectResponseTargets()
+		}
+	}
+
+	// Handle case with no targets
+	if len(targets) == 0 {
+		m.jumpMode.Deactivate()
+		m.statusBar.Info("No jump targets available")
+		return *m, nil
+	}
+
+	// Set targets and assign labels
+	m.jumpMode.SetTargets(targets)
+
+	// Update mode display
+	m.mode = JumpMode
+	m.statusBar.SetMode(JumpMode)
+
+	return *m, nil
+}
+
+// collectCollectionTargets collects jump targets from collections panel
+func (m *Model) collectCollectionTargets() []JumpTarget {
+	startRow, startCol := m.getCollectionsPanelPosition()
+	return m.leftPanel.GetJumpTargets(startRow, startCol)
+}
+
+// collectRequestTargets collects jump targets from request panel
+func (m *Model) collectRequestTargets() []JumpTarget {
+	startRow, startCol := m.getRequestPanelPosition()
+	return m.requestPanel.GetJumpTargets(startRow, startCol)
+}
+
+// collectResponseTargets collects jump targets from response panel
+func (m *Model) collectResponseTargets() []JumpTarget {
+	startRow, startCol := m.getResponsePanelPosition()
+	return m.responsePanel.GetJumpTargets(startRow, startCol)
+}
+
+// getCollectionsPanelPosition returns the (row, col) offset for the collections panel
+// based on the current layout mode (vertical, horizontal, or fullscreen).
+func (m *Model) getCollectionsPanelPosition() (startRow, startCol int) {
+	if m.isFullscreen {
+		// Fullscreen: panel fills entire screen
+		return 0, 0
+	}
+
+	if m.layoutMode == HorizontalLayout {
+		// Horizontal (stacked): collections at top
+		return 0, 0
+	}
+
+	// Vertical layout (default): collections on the left
+	return 0, 0
+}
+
+// getRequestPanelPosition returns the (row, col) offset for the request panel
+// based on the current layout mode (vertical, horizontal, or fullscreen).
+func (m *Model) getRequestPanelPosition() (startRow, startCol int) {
+	if m.isFullscreen {
+		// Fullscreen: panel fills entire screen
+		return 0, 0
+	}
+
+	contentHeight := m.height - 1 // Reserve status bar
+
+	if m.layoutMode == HorizontalLayout {
+		// Horizontal (stacked): request in middle, below collections
+		collectionsHeight := contentHeight / 3
+		return collectionsHeight, 0
+	}
+
+	// Vertical layout (default): request panel in top-right
+	// Left panel takes 1/3 of width
+	leftPanelWidth := m.width / 3
+	return 0, leftPanelWidth
+}
+
+// getResponsePanelPosition returns the (row, col) offset for the response panel
+// based on the current layout mode (vertical, horizontal, or fullscreen).
+func (m *Model) getResponsePanelPosition() (startRow, startCol int) {
+	if m.isFullscreen {
+		// Fullscreen: panel fills entire screen
+		return 0, 0
+	}
+
+	contentHeight := m.height - 1 // Reserve status bar
+
+	if m.layoutMode == HorizontalLayout {
+		// Horizontal (stacked): response at bottom
+		collectionsHeight := contentHeight / 3
+		requestHeight := contentHeight / 3
+		return collectionsHeight + requestHeight, 0
+	}
+
+	// Vertical layout (default): response panel in bottom-right
+	// Left panel takes 1/3 of width
+	// Request panel takes 40% of right side height
+	leftPanelWidth := m.width / 3
+	requestPanelHeight := contentHeight * 40 / 100
+	return requestPanelHeight, leftPanelWidth
+}
+
+// refreshJumpTargetsForScope refreshes jump targets for a specific panel scope.
+// Used when Tab cycles through panels in single-panel jump mode.
+func (m *Model) refreshJumpTargetsForScope(panel PanelType) {
+	var targets []JumpTarget
+
+	switch panel {
+	case CollectionsPanel:
+		targets = m.collectCollectionTargets()
+	case RequestPanel:
+		targets = m.collectRequestTargets()
+	case ResponsePanel:
+		targets = m.collectResponseTargets()
+	}
+
+	if len(targets) == 0 {
+		m.statusBar.Info("No jump targets in this panel")
+		return
+	}
+
+	m.jumpMode.SetTargets(targets)
+}
+
+// jumpToTarget executes a jump to the specified target
+func (m *Model) jumpToTarget(target JumpTarget) (Model, tea.Cmd) {
+	// Deactivate jump mode
+	m.jumpMode.Deactivate()
+	m.mode = NormalMode
+	m.statusBar.SetMode(NormalMode)
+
+	// Switch to target panel if different
+	if target.Panel != m.activePanel {
+		m.activePanel = target.Panel
+	}
+
+	// Execute appropriate action based on target
+	switch target.Panel {
+	case CollectionsPanel:
+		// Select the item in collections tree
+		if target.Index >= 0 {
+			m.leftPanel.GetCollections().SelectIndex(target.Index)
+		}
+	case RequestPanel:
+		// Handle request panel navigation
+		// Will be implemented fully in T034
+		if target.ElementID != "" {
+			// Switch to tab or focus element
+			m.requestPanel.JumpTo(target.ElementID)
+		}
+	case ResponsePanel:
+		// Handle response panel navigation
+		// Will be implemented fully in T035
+		if target.ElementID != "" {
+			m.responsePanel.JumpTo(target.ElementID)
+		}
+	}
+
+	// Enter insert mode if target action is focus
+	if target.Action == JumpFocus {
+		m.mode = InsertMode
+		m.statusBar.SetMode(InsertMode)
+	}
+
+	return *m, m.markSessionDirty()
 }

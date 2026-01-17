@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
 	"regexp"
@@ -31,13 +32,22 @@ type ScriptExecutor interface {
 // gojaExecutor implements ScriptExecutor using the Goja JavaScript runtime
 type gojaExecutor struct {
 	timeout time.Duration
+	globals *ScriptGlobals
+	client  *Client
 }
 
 // NewScriptExecutor creates a new script executor instance
 func NewScriptExecutor() ScriptExecutor {
 	return &gojaExecutor{
 		timeout: 5 * time.Second, // Default timeout
+		globals: NewScriptGlobals(),
+		client:  NewClient(),
 	}
+}
+
+// GetGlobals returns the global variables store
+func (e *gojaExecutor) GetGlobals() *ScriptGlobals {
+	return e.globals
 }
 
 // SetTimeout configures the script execution timeout
@@ -237,6 +247,16 @@ func (e *gojaExecutor) setupLCObject(vm *goja.Runtime, req *ScriptRequest, resp 
 
 	// Setup lc.environment
 	if err := e.setupLCEnvironment(vm, lc, env); err != nil {
+		return err
+	}
+
+	// Setup lc.globals
+	if err := e.setupLCGlobals(vm, lc); err != nil {
+		return err
+	}
+
+	// Setup lc.sendRequest
+	if err := e.setupLCSendRequest(vm, lc, env); err != nil {
 		return err
 	}
 
@@ -495,6 +515,188 @@ func (e *gojaExecutor) setupLCEnvironment(vm *goja.Runtime, lc *goja.Object, env
 
 	lc.Set("environment", envObj)
 	return nil
+}
+
+// setupLCGlobals creates the lc.globals object for cross-request variable storage
+//
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
+//
+//nolint:errcheck // Goja Set operations are safe in this context
+func (e *gojaExecutor) setupLCGlobals(vm *goja.Runtime, lc *goja.Object) error {
+	globalsObj := vm.NewObject()
+
+	globalsObj.Set("get", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) == 0 {
+			return goja.Undefined()
+		}
+		name := call.Arguments[0].String()
+		value := e.globals.Get(name)
+		if value == nil {
+			return goja.Undefined()
+		}
+		return vm.ToValue(value)
+	})
+
+	globalsObj.Set("set", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) >= 2 {
+			name := call.Arguments[0].String()
+			value := call.Arguments[1].Export()
+			e.globals.Set(name, value)
+		}
+		return goja.Undefined()
+	})
+
+	globalsObj.Set("has", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) == 0 {
+			return vm.ToValue(false)
+		}
+		name := call.Arguments[0].String()
+		return vm.ToValue(e.globals.Has(name))
+	})
+
+	globalsObj.Set("unset", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) > 0 {
+			name := call.Arguments[0].String()
+			e.globals.Unset(name)
+		}
+		return goja.Undefined()
+	})
+
+	globalsObj.Set("clear", func(call goja.FunctionCall) goja.Value {
+		e.globals.Clear()
+		return goja.Undefined()
+	})
+
+	lc.Set("globals", globalsObj)
+	return nil
+}
+
+// setupLCSendRequest creates lc.sendRequest for request chaining
+//
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
+//
+//nolint:errcheck // Goja Set operations are safe in this context
+func (e *gojaExecutor) setupLCSendRequest(vm *goja.Runtime, lc *goja.Object, env *ScriptEnvironment) error {
+	// lc.sendRequest(request, callback)
+	// request: { url: string, method: string, headers?: object, body?: any }
+	// callback: function(err, response)
+	lc.Set("sendRequest", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) < 2 {
+			return goja.Undefined()
+		}
+
+		// Parse request object
+		reqArg := call.Arguments[0].Export()
+		callback, ok := goja.AssertFunction(call.Arguments[1])
+		if !ok {
+			return goja.Undefined()
+		}
+
+		reqMap, ok := reqArg.(map[string]interface{})
+		if !ok {
+			// Call callback with error
+			_, _ = callback(goja.Undefined(), vm.ToValue("invalid request object"), goja.Undefined())
+			return goja.Undefined()
+		}
+
+		// Build request
+		url, _ := reqMap["url"].(string)
+		method, _ := reqMap["method"].(string)
+		if method == "" {
+			method = "GET"
+		}
+
+		// Apply variable substitution to URL
+		if env != nil {
+			url = e.replaceEnvVars(url, env)
+		}
+
+		headers := make(map[string]string)
+		if h, ok := reqMap["headers"].(map[string]interface{}); ok {
+			for k, v := range h {
+				if str, ok := v.(string); ok {
+					// Apply variable substitution to header values
+					if env != nil {
+						str = e.replaceEnvVars(str, env)
+					}
+					headers[k] = str
+				}
+			}
+		}
+
+		var body interface{}
+		if b, ok := reqMap["body"]; ok {
+			body = b
+		}
+
+		// Execute request
+		req := &Request{
+			Method:  HTTPMethod(strings.ToUpper(method)),
+			URL:     url,
+			Headers: headers,
+			Body:    body,
+		}
+
+		resp, err := e.client.Send(req)
+
+		// Build response object for callback
+		if err != nil {
+			_, _ = callback(goja.Undefined(), vm.ToValue(err.Error()), goja.Undefined())
+			return goja.Undefined()
+		}
+
+		// Create response object
+		respObj := vm.NewObject()
+		respObj.Set("status", resp.StatusCode)
+		respObj.Set("statusText", resp.Status)
+		respObj.Set("time", resp.Time.Milliseconds())
+		respObj.Set("size", resp.Size)
+
+		// Headers
+		headersObj := vm.NewObject()
+		for k, v := range resp.Headers {
+			if len(v) > 0 {
+				headersObj.Set(strings.ToLower(k), v[0])
+			}
+		}
+		respObj.Set("headers", headersObj)
+
+		// Body with json() helper
+		bodyObj := vm.NewObject()
+		bodyObj.Set("raw", resp.Body)
+		bodyObj.Set("json", func(call goja.FunctionCall) goja.Value {
+			var data interface{}
+			if err := json.Unmarshal([]byte(resp.Body), &data); err != nil {
+				return goja.Undefined()
+			}
+			return vm.ToValue(data)
+		})
+		respObj.Set("body", bodyObj)
+
+		// Call callback with (null, response)
+		_, _ = callback(goja.Undefined(), goja.Null(), respObj)
+		return goja.Undefined()
+	})
+
+	return nil
+}
+
+// replaceEnvVars replaces {{variable}} patterns with environment values
+func (e *gojaExecutor) replaceEnvVars(s string, env *ScriptEnvironment) string {
+	re := regexp.MustCompile(`\{\{([^}]+)\}\}`)
+	return re.ReplaceAllStringFunc(s, func(match string) string {
+		varName := strings.TrimSpace(match[2 : len(match)-2])
+		if val := env.Get(varName); val != "" {
+			return val
+		}
+		// Check globals
+		if val := e.globals.Get(varName); val != nil {
+			if str, ok := val.(string); ok {
+				return str
+			}
+		}
+		return match
+	})
 }
 
 // setupLCTest creates lc.test() and lc.expect() functions

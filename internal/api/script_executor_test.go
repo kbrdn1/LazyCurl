@@ -1720,3 +1720,195 @@ func TestSecureJSONParsing_InvalidJSON(t *testing.T) {
 		t.Errorf("Invalid JSON should return falsy value")
 	}
 }
+
+// Tests for lc.globals
+func TestLCGlobals_SetAndGet(t *testing.T) {
+	executor := NewScriptExecutor()
+
+	script := `
+		lc.globals.set("test_key", "test_value");
+		lc.globals.set("number_key", 42);
+		lc.globals.set("object_key", { nested: "value" });
+
+		lc.test("Global string value", function() {
+			lc.expect(lc.globals.get("test_key")).toBe("test_value");
+		});
+
+		lc.test("Global number value", function() {
+			lc.expect(lc.globals.get("number_key")).toBe(42);
+		});
+
+		lc.test("Global object value", function() {
+			var obj = lc.globals.get("object_key");
+			lc.expect(obj.nested).toBe("value");
+		});
+	`
+
+	resp := NewScriptResponseFromData(200, "200 OK", nil, "{}", 100)
+	result, err := executor.ExecutePostResponse(script, nil, resp, nil)
+	if err != nil {
+		t.Fatalf("Script execution failed: %v", err)
+	}
+	if !result.Success {
+		t.Errorf("Expected success, got error: %v", result.Error)
+	}
+	if len(result.Assertions) != 3 {
+		t.Fatalf("Expected 3 assertions, got %d", len(result.Assertions))
+	}
+	for i, a := range result.Assertions {
+		if !a.Passed {
+			t.Errorf("Assertion %d failed: %s", i, a.Name)
+		}
+	}
+}
+
+func TestLCGlobals_HasAndUnset(t *testing.T) {
+	executor := NewScriptExecutor()
+
+	script := `
+		lc.globals.set("exists", "yes");
+
+		lc.test("Has returns true for existing", function() {
+			lc.expect(lc.globals.has("exists")).toBe(true);
+		});
+
+		lc.test("Has returns false for non-existing", function() {
+			lc.expect(lc.globals.has("not_exists")).toBe(false);
+		});
+
+		lc.globals.unset("exists");
+
+		lc.test("Has returns false after unset", function() {
+			lc.expect(lc.globals.has("exists")).toBe(false);
+		});
+	`
+
+	resp := NewScriptResponseFromData(200, "200 OK", nil, "{}", 100)
+	result, err := executor.ExecutePostResponse(script, nil, resp, nil)
+	if err != nil {
+		t.Fatalf("Script execution failed: %v", err)
+	}
+	if !result.Success {
+		t.Errorf("Expected success, got error: %v", result.Error)
+	}
+	for i, a := range result.Assertions {
+		if !a.Passed {
+			t.Errorf("Assertion %d failed: %s", i, a.Name)
+		}
+	}
+}
+
+func TestLCGlobals_PersistAcrossExecutions(t *testing.T) {
+	executor := NewScriptExecutor()
+
+	// First execution: set a global
+	script1 := `
+		lc.globals.set("persistent", "value_from_first");
+	`
+	resp := NewScriptResponseFromData(200, "200 OK", nil, "{}", 100)
+	_, err := executor.ExecutePostResponse(script1, nil, resp, nil)
+	if err != nil {
+		t.Fatalf("First execution failed: %v", err)
+	}
+
+	// Second execution: read the global
+	script2 := `
+		lc.test("Global persists", function() {
+			lc.expect(lc.globals.get("persistent")).toBe("value_from_first");
+		});
+	`
+	result, err := executor.ExecutePostResponse(script2, nil, resp, nil)
+	if err != nil {
+		t.Fatalf("Second execution failed: %v", err)
+	}
+	if !result.Success {
+		t.Errorf("Expected success, got error: %v", result.Error)
+	}
+	if len(result.Assertions) != 1 || !result.Assertions[0].Passed {
+		t.Errorf("Global did not persist across executions")
+	}
+}
+
+func TestLCGlobals_Clear(t *testing.T) {
+	executor := NewScriptExecutor()
+
+	script := `
+		lc.globals.set("key1", "value1");
+		lc.globals.set("key2", "value2");
+		lc.globals.clear();
+
+		lc.test("Clear removes all globals", function() {
+			lc.expect(lc.globals.has("key1")).toBe(false);
+			lc.expect(lc.globals.has("key2")).toBe(false);
+		});
+	`
+
+	resp := NewScriptResponseFromData(200, "200 OK", nil, "{}", 100)
+	result, err := executor.ExecutePostResponse(script, nil, resp, nil)
+	if err != nil {
+		t.Fatalf("Script execution failed: %v", err)
+	}
+	if !result.Success {
+		t.Errorf("Expected success, got error: %v", result.Error)
+	}
+}
+
+// Tests for lc.globals storage
+func TestScriptGlobals_BasicOperations(t *testing.T) {
+	g := NewScriptGlobals()
+
+	// Test Set and Get
+	g.Set("string", "value")
+	g.Set("number", 42)
+	g.Set("bool", true)
+
+	if g.Get("string") != "value" {
+		t.Errorf("Expected 'value', got %v", g.Get("string"))
+	}
+	if g.Get("number") != 42 {
+		t.Errorf("Expected 42, got %v", g.Get("number"))
+	}
+	if g.Get("bool") != true {
+		t.Errorf("Expected true, got %v", g.Get("bool"))
+	}
+
+	// Test Has
+	if !g.Has("string") {
+		t.Error("Expected Has('string') to be true")
+	}
+	if g.Has("nonexistent") {
+		t.Error("Expected Has('nonexistent') to be false")
+	}
+
+	// Test Unset
+	g.Unset("string")
+	if g.Has("string") {
+		t.Error("Expected string to be unset")
+	}
+
+	// Test Clear
+	g.Clear()
+	if g.Has("number") || g.Has("bool") {
+		t.Error("Expected all keys to be cleared")
+	}
+}
+
+func TestScriptGlobals_All(t *testing.T) {
+	g := NewScriptGlobals()
+	g.Set("a", 1)
+	g.Set("b", 2)
+
+	all := g.All()
+	if len(all) != 2 {
+		t.Errorf("Expected 2 items, got %d", len(all))
+	}
+	if all["a"] != 1 || all["b"] != 2 {
+		t.Error("All() returned incorrect values")
+	}
+
+	// Verify it's a copy
+	all["c"] = 3
+	if g.Has("c") {
+		t.Error("All() should return a copy, not the original map")
+	}
+}

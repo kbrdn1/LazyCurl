@@ -58,6 +58,7 @@ func NewScriptResultWithError(err error) *ScriptResult {
 func (r *ScriptResult) SetError(err error) {
 	if err == nil {
 		r.Error = nil
+		r.Success = true // Restore success state when clearing error
 		return
 	}
 

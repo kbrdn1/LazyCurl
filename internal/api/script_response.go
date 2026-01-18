@@ -46,13 +46,15 @@ func NewScriptResponse(resp *http.Response, body string, duration time.Duration)
 
 // NewScriptResponseFromData creates a ScriptResponse from raw data
 func NewScriptResponseFromData(status int, statusText string, headers map[string]string, body string, timeMs int64) *ScriptResponse {
-	if headers == nil {
-		headers = make(map[string]string)
+	// Copy headers to preserve immutability
+	headersCopy := make(map[string]string)
+	for k, v := range headers {
+		headersCopy[k] = v
 	}
 	return &ScriptResponse{
 		status:     status,
 		statusText: statusText,
-		headers:    headers,
+		headers:    headersCopy,
 		body:       body,
 		time:       timeMs,
 	}

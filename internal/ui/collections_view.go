@@ -510,3 +510,37 @@ func (c *CollectionsView) GetJumpTargets(startRow, startCol int) []JumpTarget {
 
 	return targets
 }
+
+// GetSelectedCollection returns the collection file for the currently selected node.
+// If the selected node is inside a collection (folder or request), it returns that collection.
+// Returns nil if no collection is selected.
+func (c *CollectionsView) GetSelectedCollection() *api.CollectionFile {
+	if c.tree == nil {
+		return nil
+	}
+	selectedNode := c.tree.Selected()
+	if selectedNode == nil {
+		return nil
+	}
+	return c.FindCollectionByNode(selectedNode)
+}
+
+// GetSelectedFolderPath returns the folder path for the currently selected node.
+// If a folder is selected, it returns the path to that folder.
+// If a request is selected, it returns the path to its parent folder.
+// If a collection root is selected, it returns an empty slice.
+func (c *CollectionsView) GetSelectedFolderPath() []string {
+	if c.tree == nil {
+		return nil
+	}
+	selectedNode := c.tree.Selected()
+	if selectedNode == nil {
+		return nil
+	}
+	// If it's a folder, include the folder in the path
+	if selectedNode.Type == components.FolderNode {
+		return c.GetFolderPathIncluding(selectedNode)
+	}
+	// Otherwise, get the parent folder path
+	return c.GetFolderPath(selectedNode)
+}

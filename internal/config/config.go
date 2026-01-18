@@ -79,6 +79,7 @@ type KeyBindings struct {
 	ImportCurl       []string `yaml:"import_curl"`
 	ExportCurl       []string `yaml:"export_curl"`
 	ImportOpenAPI    []string `yaml:"import_openapi"`
+	RunCollection    []string `yaml:"run_collection"`
 }
 
 // Environment represents an environment with variables
@@ -127,6 +128,7 @@ func DefaultKeyBindings() KeyBindings {
 		ImportCurl:       []string{"ctrl+i"},
 		ExportCurl:       []string{"ctrl+e"},
 		ImportOpenAPI:    []string{"ctrl+o"},
+		RunCollection:    []string{"ctrl+r"},
 	}
 }
 

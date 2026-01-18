@@ -75,6 +75,13 @@ func loaderTickCmd() tea.Cmd {
 	})
 }
 
+// runnerTickCmd returns a command that sends a tick for runner animation
+func runnerTickCmd() tea.Cmd {
+	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
+		return RunnerTickMsg{}
+	})
+}
+
 // SendHTTPRequestCmd creates a command to send an HTTP request
 func SendHTTPRequestCmd(req *api.Request) tea.Cmd {
 	return func() tea.Msg {
@@ -203,6 +210,12 @@ type Model struct {
 	postResponseAssertions []api.AssertionResult // Assertions from post-response script
 	pendingScriptReq       *api.ScriptRequest    // Script request stored for post-response script
 	postResponseScript     string                // Post-response script to execute after HTTP response
+
+	// Collection Runner state
+	runnerModal     *RunnerModal
+	runnerSession   *api.RunSession
+	runnerRequests  []*api.CollectionRequest
+	runnerCancelled bool
 }
 
 // NewModel creates a new application model
@@ -281,6 +294,7 @@ func NewModel(globalConfig *config.GlobalConfig, workspaceConfig *config.Workspa
 		importModal:        NewImportModal(),
 		openAPIImportModal: NewOpenAPIImportModal(collectionsDir),
 		scriptExecutor:     api.NewScriptExecutor(),
+		runnerModal:        NewRunnerModal(),
 	}
 }
 
@@ -348,6 +362,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleDialogResult(msg)
 		}
 		return m, nil
+	}
+
+	// Handle runner modal input if visible
+	if m.runnerModal.IsVisible() {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			var cmd tea.Cmd
+			m.runnerModal, cmd = m.runnerModal.Update(msg)
+			return m, cmd
+		case tea.WindowSizeMsg:
+			m.runnerModal.SetSize(msg.Width, msg.Height)
+		}
+		// Don't return here - allow runner messages to be processed
 	}
 
 	switch msg := msg.(type) {
@@ -455,6 +482,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// CTRL+E exports current request as cURL (global handler)
 		if m.matchKey(msg.String(), m.globalConfig.KeyBindings.ExportCurl) {
 			return m.exportCurlCommand()
+		}
+
+		// CTRL+R runs collection/folder (global handler)
+		if m.matchKey(msg.String(), m.globalConfig.KeyBindings.RunCollection) {
+			return m.startCollectionRun()
 		}
 
 		// Handle COMMAND mode input first (forward all keys except escape)
@@ -1075,6 +1107,47 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusBar.Error(msg.Error)
 		return m, nil
 
+	// =========================================================================
+	// COLLECTION RUNNER MESSAGES
+	// =========================================================================
+
+	case RunnerStartedMsg:
+		return m.handleRunnerStartedMsg(msg)
+
+	case RunnerRequestCompleteMsg:
+		return m.handleRunnerRequestCompleteMsg(msg)
+
+	case RunnerExecuteNextMsg:
+		return m.handleRunnerExecuteNextMsg()
+
+	case RunnerCompleteMsg:
+		return m.handleRunnerCompleteMsg(msg)
+
+	case RunnerCancelMsg:
+		return m.handleRunnerCancelMsg()
+
+	case RunnerCancelledMsg:
+		return m.handleRunnerCancelledMsg(msg)
+
+	case RunnerExportMsg:
+		return m.handleRunnerExportMsg()
+
+	case RunnerExportedMsg:
+		return m.handleRunnerExportedMsg(msg)
+
+	case RunnerHideModalMsg:
+		return m.handleRunnerHideModalMsg()
+
+	case RunnerTickMsg:
+		return m.handleRunnerTickMsg()
+
+	case RunnerErrorMsg:
+		return m.handleRunnerErrorMsg(msg)
+
+	case RunnerDelayCompleteMsg:
+		// Delay complete, continue to next request
+		return m.handleRunnerExecuteNextMsg()
+
 	case HTTPSendingMsg:
 		// HTTP request is being sent
 		m.isSending = true
@@ -1635,6 +1708,12 @@ func (m Model) View() string {
 	if m.openAPIImportModal.IsVisible() {
 		openAPIView := m.openAPIImportModal.View()
 		result = m.overlayDialog(result, openAPIView)
+	}
+
+	// Overlay runner modal if visible
+	if m.runnerModal.IsVisible() {
+		runnerView := m.runnerModal.View()
+		result = m.overlayDialog(result, runnerView)
 	}
 
 	return result
@@ -2944,4 +3023,172 @@ func (m *Model) openExternalEditor(msg components.ExternalEditorRequestMsg) (tea
 	})
 
 	return *m, c
+}
+
+// ============================================================================
+// COLLECTION RUNNER METHODS
+// ============================================================================
+
+// startCollectionRun initiates a collection run from the current selection.
+func (m Model) startCollectionRun() (tea.Model, tea.Cmd) {
+	// Get selected collection and folder from CollectionsView
+	collectionsView := m.leftPanel.GetCollections()
+	if collectionsView == nil {
+		m.statusBar.Error(fmt.Errorf("no collections view available"))
+		return m, nil
+	}
+
+	collection := collectionsView.GetSelectedCollection()
+	if collection == nil {
+		m.statusBar.Error(fmt.Errorf("no collection selected"))
+		return m, nil
+	}
+
+	// Get selected folder path (empty for entire collection)
+	folderPath := collectionsView.GetSelectedFolderPath()
+
+	// Get active environment
+	var env *api.EnvironmentFile
+	envsView := m.leftPanel.GetEnvironments()
+	if envsView != nil {
+		env = envsView.GetActiveEnvironment()
+	}
+
+	// Create run configuration with defaults
+	config := api.DefaultRunConfig()
+
+	// Start the run
+	return m, ExecuteCollectionRunCmd(collection, folderPath, env, config)
+}
+
+// handleRunnerStartedMsg handles the runner started message.
+func (m *Model) handleRunnerStartedMsg(msg RunnerStartedMsg) (tea.Model, tea.Cmd) {
+	m.runnerSession = msg.Session
+	m.runnerRequests = msg.Requests
+	m.runnerCancelled = false
+
+	// Show modal
+	m.runnerModal.SetSize(m.width, m.height)
+	m.runnerModal.Show(msg.Session, msg.Requests)
+
+	// Start ticker and first request execution
+	return m, tea.Batch(
+		runnerTickCmd(),
+		ExecuteNextRequestCmd(m.runnerSession, m.runnerRequests, m.httpClient, m.scriptExecutor),
+	)
+}
+
+// handleRunnerRequestCompleteMsg handles individual request completion.
+func (m *Model) handleRunnerRequestCompleteMsg(msg RunnerRequestCompleteMsg) (tea.Model, tea.Cmd) {
+	// Update modal with new session state
+	m.runnerSession = msg.Session
+	m.runnerModal.UpdateSession(msg.Session)
+
+	// Check if canceled or terminal
+	if m.runnerCancelled || msg.Session.IsTerminal() {
+		return m, nil
+	}
+
+	// Chain next request (with optional delay)
+	return m, ChainNextRequestCmd(m.runnerSession, m.runnerRequests, m.httpClient, m.scriptExecutor)
+}
+
+// handleRunnerExecuteNextMsg handles the signal to execute next request.
+func (m *Model) handleRunnerExecuteNextMsg() (tea.Model, tea.Cmd) {
+	if m.runnerSession == nil || m.runnerCancelled {
+		return m, nil
+	}
+
+	return m, ExecuteNextRequestCmd(m.runnerSession, m.runnerRequests, m.httpClient, m.scriptExecutor)
+}
+
+// handleRunnerCompleteMsg handles run completion.
+func (m *Model) handleRunnerCompleteMsg(msg RunnerCompleteMsg) (tea.Model, tea.Cmd) {
+	m.runnerSession = msg.Session
+	m.runnerModal.UpdateSession(msg.Session)
+
+	// Show summary in status bar
+	report := msg.Report
+	if report != nil {
+		m.statusBar.Success("Run complete",
+			fmt.Sprintf("%d/%d passed, %d failed, %d errors",
+				report.Summary.PassedAssertions,
+				report.Summary.TotalAssertions,
+				report.Summary.FailedAssertions,
+				report.Summary.Errors))
+	}
+
+	return m, nil
+}
+
+// handleRunnerCancelMsg handles cancel request.
+func (m *Model) handleRunnerCancelMsg() (tea.Model, tea.Cmd) {
+	m.runnerCancelled = true
+	if m.runnerSession == nil {
+		return m, nil
+	}
+
+	return m, CancelRunCmd(m.runnerSession, m.runnerRequests)
+}
+
+// handleRunnerCancelledMsg handles cancellation confirmation.
+func (m *Model) handleRunnerCancelledMsg(msg RunnerCancelledMsg) (tea.Model, tea.Cmd) {
+	m.runnerSession = msg.Session
+	m.runnerModal.UpdateSession(msg.Session)
+	m.statusBar.Info("Run canceled")
+	return m, nil
+}
+
+// handleRunnerExportMsg handles export request.
+func (m *Model) handleRunnerExportMsg() (tea.Model, tea.Cmd) {
+	if m.runnerSession == nil {
+		return m, nil
+	}
+
+	report := m.runnerSession.GenerateReport()
+	return m, ExportRunReportCmd(report)
+}
+
+// handleRunnerExportedMsg handles export completion.
+func (m *Model) handleRunnerExportedMsg(msg RunnerExportedMsg) (tea.Model, tea.Cmd) {
+	m.runnerModal.SetExported(msg.FilePath, msg.Error)
+
+	if msg.Error != nil {
+		m.statusBar.Error(msg.Error)
+	} else {
+		m.statusBar.Success("Exported", msg.FilePath)
+	}
+	return m, nil
+}
+
+// handleRunnerHideModalMsg handles hiding the modal.
+func (m *Model) handleRunnerHideModalMsg() (tea.Model, tea.Cmd) {
+	m.runnerModal.Hide()
+	m.runnerSession = nil
+	m.runnerRequests = nil
+	m.runnerCancelled = false
+	return m, nil
+}
+
+// handleRunnerTickMsg handles tick messages for loader animation.
+func (m *Model) handleRunnerTickMsg() (tea.Model, tea.Cmd) {
+	// Forward to modal
+	var cmd tea.Cmd
+	m.runnerModal, cmd = m.runnerModal.Update(RunnerTickMsg{})
+
+	// Continue ticking if still running
+	if m.runnerSession != nil && !m.runnerSession.IsTerminal() && !m.runnerCancelled {
+		return m, tea.Batch(cmd, runnerTickCmd())
+	}
+
+	return m, cmd
+}
+
+// handleRunnerErrorMsg handles runner errors.
+func (m *Model) handleRunnerErrorMsg(msg RunnerErrorMsg) (tea.Model, tea.Cmd) {
+	m.statusBar.Error(msg.Error)
+	m.runnerModal.Hide()
+	m.runnerSession = nil
+	m.runnerRequests = nil
+	return m, nil
 }

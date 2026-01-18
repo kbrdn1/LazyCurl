@@ -24,6 +24,23 @@ import (
 // execCommand is a variable to allow mocking in tests
 var execCommand = exec.Command
 
+// Default script templates for comparison
+const defaultPreRequestScript = `// Pre-request script
+// Runs before the request is sent
+
+console.log('Request about to be sent');
+
+// Access environment variables
+const baseUrl = pm.environment.get('base_url');`
+
+const defaultPostResponseScript = `// Post-request script
+// Runs after the response is received
+
+console.log('Response received');
+
+// Access response data
+const response = pm.response.json();`
+
 // HTTPResponseMsg is sent when an HTTP request completes
 type HTTPResponseMsg struct {
 	Response *api.Response
@@ -1091,6 +1108,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Result != nil {
 			m.preRequestConsole = msg.Result.ConsoleOutput
 			m.preRequestAssertions = msg.Result.Assertions
+
+			// Apply environment changes from pre-request script
+			if len(msg.Result.EnvChanges) > 0 {
+				env := m.leftPanel.GetEnvironments().GetActiveEnvironment()
+				if env != nil {
+					for _, change := range msg.Result.EnvChanges {
+						switch change.Type {
+						case api.EnvChangeSet:
+							if env.Variables == nil {
+								env.Variables = make(map[string]*api.EnvironmentVariable)
+							}
+							if existing, ok := env.Variables[change.Name]; ok {
+								existing.Value = change.Value
+							} else {
+								env.Variables[change.Name] = &api.EnvironmentVariable{
+									Value:  change.Value,
+									Active: true,
+								}
+							}
+						case api.EnvChangeUnset:
+							delete(env.Variables, change.Name)
+						}
+					}
+					if err := m.leftPanel.GetEnvironments().SaveActiveEnvironment(); err != nil {
+						m.statusBar.Error(fmt.Errorf("failed to save environment: %w", err))
+					}
+				}
+			}
 		}
 
 		// Apply any modifications from the script to the request
@@ -2363,11 +2408,13 @@ func (m Model) sendHTTPRequest() (tea.Model, tea.Cmd) {
 }
 
 // isDefaultScript checks if a script is the default placeholder script
+// Uses exact match (trimmed) to avoid false positives with user scripts containing template comments
 func isDefaultScript(script string, scriptType string) bool {
+	trimmedScript := strings.TrimSpace(script)
 	if scriptType == "pre" {
-		return strings.Contains(script, "// Pre-request script") && strings.Contains(script, "// Runs before the request is sent")
+		return trimmedScript == strings.TrimSpace(defaultPreRequestScript)
 	}
-	return strings.Contains(script, "// Post-request script") && strings.Contains(script, "// Runs after the response is received")
+	return trimmedScript == strings.TrimSpace(defaultPostResponseScript)
 }
 
 // buildHTTPRequest constructs an API Request from the current RequestView state

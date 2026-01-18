@@ -1104,8 +1104,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.ModifiedReq.Headers() != nil {
 				modifiedReq.Headers = msg.ModifiedReq.Headers()
 			}
-			// Update body if changed
-			if msg.ModifiedReq.Body() != "" && msg.ModifiedReq.Body() != msg.PreRequestBody {
+			// Update body if explicitly modified (supports clearing body with "")
+			if msg.ModifiedReq.IsBodyModified() {
 				modifiedReq.Body = msg.ModifiedReq.Body()
 			}
 		}
@@ -1152,7 +1152,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 					}
 					// Save the environment changes
-					_ = m.leftPanel.GetEnvironments().SaveActiveEnvironment()
+					if err := m.leftPanel.GetEnvironments().SaveActiveEnvironment(); err != nil {
+						m.statusBar.Error(fmt.Errorf("failed to save environment: %w", err))
+					}
 				}
 			}
 		}
@@ -2326,12 +2328,13 @@ func (m Model) sendHTTPRequest() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Clear previous script results
+	// Clear previous script results and pending request
 	m.preRequestConsole = nil
 	m.postResponseConsole = nil
 	m.preRequestAssertions = nil
 	m.postResponseAssertions = nil
 	m.lastScriptResult = nil
+	m.pendingScriptReq = nil // Reset to avoid stale request in post-response scripts
 
 	// Update state to sending
 	m.isSending = true

@@ -112,6 +112,7 @@ jobs:
         with:
           # Exclude rules:
           # G104: Errors unhandled - Goja Set() returns error only for invalid types, safe with hardcoded keys
+          #       Note: inline #nosec doesn't work for multi-line function calls in Goja bindings
           # G301: Directory permissions 0755 - acceptable for user config directories
           # G304: File inclusion via variable - necessary for config/collection loading
           # G306: WriteFile permissions 0644 - acceptable for user config files

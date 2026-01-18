@@ -16,32 +16,27 @@ func (e *gojaExecutor) setupLCVariables(vm *goja.Runtime, lc *goja.Object) error
 	varsObj := vm.NewObject()
 
 	// lc.variables.uuid() - Generate a new UUID v4
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("uuid", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("uuid", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		return vm.ToValue(uuid.New().String())
 	})
 
 	// lc.variables.timestamp() - Current Unix timestamp in seconds
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("timestamp", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("timestamp", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		return vm.ToValue(time.Now().Unix())
 	})
 
 	// lc.variables.timestampMs() - Current Unix timestamp in milliseconds
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("timestampMs", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("timestampMs", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		return vm.ToValue(time.Now().UnixMilli())
 	})
 
 	// lc.variables.isoTimestamp() - Current UTC time in ISO 8601 format
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("isoTimestamp", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("isoTimestamp", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		return vm.ToValue(time.Now().UTC().Format(time.RFC3339))
 	})
 
 	// lc.variables.randomInt(min, max) - Random integer in range [min, max]
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("randomInt", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("randomInt", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		min := 0
 		max := 100
 
@@ -66,15 +61,13 @@ func (e *gojaExecutor) setupLCVariables(vm *goja.Runtime, lc *goja.Object) error
 	})
 
 	// lc.variables.randomFloat() - Random float in range [0, 1)
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("randomFloat", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("randomFloat", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		// #nosec G404 -- Random used for test data, not security
 		return vm.ToValue(rand.Float64())
 	})
 
 	// lc.variables.randomString(length) - Random alphanumeric string
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("randomString", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("randomString", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		length := 16 // Default length
 		if len(call.Arguments) >= 1 {
 			length = int(call.Arguments[0].ToInteger())
@@ -96,8 +89,7 @@ func (e *gojaExecutor) setupLCVariables(vm *goja.Runtime, lc *goja.Object) error
 	})
 
 	// lc.variables.randomHex(length) - Random hex string
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("randomHex", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("randomHex", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		length := 16 // Default length
 		if len(call.Arguments) >= 1 {
 			length = int(call.Arguments[0].ToInteger())
@@ -119,8 +111,7 @@ func (e *gojaExecutor) setupLCVariables(vm *goja.Runtime, lc *goja.Object) error
 	})
 
 	// lc.variables.randomEmail() - Generate random email address
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("randomEmail", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("randomEmail", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 		domains := []string{"example.com", "test.com", "email.test", "mail.example"}
 
@@ -140,8 +131,7 @@ func (e *gojaExecutor) setupLCVariables(vm *goja.Runtime, lc *goja.Object) error
 	})
 
 	// lc.variables.randomFirstName() - Random first name from list
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("randomFirstName", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("randomFirstName", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		names := []string{
 			"Alice", "Bob", "Charlie", "Diana", "Edward", "Fiona",
 			"George", "Hannah", "Ivan", "Julia", "Kevin", "Laura",
@@ -153,8 +143,7 @@ func (e *gojaExecutor) setupLCVariables(vm *goja.Runtime, lc *goja.Object) error
 	})
 
 	// lc.variables.randomLastName() - Random last name from list
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("randomLastName", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("randomLastName", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		names := []string{
 			"Anderson", "Brown", "Clark", "Davis", "Evans", "Foster",
 			"Garcia", "Harris", "Ivanov", "Johnson", "King", "Lee",
@@ -166,13 +155,11 @@ func (e *gojaExecutor) setupLCVariables(vm *goja.Runtime, lc *goja.Object) error
 	})
 
 	// lc.variables.randomBoolean() - Random boolean value
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	varsObj.Set("randomBoolean", func(call goja.FunctionCall) goja.Value {
+	varsObj.Set("randomBoolean", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
 		// #nosec G404 -- Random used for test data, not security
 		return vm.ToValue(rand.Intn(2) == 1)
 	})
 
-	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
-	lc.Set("variables", varsObj)
+	lc.Set("variables", varsObj) // #nosec G104 -- Goja Set safe here
 	return nil
 }

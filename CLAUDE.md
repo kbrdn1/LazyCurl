@@ -409,6 +409,9 @@ URLs, headers, and body fields support `{{variable_name}}` interpolation from ac
 
 ## Active Technologies
 
+- Markdown (GitHub Flavored) + N/A (documentation-only feature) (001-api-documentation)
+- Git repository + GitHub Wiki (001-api-documentation)
+
 - Go 1.25 (035-js-scripting)
 - JSON files (collections in `.lazycurl/collections/`) (035-js-scripting)
 

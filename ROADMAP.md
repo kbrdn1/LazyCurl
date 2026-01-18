@@ -49,27 +49,33 @@ Intégration avec éditeurs externes et specs API.
 - [x] Import OpenAPI 3.x avec security schemes ([#66](https://github.com/kbrdn1/LazyCurl/issues/66), [#71](https://github.com/kbrdn1/LazyCurl/issues/71))
 - [x] Import collection/environment Postman ([#14](https://github.com/kbrdn1/LazyCurl/issues/14), [#72](https://github.com/kbrdn1/LazyCurl/issues/72))
 
+### v1.3.0 - JavaScript Scripting (Sprint 4a) ✅
+
+Moteur de scripting JavaScript avec Goja runtime.
+
+- [x] JavaScript Scripting via Goja ES5.1+ ([#35](https://github.com/kbrdn1/LazyCurl/issues/35), [#75](https://github.com/kbrdn1/LazyCurl/pull/75))
+- [x] Test Assertions avec 16 matchers (`lc.test`, `lc.expect`)
+- [x] Request Chaining via `lc.sendRequest()` ([#42](https://github.com/kbrdn1/LazyCurl/issues/42))
+- [x] API Documentation complète (75+ méthodes documentées)
+
 ---
 
 ## Current Sprint
 
-### Sprint 4 - Parité Fonctionnelle Bruno 🔥
+### Sprint 4b - Collection Runner & UX 🔥
 
-**Objectif** : Atteindre la parité fonctionnelle avec Bruno pour le scripting et l'automatisation.
+**Objectif** : Compléter la parité Bruno avec runner et améliorations UX.
 
 #### Critical Priority 🔴
 
 | Feature | Issue | Description | Concurrent |
 |---------|-------|-------------|------------|
-| JavaScript Scripting | [#35](https://github.com/kbrdn1/LazyCurl/issues/35) | Scripts pre/post-request via Goja JS engine | Bruno, Yaak |
-| Request Chaining | [#42](https://github.com/kbrdn1/LazyCurl/issues/42) | Extraction de valeurs, chaînage de requêtes | Bruno, Yaak |
+| Collection Runner | [#44](https://github.com/kbrdn1/LazyCurl/issues/44) | Exécution séquentielle de toutes les requêtes | Bruno, Yaak |
 
 #### High Priority 🟡
 
 | Feature | Issue | Description | Concurrent |
 |---------|-------|-------------|------------|
-| Test Assertions | [#43](https://github.com/kbrdn1/LazyCurl/issues/43) | Assertions sur status, body, headers | Bruno, Yaak |
-| Collection Runner | [#44](https://github.com/kbrdn1/LazyCurl/issues/44) | Exécution séquentielle de toutes les requêtes | Bruno, Yaak |
 | Fuzzy Finder | [#45](https://github.com/kbrdn1/LazyCurl/issues/45) | Recherche rapide style fzf | UX improvement |
 
 #### Medium Priority 🟢
@@ -151,8 +157,10 @@ Features non encore planifiées :
 
 | Critère | Bruno | LazyCurl | Gap |
 |---------|-------|----------|-----|
-| Scripting JS | ✅ | ❌ | Sprint 4 |
-| Collection Runner | ✅ | ❌ | Sprint 4 |
+| Scripting JS | ✅ | ✅ | ✅ Parité |
+| Test Assertions | ✅ | ✅ | ✅ Parité |
+| Request Chaining | ✅ | ✅ | ✅ Parité |
+| Collection Runner | ✅ | ❌ | Sprint 4b |
 | GraphQL | ✅ | ❌ | Sprint 5 |
 | CLI mode | ✅ | ❌ | Sprint 7 |
 | Git-friendly | ✅ | ✅ | ✅ Parité |
@@ -172,16 +180,17 @@ Features non encore planifiées :
 ## Timeline
 
 ```
-2025 Q1: Sprint 4 - Parité Bruno
-         └── Scripting + Assertions + Runner
+2026 Q1: Sprint 4 - Parité Bruno
+         ├── v1.3.0 ✅ Scripting + Assertions + Chaining
+         └── v1.4.0 🔄 Collection Runner + UX
 
-2025 Q2: Sprint 5 - Multi-Protocol
+2026 Q2: Sprint 5 - Multi-Protocol
          └── GraphQL + WebSocket + SSE + gRPC
 
-2025 Q3: Sprint 6 - Enterprise
+2026 Q3: Sprint 6 - Enterprise
          └── OAuth2 + mTLS + Proxy
 
-2025 Q4: Sprint 7 - CI/CD
+2026 Q4: Sprint 7 - CI/CD
          └── CLI Mode + Automation
 ```
 
@@ -201,8 +210,9 @@ Features non encore planifiées :
 
 | Milestone | Target | Status |
 |-----------|--------|--------|
-| Parité posting | v1.3.0 | 🔄 In Progress |
-| Parité Bruno | v1.4.0 | ⏳ Sprint 4-5 |
+| Parité posting | v1.3.0 | ✅ Complete |
+| Scripting & Assertions | v1.3.0 | ✅ Complete |
+| Parité Bruno (core) | v1.4.0 | 🔄 In Progress (Runner pending) |
 | Parité Yaak protocols | v1.5.0 | ⏳ Sprint 5 |
 | Enterprise-ready | v1.6.0 | ⏳ Sprint 6 |
 | CI/CD complete | v2.0.0 | ⏳ Sprint 7 |

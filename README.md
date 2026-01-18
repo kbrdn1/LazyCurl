@@ -35,6 +35,8 @@
 ## Features
 
 - **Lazygit-Style Interface** — Multi-panel layout with vim motions (`h/j/k/l`)
+- **JavaScript Scripting** — Pre/post-request scripts via Goja ES5.1+ engine
+- **Test Assertions** — 16 matchers with `lc.test()` and `lc.expect()`
 - **Collections & Environments** — Organize requests, manage variables with `{{var}}` syntax
 - **Import/Export** — cURL, OpenAPI 3.x, Postman collections
 - **External Editor** — Edit bodies in vim, VS Code, nano, etc.
@@ -112,11 +114,12 @@ lazycurl import postman collection.json
 
 ## Documentation
 
-Full documentation available in [`docs/`](docs/index.md):
+Full documentation available in [`docs/`](docs/index.md) and [Wiki](https://github.com/kbrdn1/LazyCurl/wiki):
 
 | Guide | Description |
 |-------|-------------|
 | [Getting Started](docs/getting-started.md) | First steps with LazyCurl |
+| [**Scripting API**](docs/api/overview.md) | JavaScript API reference (75+ methods) |
 | [Keybindings](docs/keybindings.md) | Complete keyboard reference |
 | [Import/Export](docs/import-export.md) | cURL, OpenAPI, Postman |
 | [Collections](docs/collections.md) | Organize requests |

@@ -511,10 +511,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// Check if request panel Body or Scripts tab is active - forward ALL keys to editor
+		// Check if request panel Body or Scripts tab is active - forward most keys to editor
 		// The editor has its own vim-like modes (NORMAL/INSERT) and handles q, h, l, etc.
 		// This MUST return to prevent quit handler from catching 'q'
+		// BUT: Intercept H/L (uppercase) for panel switching
 		if m.activePanel == RequestPanel && m.requestPanel.IsEditorActive() {
+			// H/L (uppercase) switches panels even when editor is active
+			switch msg.String() {
+			case "H":
+				// Switch to left panel (Collections)
+				m.activePanel = CollectionsPanel
+				if m.isFullscreen {
+					m.fullscreenPanel = m.activePanel
+				}
+				return m, m.markSessionDirty()
+			case "L":
+				// Switch to right panel (Response)
+				m.activePanel = ResponsePanel
+				if m.isFullscreen {
+					m.fullscreenPanel = m.activePanel
+				}
+				return m, m.markSessionDirty()
+			}
+			// Forward other keys to editor
 			var cmd tea.Cmd
 			*m.requestPanel, cmd = m.requestPanel.Update(msg, m.globalConfig)
 			return m, cmd
@@ -2225,6 +2244,9 @@ func (m *Model) updateWhichKeyContext() {
 
 	// Mode-based context
 	switch m.mode {
+	case JumpMode:
+		m.whichKey.SetContext(components.ContextJump)
+		return
 	case InsertMode:
 		m.whichKey.SetContext(components.ContextInsert)
 	case ViewMode:

@@ -45,6 +45,8 @@ const (
 	ContextRequestScripts KeyContext = "request_scripts"
 	// Response panel tab contexts
 	ContextConsole KeyContext = "console"
+	// Jump mode context
+	ContextJump KeyContext = "jump"
 )
 
 // WhichKey manages keybinding hints display
@@ -169,10 +171,11 @@ func (w *WhichKey) initBindings() {
 	// Normal mode - Request panel
 	w.bindings[ContextNormalRequest] = []KeyGroup{
 		{
-			Name: "Tabs",
+			Name: "Navigation",
 			Bindings: []KeyBinding{
+				{Key: "H/L", Desc: "Panel"},
 				{Key: "tab", Desc: "Next tab"},
-				{Key: "1-6", Desc: "Direct tab"},
+				{Key: "1-5", Desc: "Direct tab"},
 			},
 		},
 		{
@@ -193,19 +196,19 @@ func (w *WhichKey) initBindings() {
 	// Normal mode - Response panel
 	w.bindings[ContextNormalResponse] = []KeyGroup{
 		{
-			Name: "Tabs",
-			Bindings: []KeyBinding{
-				{Key: "tab", Desc: "Next tab"},
-				{Key: "1-3", Desc: "Direct tab"},
-			},
-		},
-		{
 			Name: "Navigation",
 			Bindings: []KeyBinding{
 				{Key: "j/k", Desc: "Up/Down"},
 				{Key: "g/G", Desc: "Top/Bottom"},
-				{Key: "h/l", Desc: "Switch panel"},
+				{Key: "H/L", Desc: "Panel"},
 				{Key: "w/b", Desc: "Next/Prev word"},
+			},
+		},
+		{
+			Name: "Tabs",
+			Bindings: []KeyBinding{
+				{Key: "tab", Desc: "Next tab"},
+				{Key: "1-5", Desc: "Direct tab"},
 			},
 		},
 		{
@@ -214,12 +217,6 @@ func (w *WhichKey) initBindings() {
 				{Key: "y", Desc: "Yank line"},
 				{Key: "Y", Desc: "Yank all"},
 				{Key: "Ctrl+C", Desc: "Copy all"},
-			},
-		},
-		{
-			Name: "Actions",
-			Bindings: []KeyBinding{
-				{Key: "Ctrl+S", Desc: "Send request"},
 			},
 		},
 		{
@@ -344,6 +341,7 @@ func (w *WhichKey) initBindings() {
 				{Key: "c/i", Desc: "Edit"},
 				{Key: "d", Desc: "Delete"},
 				{Key: "space", Desc: "Toggle"},
+				{Key: "H/L", Desc: "Panel"},
 				{Key: "tab", Desc: "Next tab"},
 			},
 		},
@@ -356,6 +354,7 @@ func (w *WhichKey) initBindings() {
 				{Key: "j/k", Desc: "Navigate"},
 				{Key: "h/l", Desc: "Change type"},
 				{Key: "i/c/Enter", Desc: "Edit"},
+				{Key: "H/L", Desc: "Panel"},
 				{Key: "tab", Desc: "Next tab"},
 				{Key: "ctrl+s", Desc: "Send"},
 			},
@@ -371,6 +370,7 @@ func (w *WhichKey) initBindings() {
 				{Key: "c/i", Desc: "Edit"},
 				{Key: "d", Desc: "Delete"},
 				{Key: "space", Desc: "Toggle"},
+				{Key: "H/L", Desc: "Panel"},
 				{Key: "tab", Desc: "Next tab"},
 			},
 		},
@@ -380,11 +380,12 @@ func (w *WhichKey) initBindings() {
 		{
 			Name: "Body",
 			Bindings: []KeyBinding{
+				{Key: "h/l", Desc: "Cursor"},
+				{Key: "j/k", Desc: "Up/Down"},
 				{Key: "i", Desc: "Insert mode"},
-				{Key: "h/l", Desc: "Body type"},
 				{Key: "ctrl+f", Desc: "Format"},
+				{Key: "H/L", Desc: "Panel"},
 				{Key: "tab", Desc: "Next tab"},
-				{Key: "ctrl+s", Desc: "Send"},
 			},
 		},
 	}
@@ -393,10 +394,12 @@ func (w *WhichKey) initBindings() {
 		{
 			Name: "Scripts",
 			Bindings: []KeyBinding{
+				{Key: "h/l", Desc: "Cursor"},
+				{Key: "j/k", Desc: "Up/Down"},
+				{Key: "[/]", Desc: "Section"},
 				{Key: "i", Desc: "Insert mode"},
-				{Key: "h/l", Desc: "Section"},
+				{Key: "H/L", Desc: "Panel"},
 				{Key: "tab", Desc: "Next tab"},
-				{Key: "ctrl+s", Desc: "Send"},
 			},
 		},
 	}
@@ -427,6 +430,23 @@ func (w *WhichKey) initBindings() {
 				{Key: "I", Desc: "Copy info"},
 				{Key: "E", Desc: "Copy error"},
 				{Key: "A", Desc: "Copy all"},
+			},
+		},
+		{
+			Name: "Help",
+			Bindings: []KeyBinding{
+				{Key: "?", Desc: "Show all keys"},
+			},
+		},
+	}
+
+	// Jump mode context
+	w.bindings[ContextJump] = []KeyGroup{
+		{
+			Name: "Navigation",
+			Bindings: []KeyBinding{
+				{Key: "char", Desc: "Type label"},
+				{Key: "esc", Desc: "Cancel"},
 			},
 		},
 		{

@@ -104,7 +104,7 @@ func (m *RunnerModal) Update(msg tea.Msg) (*RunnerModal, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
+		case "esc", "q":
 			if m.session.IsTerminal() {
 				// Close modal when run is finished
 				m.Hide()
@@ -187,8 +187,10 @@ func (m *RunnerModal) maxScrollOffset() int {
 
 // visibleResultRows returns the number of result rows that can be displayed.
 func (m *RunnerModal) visibleResultRows() int {
-	// Modal height minus header, progress bar, summary, footer, borders
-	available := m.height - 16
+	// Use effective modal height (capped) instead of terminal height
+	effectiveHeight := min(m.height-4, 30)
+	// Subtract header, progress bar, summary, footer, borders
+	available := effectiveHeight - 12
 	if available < 3 {
 		return 3
 	}
@@ -297,7 +299,16 @@ func (m *RunnerModal) renderProgress(width int) string {
 		barWidth = 10
 	}
 
-	percent := float64(m.session.CurrentIndex) / float64(m.session.TotalRequests)
+	// Guard against divide by zero when TotalRequests is 0
+	percent := 0.0
+	if m.session.TotalRequests > 0 {
+		percent = float64(m.session.CurrentIndex) / float64(m.session.TotalRequests)
+	}
+	if percent < 0 {
+		percent = 0
+	} else if percent > 1 {
+		percent = 1
+	}
 	filled := int(float64(barWidth) * percent)
 	empty := barWidth - filled
 

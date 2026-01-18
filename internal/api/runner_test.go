@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -821,6 +822,10 @@ func TestRunSession_SetSessionEnvVariable(t *testing.T) {
 }
 
 func TestExportRunReport_DirectoryPermissions(t *testing.T) {
+	// Skip on Windows (os.Getuid not available)
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping permission test on Windows")
+	}
 	// Skip if running as root (root can write anywhere)
 	if os.Getuid() == 0 {
 		t.Skip("Skipping permission test when running as root")

@@ -451,8 +451,9 @@ func ExportRunReport(report *RunReport) (string, error) {
 		return "", fmt.Errorf("failed to create reports directory: %w", err)
 	}
 
-	// Generate filename with timestamp
-	filename := fmt.Sprintf("run_%s.json", time.Now().Format("20060102_150405"))
+	// Generate filename with high-resolution timestamp to prevent collision
+	ts := time.Now()
+	filename := fmt.Sprintf("run_%s_%09d.json", ts.Format("20060102_150405"), ts.Nanosecond())
 	path := filepath.Join(dir, filename)
 
 	// Marshal and write
@@ -476,7 +477,7 @@ func ExportRunReport(report *RunReport) (string, error) {
 func generateRunID(collection string) string {
 	// Sanitize collection name
 	sanitized := sanitizeForID(collection)
-	return fmt.Sprintf("run_%d_%s", time.Now().Unix(), sanitized)
+	return fmt.Sprintf("run_%d_%s", time.Now().UnixNano(), sanitized)
 }
 
 // sanitizeForID removes special characters from a string for use in IDs.

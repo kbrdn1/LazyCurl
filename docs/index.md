@@ -32,6 +32,15 @@
 - **[Console](console.md)** - Request history and logging
 - **[CLI Reference](cli.md)** - Command-line interface and automation
 
+### Scripting API Reference
+
+- **[API Overview](api/overview.md)** - JavaScript scripting API introduction
+- **[lc.request](api/request.md)** - HTTP request manipulation
+- **[lc.response](api/response.md)** - HTTP response access
+- **[lc.env & lc.globals](api/env.md)** - Environment and session variables
+- **[lc.test & lc.expect](api/test.md)** - Testing and assertions
+- **[Full API Reference](scripting-api-reference.md)** - Complete single-page reference
+
 ### Reference
 
 - **[Statusbar](statusbar.md)** - Statusbar component API reference

@@ -6,12 +6,13 @@ import (
 
 // ScriptRequest represents mutable request data for scripts
 type ScriptRequest struct {
-	name     string
-	method   string
-	url      string
-	headers  map[string]string
-	body     string
-	modified bool
+	name         string
+	method       string
+	url          string
+	headers      map[string]string
+	body         string
+	modified     bool
+	bodyModified bool // Track explicit body modifications (allows clearing with "")
 }
 
 // NewScriptRequest creates a ScriptRequest from a CollectionRequest
@@ -124,6 +125,12 @@ func (r *ScriptRequest) Body() string {
 func (r *ScriptRequest) SetBody(body string) {
 	r.body = body
 	r.modified = true
+	r.bodyModified = true // Explicitly track body changes to allow clearing
+}
+
+// IsBodyModified returns true if the body was explicitly modified by a script
+func (r *ScriptRequest) IsBodyModified() bool {
+	return r.bodyModified
 }
 
 // GetHeader returns a header value (case-insensitive)
@@ -196,9 +203,12 @@ func (r *ScriptRequest) ApplyTo(req *CollectionRequest) {
 		})
 	}
 
-	// Update body if we have body config
-	if r.body != "" {
-		if req.Body == nil {
+	// Update body if explicitly modified (allows clearing body with "")
+	if r.bodyModified {
+		if r.body == "" {
+			// Clear the body
+			req.Body = nil
+		} else if req.Body == nil {
 			req.Body = &BodyConfig{
 				Type:    "raw",
 				Content: r.body,

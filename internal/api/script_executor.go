@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -31,17 +32,19 @@ type ScriptExecutor interface {
 
 // gojaExecutor implements ScriptExecutor using the Goja JavaScript runtime
 type gojaExecutor struct {
-	timeout time.Duration
-	globals *ScriptGlobals
-	client  *Client
+	timeout   time.Duration
+	globals   *ScriptGlobals
+	client    *Client
+	cookieJar *ScriptCookieJar
 }
 
 // NewScriptExecutor creates a new script executor instance
 func NewScriptExecutor() ScriptExecutor {
 	return &gojaExecutor{
-		timeout: 5 * time.Second, // Default timeout
-		globals: NewScriptGlobals(),
-		client:  NewClient(),
+		timeout:   5 * time.Second, // Default timeout
+		globals:   NewScriptGlobals(),
+		client:    NewClient(),
+		cookieJar: NewScriptCookieJar(),
 	}
 }
 
@@ -83,7 +86,23 @@ func (e *gojaExecutor) ExecutePreRequest(script string, req *ScriptRequest, env 
 		return result, err
 	}
 
-	if err := e.setupLCObject(vm, req, nil, scriptEnv, assertions, true); err != nil {
+	// Create script info for pre-request context
+	envName := ""
+	if env != nil {
+		envName = env.Name
+	}
+	reqName := ""
+	if req != nil {
+		reqName = req.Name()
+	}
+	info := &ScriptInfo{
+		ScriptType:      "pre-request",
+		RequestName:     reqName,
+		EnvironmentName: envName,
+		Iteration:       1,
+	}
+
+	if err := e.setupLCObject(vm, req, nil, scriptEnv, assertions, info); err != nil {
 		result.SetError(err)
 		return result, err
 	}
@@ -131,7 +150,23 @@ func (e *gojaExecutor) ExecutePostResponse(script string, req *ScriptRequest, re
 		return result, err
 	}
 
-	if err := e.setupLCObject(vm, req, resp, scriptEnv, assertions, false); err != nil {
+	// Create script info for post-response context
+	envName := ""
+	if env != nil {
+		envName = env.Name
+	}
+	reqName := ""
+	if req != nil {
+		reqName = req.Name()
+	}
+	info := &ScriptInfo{
+		ScriptType:      "post-response",
+		RequestName:     reqName,
+		EnvironmentName: envName,
+		Iteration:       1,
+	}
+
+	if err := e.setupLCObject(vm, req, resp, scriptEnv, assertions, info); err != nil {
 		result.SetError(err)
 		return result, err
 	}
@@ -230,8 +265,10 @@ func (e *gojaExecutor) setupConsole(vm *goja.Runtime, console *ScriptConsole) er
 // #nosec G104 -- Goja Set returns error only for invalid types, safe here
 //
 //nolint:errcheck // Goja Set operations are safe in this context
-func (e *gojaExecutor) setupLCObject(vm *goja.Runtime, req *ScriptRequest, resp *ScriptResponse, env *ScriptEnvironment, assertions *AssertionCollector, isPreRequest bool) error {
+func (e *gojaExecutor) setupLCObject(vm *goja.Runtime, req *ScriptRequest, resp *ScriptResponse, env *ScriptEnvironment, assertions *AssertionCollector, info *ScriptInfo) error {
 	lc := vm.NewObject()
+
+	isPreRequest := info.ScriptType == "pre-request"
 
 	// Setup lc.request
 	if err := e.setupLCRequest(vm, lc, req, isPreRequest); err != nil {
@@ -265,6 +302,31 @@ func (e *gojaExecutor) setupLCObject(vm *goja.Runtime, req *ScriptRequest, resp 
 		return err
 	}
 
+	// Setup lc.base64 and global btoa/atob
+	if err := e.setupLCBase64(vm, lc); err != nil {
+		return err
+	}
+
+	// Setup lc.crypto
+	if err := e.setupLCCrypto(vm, lc); err != nil {
+		return err
+	}
+
+	// Setup lc.variables
+	if err := e.setupLCVariables(vm, lc); err != nil {
+		return err
+	}
+
+	// Setup lc.cookies
+	if err := e.setupLCCookies(vm, lc, e.cookieJar); err != nil {
+		return err
+	}
+
+	// Setup lc.info
+	if err := e.setupLCInfo(vm, lc, info); err != nil {
+		return err
+	}
+
 	return vm.Set("lc", lc)
 }
 
@@ -275,6 +337,12 @@ func (e *gojaExecutor) setupLCObject(vm *goja.Runtime, req *ScriptRequest, resp 
 //nolint:errcheck // Goja Set operations are safe in this context
 func (e *gojaExecutor) setupLCRequest(vm *goja.Runtime, lc *goja.Object, req *ScriptRequest, isMutable bool) error {
 	reqObj := vm.NewObject()
+
+	// Handle nil request - create empty object
+	if req == nil {
+		lc.Set("request", reqObj)
+		return nil
+	}
 
 	// lc.request.method (readonly)
 	reqObj.DefineAccessorProperty("method", vm.ToValue(func(call goja.FunctionCall) goja.Value {
@@ -382,6 +450,88 @@ func (e *gojaExecutor) setupLCRequest(vm *goja.Runtime, lc *goja.Object, req *Sc
 	}
 
 	reqObj.Set("body", bodyObj)
+
+	// lc.request.params - query parameters from URL
+	paramsObj := vm.NewObject()
+
+	// Parse URL to extract query parameters
+	if parsedURL, err := url.Parse(req.URL()); err == nil {
+		queryParams := parsedURL.Query()
+
+		// lc.request.params.get(name) - get a query parameter value
+		paramsObj.Set("get", func(call goja.FunctionCall) goja.Value {
+			if len(call.Arguments) == 0 {
+				return goja.Undefined()
+			}
+			name := call.Arguments[0].String()
+			value := queryParams.Get(name)
+			if value == "" {
+				return goja.Undefined()
+			}
+			return vm.ToValue(value)
+		})
+
+		// lc.request.params.getAll(name) - get all values for a parameter
+		paramsObj.Set("getAll", func(call goja.FunctionCall) goja.Value {
+			if len(call.Arguments) == 0 {
+				return vm.ToValue([]string{})
+			}
+			name := call.Arguments[0].String()
+			values := queryParams[name]
+			if values == nil {
+				return vm.ToValue([]string{})
+			}
+			return vm.ToValue(values)
+		})
+
+		// lc.request.params.has(name) - check if parameter exists
+		paramsObj.Set("has", func(call goja.FunctionCall) goja.Value {
+			if len(call.Arguments) == 0 {
+				return vm.ToValue(false)
+			}
+			name := call.Arguments[0].String()
+			return vm.ToValue(queryParams.Has(name))
+		})
+
+		// lc.request.params.all() - get all parameters as object
+		paramsObj.Set("all", func(call goja.FunctionCall) goja.Value {
+			result := vm.NewObject()
+			for key, values := range queryParams {
+				if len(values) > 0 {
+					result.Set(key, values[0])
+				}
+			}
+			return result
+		})
+
+		// lc.request.params.keys() - get all parameter names
+		paramsObj.Set("keys", func(call goja.FunctionCall) goja.Value {
+			keys := make([]string, 0, len(queryParams))
+			for key := range queryParams {
+				keys = append(keys, key)
+			}
+			return vm.ToValue(keys)
+		})
+	} else {
+		// URL parsing failed, provide empty params
+		paramsObj.Set("get", func(call goja.FunctionCall) goja.Value {
+			return goja.Undefined()
+		})
+		paramsObj.Set("getAll", func(call goja.FunctionCall) goja.Value {
+			return vm.ToValue([]string{})
+		})
+		paramsObj.Set("has", func(call goja.FunctionCall) goja.Value {
+			return vm.ToValue(false)
+		})
+		paramsObj.Set("all", func(call goja.FunctionCall) goja.Value {
+			return vm.NewObject()
+		})
+		paramsObj.Set("keys", func(call goja.FunctionCall) goja.Value {
+			return vm.ToValue([]string{})
+		})
+	}
+
+	reqObj.Set("params", paramsObj)
 
 	lc.Set("request", reqObj)
 	return nil
@@ -859,7 +1009,239 @@ func (e *gojaExecutor) createExpectation(vm *goja.Runtime, actual interface{}, a
 		return exp
 	})
 
+	// toMatch - regex pattern matching
+	exp.Set("toMatch", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) == 0 {
+			return exp
+		}
+		pattern := call.Arguments[0].String()
+		str, ok := actual.(string)
+		if !ok {
+			str = formatArg(actual)
+		}
+		matched, err := regexp.MatchString(pattern, str)
+		if err != nil {
+			panic(vm.ToValue("Invalid regex pattern: " + pattern))
+		}
+		if !matched {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " to match /" + pattern + "/"))
+		}
+		return exp
+	})
+
+	// toBeNull
+	exp.Set("toBeNull", func(call goja.FunctionCall) goja.Value {
+		if actual != nil {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " to be null"))
+		}
+		return exp
+	})
+
+	// toBeUndefined
+	exp.Set("toBeUndefined", func(call goja.FunctionCall) goja.Value {
+		if actual != nil {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " to be undefined"))
+		}
+		return exp
+	})
+
+	// toBeDefined - opposite of toBeUndefined
+	exp.Set("toBeDefined", func(call goja.FunctionCall) goja.Value {
+		if actual == nil {
+			panic(vm.ToValue("Expected value to be defined"))
+		}
+		return exp
+	})
+
+	// toHaveLength - check length of string or array
+	exp.Set("toHaveLength", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) == 0 {
+			return exp
+		}
+		expectedLen := int(call.Arguments[0].ToInteger())
+		var actualLen int
+
+		switch v := actual.(type) {
+		case string:
+			actualLen = len(v)
+		case []interface{}:
+			actualLen = len(v)
+		case map[string]interface{}:
+			actualLen = len(v)
+		default:
+			panic(vm.ToValue("Expected array, string, or object but got " + formatArg(actual)))
+		}
+
+		if actualLen != expectedLen {
+			panic(vm.ToValue("Expected length " + formatArg(expectedLen) + " but got " + formatArg(actualLen)))
+		}
+		return exp
+	})
+
+	// toBeGreaterThanOrEqual
+	exp.Set("toBeGreaterThanOrEqual", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) == 0 {
+			return exp
+		}
+		expected := call.Arguments[0].ToFloat()
+		actualNum := toFloat(actual)
+		if actualNum < expected {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " to be >= " + formatArg(expected)))
+		}
+		return exp
+	})
+
+	// toBeLessThanOrEqual
+	exp.Set("toBeLessThanOrEqual", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) == 0 {
+			return exp
+		}
+		expected := call.Arguments[0].ToFloat()
+		actualNum := toFloat(actual)
+		if actualNum > expected {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " to be <= " + formatArg(expected)))
+		}
+		return exp
+	})
+
+	// Create .not object for negated matchers
+	notObj := e.createNegatedExpectation(vm, actual)
+	exp.Set("not", notObj)
+
 	return exp
+}
+
+// createNegatedExpectation creates the .not matcher chain
+//
+// #nosec G104 -- Goja Set returns error only for invalid types, safe here
+//
+//nolint:errcheck // Goja Set operations are safe in this context
+func (e *gojaExecutor) createNegatedExpectation(vm *goja.Runtime, actual interface{}) *goja.Object {
+	not := vm.NewObject()
+
+	// not.toBe
+	not.Set("toBe", func(call goja.FunctionCall) goja.Value {
+		var expected interface{}
+		if len(call.Arguments) > 0 {
+			expected = call.Arguments[0].Export()
+		}
+		var passed bool
+		if isComparable(actual) && isComparable(expected) {
+			passed = actual != expected
+		} else {
+			passed = !reflect.DeepEqual(actual, expected)
+		}
+		if !passed {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " not to be " + formatArg(expected)))
+		}
+		return not
+	})
+
+	// not.toEqual
+	not.Set("toEqual", func(call goja.FunctionCall) goja.Value {
+		var expected interface{}
+		if len(call.Arguments) > 0 {
+			expected = call.Arguments[0].Export()
+		}
+		if deepEqual(actual, expected) {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " not to equal " + formatArg(expected)))
+		}
+		return not
+	})
+
+	// not.toBeTruthy
+	not.Set("toBeTruthy", func(call goja.FunctionCall) goja.Value {
+		if isTruthy(actual) {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " not to be truthy"))
+		}
+		return not
+	})
+
+	// not.toBeFalsy
+	not.Set("toBeFalsy", func(call goja.FunctionCall) goja.Value {
+		if !isTruthy(actual) {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " not to be falsy"))
+		}
+		return not
+	})
+
+	// not.toContain
+	not.Set("toContain", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) == 0 {
+			return not
+		}
+		substring := call.Arguments[0].String()
+		str, ok := actual.(string)
+		if !ok {
+			panic(vm.ToValue("Expected a string but got " + formatArg(actual)))
+		}
+		if strings.Contains(str, substring) {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " not to contain " + substring))
+		}
+		return not
+	})
+
+	// not.toBeNull
+	not.Set("toBeNull", func(call goja.FunctionCall) goja.Value {
+		if actual == nil {
+			panic(vm.ToValue("Expected value not to be null"))
+		}
+		return not
+	})
+
+	// not.toBeUndefined
+	not.Set("toBeUndefined", func(call goja.FunctionCall) goja.Value {
+		if actual == nil {
+			panic(vm.ToValue("Expected value not to be undefined"))
+		}
+		return not
+	})
+
+	// not.toBeDefined
+	not.Set("toBeDefined", func(call goja.FunctionCall) goja.Value {
+		if actual != nil {
+			panic(vm.ToValue("Expected value not to be defined"))
+		}
+		return not
+	})
+
+	// not.toMatch
+	not.Set("toMatch", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) == 0 {
+			return not
+		}
+		pattern := call.Arguments[0].String()
+		str, ok := actual.(string)
+		if !ok {
+			str = formatArg(actual)
+		}
+		matched, err := regexp.MatchString(pattern, str)
+		if err != nil {
+			panic(vm.ToValue("Invalid regex pattern: " + pattern))
+		}
+		if matched {
+			panic(vm.ToValue("Expected " + formatArg(actual) + " not to match /" + pattern + "/"))
+		}
+		return not
+	})
+
+	// not.toHaveProperty
+	not.Set("toHaveProperty", func(call goja.FunctionCall) goja.Value {
+		if len(call.Arguments) == 0 {
+			return not
+		}
+		propName := call.Arguments[0].String()
+		obj, ok := actual.(map[string]interface{})
+		if !ok {
+			panic(vm.ToValue("Expected an object but got " + formatArg(actual)))
+		}
+		if _, exists := obj[propName]; exists {
+			panic(vm.ToValue("Expected object not to have property " + propName))
+		}
+		return not
+	})
+
+	return not
 }
 
 // extractArgs converts Goja arguments to Go interface slice

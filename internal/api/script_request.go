@@ -6,6 +6,7 @@ import (
 
 // ScriptRequest represents mutable request data for scripts
 type ScriptRequest struct {
+	name     string
 	method   string
 	url      string
 	headers  map[string]string
@@ -17,6 +18,7 @@ type ScriptRequest struct {
 func NewScriptRequest(req *CollectionRequest) *ScriptRequest {
 	if req == nil {
 		return &ScriptRequest{
+			name:    "",
 			method:  "GET",
 			url:     "",
 			headers: make(map[string]string),
@@ -46,6 +48,7 @@ func NewScriptRequest(req *CollectionRequest) *ScriptRequest {
 	}
 
 	return &ScriptRequest{
+		name:     req.Name,
 		method:   string(req.Method),
 		url:      req.URL,
 		headers:  headers,
@@ -58,6 +61,7 @@ func NewScriptRequest(req *CollectionRequest) *ScriptRequest {
 func NewScriptRequestFromHTTP(req *Request) *ScriptRequest {
 	if req == nil {
 		return &ScriptRequest{
+			name:    "",
 			method:  "GET",
 			url:     "",
 			headers: make(map[string]string),
@@ -81,12 +85,18 @@ func NewScriptRequestFromHTTP(req *Request) *ScriptRequest {
 	}
 
 	return &ScriptRequest{
+		name:     "",
 		method:   string(req.Method),
 		url:      req.URL,
 		headers:  headers,
 		body:     body,
 		modified: false,
 	}
+}
+
+// Name returns the request name
+func (r *ScriptRequest) Name() string {
+	return r.name
 }
 
 // Method returns the HTTP method (readonly)

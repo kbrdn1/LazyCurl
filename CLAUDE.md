@@ -325,12 +325,12 @@ Examples:
 - OpenAPI 3.x import with security schemes
 - Postman import/export with CLI support
 
-**Sprint 4 - Competitive Advantage** 🔥 Current:
+**Sprint 4 - Competitive Advantage** 🔥 In Progress:
 
-- JavaScript scripting (Goja)
-- Request chaining
-- Test assertions
-- Collection runner
+- ✅ JavaScript scripting (Goja) - Pre/Post-request scripts with `lc` API
+- ✅ Test assertions - Built-in assertion API with Tests tab
+- Request chaining (planned)
+- Collection runner (planned)
 
 ## Key Dependencies
 
@@ -340,6 +340,7 @@ Examples:
 - **Bubble Zone** (`lrstanley/bubblezone`): Mouse interaction support
 - **yaml.v3** (`gopkg.in/yaml.v3`): YAML parsing for configs
 - **libopenapi** (`github.com/pb33f/libopenapi`): OpenAPI 3.x parsing and validation
+- **Goja** (`github.com/dop251/goja`): JavaScript runtime for scripting
 
 ## Development Notes
 
@@ -394,11 +395,15 @@ URLs, headers, and body fields support `{{variable_name}}` interpolation from ac
 
 ## Active Technologies
 
+- Go 1.25 (035-js-scripting)
+- JSON files (collections in `.lazycurl/collections/`) (035-js-scripting)
+
 - Go 1.21+ + Bubble Tea (TUI), Lipgloss (styling), Bubble Zone (mouse), yaml.v3 (config) (001-vim-mode-workspace)
 - File-based (YAML for config, JSON for collections/environments) in `.lazycurl/` workspace (001-vim-mode-workspace)
 
 ## Recent Changes
 
+- 035-js-scripting: Added JavaScript scripting with Goja runtime (pre/post-request scripts, `lc` API, test assertions)
 - v1.2.0: Added Postman import/export with CLI support (`lazycurl import postman`)
 - v1.2.0: Added OpenAPI security scheme import (Bearer, Basic, API Key)
 - v1.1.0: Added cURL import/export, jump mode navigation
@@ -632,3 +637,188 @@ lazycurl import postman collection.json --json  # JSON output for scripting
 - **Authentication**: Imports Bearer, Basic, API Key settings
 - **Request Bodies**: Converts raw, form-data, urlencoded
 - **Headers**: Preserves all headers with enabled/disabled state
+
+---
+
+## Feature: JavaScript Scripting (Issue #35)
+
+### Overview
+
+JavaScript scripting support via the Goja runtime allows users to write pre-request and post-response scripts for dynamic request manipulation, environment variable management, and test assertions.
+
+### Key Files
+
+- `internal/api/script_executor.go` - ScriptExecutor interface and Goja implementation
+- `internal/api/script_runtime.go` - Runtime setup with `lc` global object
+- `internal/api/script_request.go` - ScriptRequest for request manipulation
+- `internal/api/script_response.go` - ScriptResponse for response access
+- `internal/api/script_env.go` - ScriptEnvironment for variable management
+- `internal/api/script_console.go` - Console logging API
+- `internal/api/script_assertions.go` - Test assertions API
+- `internal/ui/request_view.go` - Script editor tabs (Pre-request, Post-response)
+- `internal/ui/response_view.go` - Tests tab for assertion results
+- `internal/ui/model.go` - Script execution integration with HTTP flow
+
+### Script Editor UI
+
+The Request Panel now includes two new tabs:
+
+- **Pre-request** (Tab 5): Script runs before the HTTP request is sent
+- **Post-response** (Tab 6): Script runs after the response is received
+
+### JavaScript API (`lc` global object)
+
+```javascript
+// Request object (pre-request only, read-only in post-response)
+lc.request.method      // HTTP method (readonly)
+lc.request.url         // Request URL
+lc.request.getHeader(name)
+lc.request.setHeader(name, value)
+lc.request.removeHeader(name)
+lc.request.body        // Request body
+
+// Response object (post-response only)
+lc.response.status     // Status code (e.g., 200)
+lc.response.statusText // Status text (e.g., "200 OK")
+lc.response.getHeader(name)
+lc.response.body       // Response body
+lc.response.json()     // Parse body as JSON
+lc.response.time       // Response time in ms
+
+// Environment variables
+lc.env.get(name)       // Get variable value
+lc.env.set(name, value) // Set variable (persists after script)
+lc.env.unset(name)     // Remove variable
+lc.env.has(name)       // Check if variable exists
+
+// Console logging
+lc.console.log(msg)    // Log message
+lc.console.info(msg)   // Info message
+lc.console.warn(msg)   // Warning message
+lc.console.error(msg)  // Error message
+
+// Test assertions
+lc.test.assert(name, condition)           // Basic assertion
+lc.test.assertEqual(name, actual, expected)
+lc.test.assertNotEqual(name, actual, expected)
+lc.test.assertTrue(name, condition)
+lc.test.assertFalse(name, condition)
+lc.test.assertContains(name, haystack, needle)
+lc.test.assertStatus(expectedStatus)      // Assert response status
+lc.test.assertHeader(name, expectedValue) // Assert header value
+```
+
+### Script Execution Flow
+
+```text
+User presses Ctrl+S (Send)
+    ↓
+sendHTTPRequest() checks for pre-request script
+    ↓
+If pre-request script exists:
+  1. ExecutePreRequestScriptCmd runs script with Goja
+  2. Script can modify request (URL, headers, body)
+  3. Script can set environment variables
+  4. PreRequestScriptResultMsg returns with modified request
+    ↓
+HTTP request sent with modifications applied
+    ↓
+HTTPResponseMsg received
+    ↓
+If post-response script exists:
+  1. ExecutePostResponseScriptCmd runs script
+  2. Script can access response, run assertions
+  3. Script can modify environment variables
+  4. PostResponseScriptResultMsg returns with results
+    ↓
+Assertions displayed in Tests tab
+Environment changes persisted to file
+```
+
+### Tests Tab (Response Panel)
+
+The Response Panel now includes a "Tests" tab (Tab 4) showing:
+
+- Summary: "Tests: X passed, Y failed"
+- List of all assertion results with ✓/✗ icons
+- Detailed error messages for failed assertions
+- Vim navigation (j/k/g/G) through results
+
+### Example Scripts
+
+**Pre-request: Add timestamp header**
+
+```javascript
+lc.request.setHeader("X-Timestamp", Date.now().toString());
+```
+
+**Pre-request: Dynamic authentication**
+
+```javascript
+var token = lc.env.get("auth_token");
+if (token) {
+    lc.request.setHeader("Authorization", "Bearer " + token);
+}
+```
+
+**Post-response: Store token from response**
+
+```javascript
+var data = lc.response.json();
+if (data && data.token) {
+    lc.env.set("auth_token", data.token);
+    lc.console.log("Token saved: " + data.token.substring(0, 10) + "...");
+}
+```
+
+**Post-response: Test assertions**
+
+```javascript
+lc.test.assertStatus(200);
+lc.test.assertHeader("Content-Type", "application/json");
+
+var data = lc.response.json();
+lc.test.assert("Response has data", data !== null);
+lc.test.assert("User ID is present", data.id !== undefined);
+lc.test.assertEqual("Status is active", data.status, "active");
+```
+
+### Keybindings
+
+- `Tab 5`: Switch to Pre-request script editor (Request Panel)
+- `Tab 6`: Switch to Post-response script editor (Request Panel)
+- `Tab 4` / `4`: Switch to Tests tab (Response Panel)
+- `Tab 5` / `5`: Switch to Console tab (Response Panel)
+- `j/k/g/G`: Navigate test results in Tests tab
+
+### Architecture Patterns
+
+**Script Executor Interface**
+
+```go
+type ScriptExecutor interface {
+    ExecutePreRequest(script string, req *ScriptRequest, env *Environment) (*ScriptResult, error)
+    ExecutePostResponse(script string, req *ScriptRequest, resp *ScriptResponse, env *Environment) (*ScriptResult, error)
+    SetTimeout(timeout time.Duration)
+}
+```
+
+**Message-Based Integration**
+
+```go
+PreRequestScriptResultMsg{
+    Result      *api.ScriptResult
+    ModifiedReq *api.ScriptRequest
+    Error       error
+    OriginalReq *api.Request
+}
+
+PostResponseScriptResultMsg{
+    Result *api.ScriptResult
+    Error  error
+}
+```
+
+### Dependencies
+
+- `github.com/dop251/goja` - JavaScript runtime for Go

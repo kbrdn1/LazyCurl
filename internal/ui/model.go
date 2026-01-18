@@ -24,6 +24,23 @@ import (
 // execCommand is a variable to allow mocking in tests
 var execCommand = exec.Command
 
+// Default script templates for comparison
+const defaultPreRequestScript = `// Pre-request script
+// Runs before the request is sent
+
+console.log('Request about to be sent');
+
+// Access environment variables
+const baseUrl = pm.environment.get('base_url');`
+
+const defaultPostResponseScript = `// Post-request script
+// Runs after the response is received
+
+console.log('Response received');
+
+// Access response data
+const response = pm.response.json();`
+
 // HTTPResponseMsg is sent when an HTTP request completes
 type HTTPResponseMsg struct {
 	Response *api.Response
@@ -35,6 +52,21 @@ type HTTPSendingMsg struct{}
 
 // LoaderTickMsg is sent to animate the loader
 type LoaderTickMsg struct{}
+
+// PreRequestScriptResultMsg is sent when pre-request script execution completes
+type PreRequestScriptResultMsg struct {
+	Result         *api.ScriptResult
+	ModifiedReq    *api.ScriptRequest
+	Error          error
+	OriginalReq    *api.Request
+	PreRequestBody string // Original body before script modification
+}
+
+// PostResponseScriptResultMsg is sent when post-response script execution completes
+type PostResponseScriptResultMsg struct {
+	Result *api.ScriptResult
+	Error  error
+}
 
 // loaderTickCmd returns a command that sends a tick for loader animation
 func loaderTickCmd() tea.Cmd {
@@ -49,6 +81,45 @@ func SendHTTPRequestCmd(req *api.Request) tea.Cmd {
 		client := api.NewClient()
 		resp, err := client.Send(req)
 		return HTTPResponseMsg{Response: resp, Error: err}
+	}
+}
+
+// ExecutePreRequestScriptCmd creates a command to execute pre-request script
+func ExecutePreRequestScriptCmd(executor api.ScriptExecutor, script string, req *api.Request, envFile *api.EnvironmentFile) tea.Cmd {
+	return func() tea.Msg {
+		// Convert api.Request to api.ScriptRequest
+		scriptReq := api.NewScriptRequestFromHTTP(req)
+		originalBody := scriptReq.Body()
+
+		// Convert EnvironmentFile to Environment for executor
+		env := api.EnvironmentFromFile(envFile)
+
+		// Execute the pre-request script
+		result, err := executor.ExecutePreRequest(script, scriptReq, env)
+
+		return PreRequestScriptResultMsg{
+			Result:         result,
+			ModifiedReq:    scriptReq,
+			Error:          err,
+			OriginalReq:    req,
+			PreRequestBody: originalBody,
+		}
+	}
+}
+
+// ExecutePostResponseScriptCmd creates a command to execute post-response script
+func ExecutePostResponseScriptCmd(executor api.ScriptExecutor, script string, req *api.ScriptRequest, resp *api.ScriptResponse, envFile *api.EnvironmentFile) tea.Cmd {
+	return func() tea.Msg {
+		// Convert EnvironmentFile to Environment for executor
+		env := api.EnvironmentFromFile(envFile)
+
+		// Execute the post-response script
+		result, err := executor.ExecutePostResponse(script, req, resp, env)
+
+		return PostResponseScriptResultMsg{
+			Result: result,
+			Error:  err,
+		}
 	}
 }
 
@@ -122,6 +193,16 @@ type Model struct {
 	// External editor state
 	externalEditorActive bool              // Whether external editor is currently open
 	externalEditorInfo   *api.TempFileInfo // Temp file info for cleanup
+
+	// Script execution
+	scriptExecutor         api.ScriptExecutor
+	lastScriptResult       *api.ScriptResult     // Last script execution result
+	preRequestConsole      []api.ConsoleLogEntry // Console output from pre-request script
+	postResponseConsole    []api.ConsoleLogEntry // Console output from post-response script
+	preRequestAssertions   []api.AssertionResult // Assertions from pre-request script
+	postResponseAssertions []api.AssertionResult // Assertions from post-response script
+	pendingScriptReq       *api.ScriptRequest    // Script request stored for post-response script
+	postResponseScript     string                // Post-response script to execute after HTTP response
 }
 
 // NewModel creates a new application model
@@ -199,6 +280,7 @@ func NewModel(globalConfig *config.GlobalConfig, workspaceConfig *config.Workspa
 		session:            sess,
 		importModal:        NewImportModal(),
 		openAPIImportModal: NewOpenAPIImportModal(collectionsDir),
+		scriptExecutor:     api.NewScriptExecutor(),
 	}
 }
 
@@ -446,10 +528,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
-		// Check if request panel Body or Scripts tab is active - forward ALL keys to editor
+		// Check if request panel Body or Scripts tab is active - forward most keys to editor
 		// The editor has its own vim-like modes (NORMAL/INSERT) and handles q, h, l, etc.
 		// This MUST return to prevent quit handler from catching 'q'
+		// BUT: Intercept H/L (uppercase) for panel switching
 		if m.activePanel == RequestPanel && m.requestPanel.IsEditorActive() {
+			// H/L (uppercase) switches panels even when editor is active
+			switch msg.String() {
+			case "H":
+				// Switch to left panel (Collections)
+				m.activePanel = CollectionsPanel
+				if m.isFullscreen {
+					m.fullscreenPanel = m.activePanel
+				}
+				return m, m.markSessionDirty()
+			case "L":
+				// Switch to right panel (Response)
+				m.activePanel = ResponsePanel
+				if m.isFullscreen {
+					m.fullscreenPanel = m.activePanel
+				}
+				return m, m.markSessionDirty()
+			}
+			// Forward other keys to editor
 			var cmd tea.Cmd
 			*m.requestPanel, cmd = m.requestPanel.Update(msg, m.globalConfig)
 			return m, cmd
@@ -990,6 +1091,145 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case PreRequestScriptResultMsg:
+		// Pre-request script completed
+		if msg.Error != nil {
+			m.isSending = false
+			m.responsePanel.SetLoading(false)
+			m.statusBar.Error(fmt.Errorf("pre-request script error: %w", msg.Error))
+			// Store error info for display
+			if msg.Result != nil && msg.Result.Error != nil {
+				m.preRequestConsole = msg.Result.ConsoleOutput
+			}
+			return m, nil
+		}
+
+		// Store console output and assertions from pre-request script
+		if msg.Result != nil {
+			m.preRequestConsole = msg.Result.ConsoleOutput
+			m.preRequestAssertions = msg.Result.Assertions
+
+			// Apply environment changes from pre-request script
+			if len(msg.Result.EnvChanges) > 0 {
+				env := m.leftPanel.GetEnvironments().GetActiveEnvironment()
+				if env != nil {
+					for _, change := range msg.Result.EnvChanges {
+						switch change.Type {
+						case api.EnvChangeSet:
+							if env.Variables == nil {
+								env.Variables = make(map[string]*api.EnvironmentVariable)
+							}
+							if existing, ok := env.Variables[change.Name]; ok {
+								existing.Value = change.Value
+							} else {
+								env.Variables[change.Name] = &api.EnvironmentVariable{
+									Value:  change.Value,
+									Active: true,
+								}
+							}
+						case api.EnvChangeUnset:
+							delete(env.Variables, change.Name)
+						}
+					}
+					if err := m.leftPanel.GetEnvironments().SaveActiveEnvironment(); err != nil {
+						m.statusBar.Error(fmt.Errorf("failed to save environment: %w", err))
+					}
+				}
+			}
+		}
+
+		// Apply any modifications from the script to the request
+		modifiedReq := msg.OriginalReq
+		if msg.ModifiedReq != nil && msg.ModifiedReq.IsModified() {
+			// Update URL if changed
+			if msg.ModifiedReq.URL() != "" {
+				modifiedReq.URL = msg.ModifiedReq.URL()
+			}
+			// Update headers if changed
+			if msg.ModifiedReq.Headers() != nil {
+				modifiedReq.Headers = msg.ModifiedReq.Headers()
+			}
+			// Update body if explicitly modified (supports clearing body with "")
+			if msg.ModifiedReq.IsBodyModified() {
+				modifiedReq.Body = msg.ModifiedReq.Body()
+			}
+		}
+
+		// Store the script request for post-response script
+		m.pendingScriptReq = msg.ModifiedReq
+
+		// Now send the actual HTTP request
+		m.statusBar.Info("Sending request...")
+		return m, tea.Batch(SendHTTPRequestCmd(modifiedReq), loaderTickCmd())
+
+	case PostResponseScriptResultMsg:
+		// Post-response script completed
+		if msg.Error != nil {
+			m.statusBar.Error(fmt.Errorf("post-response script error: %w", msg.Error))
+		}
+
+		// Store console output and assertions from post-response script
+		if msg.Result != nil {
+			m.postResponseConsole = msg.Result.ConsoleOutput
+			m.postResponseAssertions = msg.Result.Assertions
+			m.lastScriptResult = msg.Result
+
+			// Apply environment changes if any
+			if len(msg.Result.EnvChanges) > 0 {
+				env := m.leftPanel.GetEnvironments().GetActiveEnvironment()
+				if env != nil {
+					for _, change := range msg.Result.EnvChanges {
+						switch change.Type {
+						case api.EnvChangeSet:
+							if env.Variables == nil {
+								env.Variables = make(map[string]*api.EnvironmentVariable)
+							}
+							if existing, ok := env.Variables[change.Name]; ok {
+								existing.Value = change.Value
+							} else {
+								env.Variables[change.Name] = &api.EnvironmentVariable{
+									Value:  change.Value,
+									Active: true,
+								}
+							}
+						case api.EnvChangeUnset:
+							delete(env.Variables, change.Name)
+						}
+					}
+					// Save the environment changes
+					if err := m.leftPanel.GetEnvironments().SaveActiveEnvironment(); err != nil {
+						m.statusBar.Error(fmt.Errorf("failed to save environment: %w", err))
+					}
+				}
+			}
+		}
+
+		// Combine assertions from pre-request and post-response scripts
+		allAssertions := make([]api.AssertionResult, 0, len(m.preRequestAssertions)+len(m.postResponseAssertions))
+		allAssertions = append(allAssertions, m.preRequestAssertions...)
+		allAssertions = append(allAssertions, m.postResponseAssertions...)
+
+		// Update response panel with test results
+		m.responsePanel.SetTestResults(allAssertions)
+
+		// Display assertions summary if there are any
+		totalAssertions := len(allAssertions)
+		if totalAssertions > 0 {
+			passed := 0
+			for _, a := range allAssertions {
+				if a.Passed {
+					passed++
+				}
+			}
+			if passed == totalAssertions {
+				m.statusBar.Success("Tests", fmt.Sprintf("%d/%d passed", passed, totalAssertions))
+			} else {
+				m.statusBar.ShowMessage(fmt.Sprintf("⚠ Tests: %d/%d passed", passed, totalAssertions), 3*time.Second)
+			}
+		}
+
+		return m, nil
+
 	case HTTPResponseMsg:
 		// HTTP response received
 		m.isSending = false
@@ -1061,6 +1301,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Focus response panel
 			m.activePanel = ResponsePanel
 			m.statusBar.Success("Response", fmt.Sprintf("%d %s in %s", msg.Response.StatusCode, statusText, timeStr))
+
+			// Execute post-response script if present
+			if m.postResponseScript != "" && !isDefaultScript(m.postResponseScript, "post") {
+				// Build ScriptResponse from HTTP response using factory function
+				scriptResp := api.NewScriptResponseFromData(
+					msg.Response.StatusCode,
+					msg.Response.Status,
+					headers,
+					msg.Response.Body,
+					msg.Response.Time.Milliseconds(),
+				)
+
+				// Get active environment
+				env := m.leftPanel.GetEnvironments().GetActiveEnvironment()
+
+				// Use pendingScriptReq if available, otherwise create from lastRequest
+				scriptReq := m.pendingScriptReq
+				if scriptReq == nil && m.lastRequest != nil {
+					scriptReq = api.NewScriptRequestFromHTTP(m.lastRequest)
+				}
+
+				m.statusBar.Info("Running post-response script...")
+				return m, ExecutePostResponseScriptCmd(m.scriptExecutor, m.postResponseScript, scriptReq, scriptResp, env)
+			}
 		}
 		return m, nil
 
@@ -2027,6 +2291,9 @@ func (m *Model) updateWhichKeyContext() {
 
 	// Mode-based context
 	switch m.mode {
+	case JumpMode:
+		m.whichKey.SetContext(components.ContextJump)
+		return
 	case InsertMode:
 		m.whichKey.SetContext(components.ContextInsert)
 	case ViewMode:
@@ -2106,16 +2373,48 @@ func (m Model) sendHTTPRequest() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Clear previous script results and pending request
+	m.preRequestConsole = nil
+	m.postResponseConsole = nil
+	m.preRequestAssertions = nil
+	m.postResponseAssertions = nil
+	m.lastScriptResult = nil
+	m.pendingScriptReq = nil // Reset to avoid stale request in post-response scripts
+
 	// Update state to sending
 	m.isSending = true
 	m.lastRequest = req         // Track request for console logging
 	m.requestStart = time.Now() // Track start time for duration
 	m.responsePanel.ClearResponse()
+	m.responsePanel.ClearTestResults()
 	m.responsePanel.SetLoading(true)
-	m.statusBar.Info("Sending request...")
 
-	// Send the request asynchronously with loader tick
+	// Get scripts
+	preRequestScript := m.requestPanel.GetPreRequestScript()
+	m.postResponseScript = m.requestPanel.GetPostRequestScript()
+
+	// Get active environment
+	env := m.leftPanel.GetEnvironments().GetActiveEnvironment()
+
+	// If there's a pre-request script, execute it first
+	if preRequestScript != "" && !isDefaultScript(preRequestScript, "pre") {
+		m.statusBar.Info("Running pre-request script...")
+		return m, tea.Batch(ExecutePreRequestScriptCmd(m.scriptExecutor, preRequestScript, req, env), loaderTickCmd())
+	}
+
+	// No pre-request script, send request directly
+	m.statusBar.Info("Sending request...")
 	return m, tea.Batch(SendHTTPRequestCmd(req), loaderTickCmd())
+}
+
+// isDefaultScript checks if a script is the default placeholder script
+// Uses exact match (trimmed) to avoid false positives with user scripts containing template comments
+func isDefaultScript(script string, scriptType string) bool {
+	trimmedScript := strings.TrimSpace(script)
+	if scriptType == "pre" {
+		return trimmedScript == strings.TrimSpace(defaultPreRequestScript)
+	}
+	return trimmedScript == strings.TrimSpace(defaultPostResponseScript)
 }
 
 // buildHTTPRequest constructs an API Request from the current RequestView state

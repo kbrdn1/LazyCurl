@@ -3,9 +3,32 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
+
+// Script configuration defaults
+const (
+	DefaultScriptTimeout = 5 * time.Second
+	DefaultScriptEnabled = true
+)
+
+// ScriptConfig holds scripting-related configuration
+type ScriptConfig struct {
+	// Timeout is the maximum execution time for scripts
+	Timeout time.Duration `yaml:"timeout"`
+	// Enabled controls whether scripting is active
+	Enabled bool `yaml:"enabled"`
+}
+
+// DefaultScriptConfig returns default script configuration
+func DefaultScriptConfig() ScriptConfig {
+	return ScriptConfig{
+		Timeout: DefaultScriptTimeout,
+		Enabled: DefaultScriptEnabled,
+	}
+}
 
 // GlobalConfig represents the global configuration
 type GlobalConfig struct {
@@ -15,6 +38,7 @@ type GlobalConfig struct {
 	Workspaces    []string                `yaml:"workspaces"` // List of recent workspaces
 	LastWorkspace string                  `yaml:"last_workspace"`
 	Environments  map[string]*Environment `yaml:"global_environments,omitempty"`
+	Script        ScriptConfig            `yaml:"script"`
 }
 
 // WorkspaceConfig represents a workspace configuration (.lazycurl/config.yaml)
@@ -78,6 +102,7 @@ func DefaultGlobalConfig() *GlobalConfig {
 		KeyBindings: DefaultKeyBindings(),
 		Editor:      "vim",
 		Workspaces:  []string{},
+		Script:      DefaultScriptConfig(),
 	}
 }
 

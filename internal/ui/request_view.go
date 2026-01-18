@@ -654,39 +654,19 @@ func (r RequestView) Update(msg tea.Msg, cfg *config.GlobalConfig) (RequestView,
 					r.tabs.SetActive(4)
 				}
 				return r, nil
-			case "h":
-				// Switch to Pre-request section (left)
-				if r.scriptsSection != PreRequestSection {
-					r.scriptsSection = PreRequestSection
-					return r, nil
-				}
-				// Forward h to editor for cursor movement
-				editor, cmd := activeEditor.Update(msg, true)
-				if r.scriptsSection == PreRequestSection {
-					r.preRequestEditor = editor
-				} else {
-					r.postRequestEditor = editor
-				}
-				return r, cmd
-			case "l":
-				// Switch to Post-request section (right)
-				if r.scriptsSection != PostRequestSection {
-					r.scriptsSection = PostRequestSection
-					return r, nil
-				}
-				// Forward l to editor for cursor movement
-				editor, cmd := activeEditor.Update(msg, true)
-				if r.scriptsSection == PreRequestSection {
-					r.preRequestEditor = editor
-				} else {
-					r.postRequestEditor = editor
-				}
-				return r, cmd
+			case "[":
+				// Switch to Pre-request section
+				r.scriptsSection = PreRequestSection
+				return r, nil
+			case "]":
+				// Switch to Post-request section
+				r.scriptsSection = PostRequestSection
+				return r, nil
 			case "ctrl+s":
 				// TODO: Send HTTP request
 				return r, nil
 			default:
-				// Forward to editor for NORMAL mode commands
+				// Forward all other keys to editor (h/l for cursor, j/k for lines, etc.)
 				editor, cmd := activeEditor.Update(msg, true)
 				if r.scriptsSection == PreRequestSection {
 					r.preRequestEditor = editor
@@ -1890,18 +1870,27 @@ func (r *RequestView) renderScriptsTab(width, height int) string {
 		Padding(0, 1)
 
 	separatorStyle := lipgloss.NewStyle().Foreground(styles.Surface0)
+	hintStyle := lipgloss.NewStyle().Foreground(styles.Surface1)
 
-	// Section tabs: Pre-request | Post-request
+	// Section tabs: [Pre-request] | [Post-request] with bracket hints
 	if r.scriptsSection == PreRequestSection {
+		result.WriteString(hintStyle.Render("[ "))
 		result.WriteString(sectionHeaderActive.Render("Pre-request"))
+		result.WriteString(hintStyle.Render(" ]"))
 	} else {
+		result.WriteString("  ")
 		result.WriteString(sectionHeaderInactive.Render("Pre-request"))
+		result.WriteString("  ")
 	}
 	result.WriteString(separatorStyle.Render("  │  "))
 	if r.scriptsSection == PostRequestSection {
+		result.WriteString(hintStyle.Render("[ "))
 		result.WriteString(sectionHeaderActive.Render("Post-request"))
+		result.WriteString(hintStyle.Render(" ]"))
 	} else {
+		result.WriteString("  ")
 		result.WriteString(sectionHeaderInactive.Render("Post-request"))
+		result.WriteString("  ")
 	}
 	result.WriteString("\n")
 
@@ -2090,6 +2079,16 @@ func (r *RequestView) GetBodyContent() string {
 		return ""
 	}
 	return r.bodyEditor.GetContent()
+}
+
+// GetPreRequestScript returns the pre-request script content
+func (r *RequestView) GetPreRequestScript() string {
+	return r.preRequestEditor.GetContent()
+}
+
+// GetPostRequestScript returns the post-request script content
+func (r *RequestView) GetPostRequestScript() string {
+	return r.postRequestEditor.GetContent()
 }
 
 // SetEnvironmentVariables sets the environment variables for body preview mode

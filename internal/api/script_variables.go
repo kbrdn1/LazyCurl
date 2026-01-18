@@ -8,6 +8,21 @@ import (
 	"github.com/google/uuid"
 )
 
+// Package-level name lists to avoid per-call allocations
+var firstNames = []string{
+	"Alice", "Bob", "Charlie", "Diana", "Edward", "Fiona",
+	"George", "Hannah", "Ivan", "Julia", "Kevin", "Laura",
+	"Michael", "Nancy", "Oscar", "Patricia", "Quinn", "Rachel",
+	"Samuel", "Teresa", "Ulrich", "Victoria", "William", "Xena", "Yuri", "Zoe",
+}
+
+var lastNames = []string{
+	"Anderson", "Brown", "Clark", "Davis", "Evans", "Foster",
+	"Garcia", "Harris", "Ivanov", "Johnson", "King", "Lee",
+	"Martinez", "Nelson", "O'Brien", "Patel", "Quinn", "Roberts",
+	"Smith", "Taylor", "Underwood", "Vargas", "Wilson", "Xavier", "Young", "Zhang",
+}
+
 // setupLCVariables creates the lc.variables object for dynamic variable generation
 // Provides UUID, timestamp, random numbers and strings for test data generation
 //
@@ -132,26 +147,14 @@ func (e *gojaExecutor) setupLCVariables(vm *goja.Runtime, lc *goja.Object) error
 
 	// lc.variables.randomFirstName() - Random first name from list
 	varsObj.Set("randomFirstName", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
-		names := []string{
-			"Alice", "Bob", "Charlie", "Diana", "Edward", "Fiona",
-			"George", "Hannah", "Ivan", "Julia", "Kevin", "Laura",
-			"Michael", "Nancy", "Oscar", "Patricia", "Quinn", "Rachel",
-			"Samuel", "Teresa", "Ulrich", "Victoria", "William", "Xena", "Yuri", "Zoe",
-		}
 		// #nosec G404 -- Random used for test data, not security
-		return vm.ToValue(names[rand.Intn(len(names))])
+		return vm.ToValue(firstNames[rand.Intn(len(firstNames))])
 	})
 
 	// lc.variables.randomLastName() - Random last name from list
 	varsObj.Set("randomLastName", func(call goja.FunctionCall) goja.Value { // #nosec G104 -- Goja Set safe here
-		names := []string{
-			"Anderson", "Brown", "Clark", "Davis", "Evans", "Foster",
-			"Garcia", "Harris", "Ivanov", "Johnson", "King", "Lee",
-			"Martinez", "Nelson", "O'Brien", "Patel", "Quinn", "Roberts",
-			"Smith", "Taylor", "Underwood", "Vargas", "Wilson", "Xavier", "Young", "Zhang",
-		}
 		// #nosec G404 -- Random used for test data, not security
-		return vm.ToValue(names[rand.Intn(len(names))])
+		return vm.ToValue(lastNames[rand.Intn(len(lastNames))])
 	})
 
 	// lc.variables.randomBoolean() - Random boolean value

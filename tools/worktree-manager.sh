@@ -307,12 +307,13 @@ quick_create() {
     local type="$1"
     local issue="$2"
     local desc="$3"
-    local auto_claude="${4:-}"
+    local option="${4:-}"
 
     if [[ -z "$type" ]] || [[ -z "$issue" ]] || [[ -z "$desc" ]]; then
-        echo -e "${RED}Usage: $0 create <type> <issue-number> <description> [--claude]${NC}"
+        echo -e "${RED}Usage: $0 create <type> <issue-number> <description> [--no-launch|--claude]${NC}"
         echo -e "${YELLOW}Example: $0 create feat 123 user-authentication${NC}"
-        echo -e "${YELLOW}Example: $0 create feat 123 user-authentication --claude${NC}"
+        echo -e "${YELLOW}Example: $0 create feat 123 user-authentication --no-launch  # Skip Claude launch${NC}"
+        echo -e "${YELLOW}Example: $0 create feat 123 user-authentication --claude     # Auto-launch Claude${NC}"
         echo ""
         echo -e "${YELLOW}Available types:${NC}"
         for type_desc in "${BRANCH_TYPES[@]}"; do
@@ -356,12 +357,23 @@ quick_create() {
         if [ -n "$worktree_path" ] && [ -d "$worktree_path" ]; then
             setup_worktree "$worktree_path" "$issue" "$clean_desc"
 
-            if [ "$auto_claude" == "--claude" ]; then
-                echo -e "${CYAN}Launching Claude Code...${NC}"
-                cd "${worktree_path}" && claude
-            else
-                launch_claude "$worktree_path"
-            fi
+            # Handle launch options
+            case "$option" in
+                --no-launch)
+                    echo ""
+                    echo -e "${GREEN}Worktree ready at:${NC} ${worktree_path}"
+                    echo -e "${YELLOW}To start working:${NC}"
+                    echo -e "  cd ${worktree_path}"
+                    echo -e "  claude"
+                    ;;
+                --claude)
+                    echo -e "${CYAN}Launching Claude Code...${NC}"
+                    cd "${worktree_path}" && claude
+                    ;;
+                *)
+                    launch_claude "$worktree_path"
+                    ;;
+            esac
         else
             echo -e "${YELLOW}Next: cd \$(gwq get ${type}) && make deps && claude${NC}"
         fi

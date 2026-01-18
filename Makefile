@@ -13,14 +13,20 @@ all: build
 ## help: Affiche cette aide
 help:
 	@echo "Commandes disponibles:"
-	@echo "  make build     - Compile l'application"
-	@echo "  make run       - Compile et lance l'application"
-	@echo "  make clean     - Nettoie les binaires et caches"
-	@echo "  make test      - Lance les tests"
-	@echo "  make install   - Installe l'application globalement"
-	@echo "  make dev       - Mode développement avec live reload"
-	@echo "  make deps      - Télécharge les dépendances"
-	@echo "  make worktree  - Gestion des worktrees Git avec gwq"
+	@echo "  make build           - Compile l'application"
+	@echo "  make run             - Compile et lance l'application"
+	@echo "  make clean           - Nettoie les binaires et caches"
+	@echo "  make test            - Lance les tests"
+	@echo "  make install         - Installe l'application globalement"
+	@echo "  make dev             - Mode développement avec live reload"
+	@echo "  make deps            - Télécharge les dépendances"
+	@echo ""
+	@echo "Git Worktrees:"
+	@echo "  make worktree        - Menu interactif de gestion des worktrees"
+	@echo "  make worktree-create - Créer worktree (non-interactif pour Claude Code)"
+	@echo "                         Usage: make worktree-create TYPE=feat ISSUE=35 DESC=js-scripting"
+	@echo "  make worktree-list   - Lister les worktrees"
+	@echo "  make worktree-cleanup- Nettoyer les références obsolètes"
 
 ## build: Compile l'application
 build:
@@ -131,3 +137,23 @@ ci: fmt lint test
 ## worktree: Manage Git worktrees with gwq (interactive menu)
 worktree:
 	@bash tools/worktree-manager.sh
+
+## worktree-create: Create worktree non-interactively (for Claude Code)
+## Usage: make worktree-create TYPE=feat ISSUE=35 DESC=js-scripting
+worktree-create:
+	@if [ -z "$(TYPE)" ] || [ -z "$(ISSUE)" ] || [ -z "$(DESC)" ]; then \
+		echo "❌ Usage: make worktree-create TYPE=<type> ISSUE=<number> DESC=<description>"; \
+		echo "   Example: make worktree-create TYPE=feat ISSUE=35 DESC=js-scripting"; \
+		echo ""; \
+		echo "   Types: feat, fix, hotfix, docs, test, refactor, chore, perf, ci, build"; \
+		exit 1; \
+	fi
+	@bash tools/worktree-manager.sh create $(TYPE) $(ISSUE) $(DESC) --no-launch
+
+## worktree-list: List all worktrees
+worktree-list:
+	@bash tools/worktree-manager.sh list
+
+## worktree-cleanup: Cleanup stale worktree references
+worktree-cleanup:
+	@bash tools/worktree-manager.sh cleanup

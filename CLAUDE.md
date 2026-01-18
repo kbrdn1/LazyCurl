@@ -52,29 +52,43 @@ make build-all      # Cross-compile for Linux/macOS/Windows (AMD64 & ARM64)
 make worktree       # Interactive worktree manager with gwq
 ```
 
-**For Claude Code**: Use non-interactive commands:
+**For Claude Code**: Use non-interactive `make worktree-create`:
 
 ```bash
-# Create worktree for a feature
-gwq add -b feat/#<issue>-<description>
+# Create worktree for a feature (copies all necessary files + runs make deps)
+make worktree-create TYPE=feat ISSUE=35 DESC=js-scripting
 
-# Navigate to worktree
-cd ~/cc-worktree/LazyCurl/<branch-name>
-
-# Install dependencies (REQUIRED after creating worktree)
-make deps
+# This automatically:
+# - Creates branch: feat/#35-js-scripting
+# - Creates worktree at: ~/cc-worktree/LazyCurl/feat-35-js-scripting
+# - Copies: CLAUDE.md, .lazycurl/, .claude/commands/, .specify/
+# - Creates: specs/035-js-scripting/ folder
+# - Runs: make deps
 
 # List worktrees
-gwq list
+make worktree-list
 
-# Remove worktree when done
-gwq remove -b feat/#<issue>-<description>
+# Cleanup stale references
+make worktree-cleanup
+```
+
+**After creation**: The user launches a new Claude Code session in the worktree:
+
+```bash
+cd ~/cc-worktree/LazyCurl/feat-35-js-scripting
+claude
 ```
 
 **Branch naming convention**: `<type>/#<issue>-<description>`
 
-- Types: `feat`, `fix`, `hotfix`, `docs`, `test`, `refactor`, `chore`, `perf`
+- Types: `feat`, `fix`, `hotfix`, `docs`, `test`, `refactor`, `chore`, `perf`, `ci`, `build`
 - Example: `feat/#35-js-scripting`, `fix/#42-request-chaining`
+
+**Remove worktree when done**:
+
+```bash
+gwq remove -b feat/#35-js-scripting
+```
 
 ## Architecture
 

@@ -157,6 +157,7 @@ func (e *gojaExecutor) setupLCVariables(vm *goja.Runtime, lc *goja.Object) error
 	})
 
 	// lc.variables.randomBoolean() - Random boolean value
+	// #nosec G104 -- Goja Set returns error only for invalid types, safe here
 	varsObj.Set("randomBoolean", func(call goja.FunctionCall) goja.Value {
 		// #nosec G404 -- Random used for test data, not security
 		return vm.ToValue(rand.Intn(2) == 1)

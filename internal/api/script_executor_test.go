@@ -593,9 +593,10 @@ func TestExecutePreRequest_Duration(t *testing.T) {
 		t.Errorf("ExecutePreRequest failed: %v", result.Error)
 	}
 
-	// Duration should be recorded and positive
-	if result.Duration <= 0 {
-		t.Errorf("Duration = %v, want > 0", result.Duration)
+	// Duration should be recorded and non-negative
+	// Note: On Windows, timer resolution may cause very fast scripts to report 0
+	if result.Duration < 0 {
+		t.Errorf("Duration = %v, want >= 0", result.Duration)
 	}
 }
 

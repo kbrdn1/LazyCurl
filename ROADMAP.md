@@ -55,22 +55,23 @@ Moteur de scripting JavaScript avec Goja runtime.
 
 - [x] JavaScript Scripting via Goja ES5.1+ ([#35](https://github.com/kbrdn1/LazyCurl/issues/35), [#75](https://github.com/kbrdn1/LazyCurl/pull/75))
 - [x] Test Assertions avec 16 matchers (`lc.test`, `lc.expect`)
-- [x] Request Chaining via `lc.sendRequest()` ([#42](https://github.com/kbrdn1/LazyCurl/issues/42))
+- [x] Basic chaining via `lc.sendRequest()` (scripting-based)
 - [x] API Documentation complète (75+ méthodes documentées)
 
 ---
 
 ## Current Sprint
 
-### Sprint 4b - Collection Runner & UX 🔥
+### Sprint 4b - Collection Runner & Chaining 🔥
 
-**Objectif** : Compléter la parité Bruno avec runner et améliorations UX.
+**Objectif** : Compléter la parité Bruno avec runner, chaining complet et améliorations UX.
 
 #### Critical Priority 🔴
 
 | Feature | Issue | Description | Concurrent |
 |---------|-------|-------------|------------|
 | Collection Runner | [#44](https://github.com/kbrdn1/LazyCurl/issues/44) | Exécution séquentielle de toutes les requêtes | Bruno, Yaak |
+| Request Chaining | [#42](https://github.com/kbrdn1/LazyCurl/issues/42) | JSONPath/Regex extraction, chain definition UI | Bruno |
 
 #### High Priority 🟡
 
@@ -159,8 +160,8 @@ Features non encore planifiées :
 |---------|-------|----------|-----|
 | Scripting JS | ✅ | ✅ | ✅ Parité |
 | Test Assertions | ✅ | ✅ | ✅ Parité |
-| Request Chaining | ✅ | ✅ | ✅ Parité |
-| Collection Runner | ✅ | ❌ | Sprint 4b |
+| Request Chaining | ✅ | ⚠️ Basic | [#42](https://github.com/kbrdn1/LazyCurl/issues/42) Sprint 4b |
+| Collection Runner | ✅ | ❌ | [#44](https://github.com/kbrdn1/LazyCurl/issues/44) Sprint 4b |
 | GraphQL | ✅ | ❌ | Sprint 5 |
 | CLI mode | ✅ | ❌ | Sprint 7 |
 | Git-friendly | ✅ | ✅ | ✅ Parité |
@@ -181,8 +182,8 @@ Features non encore planifiées :
 
 ```
 2026 Q1: Sprint 4 - Parité Bruno
-         ├── v1.3.0 ✅ Scripting + Assertions + Chaining
-         └── v1.4.0 🔄 Collection Runner + UX
+         ├── v1.3.0 ✅ Scripting + Assertions + Basic Chaining
+         └── v1.4.0 🔄 Collection Runner + Full Chaining + UX
 
 2026 Q2: Sprint 5 - Multi-Protocol
          └── GraphQL + WebSocket + SSE + gRPC
@@ -212,7 +213,7 @@ Features non encore planifiées :
 |-----------|--------|--------|
 | Parité posting | v1.3.0 | ✅ Complete |
 | Scripting & Assertions | v1.3.0 | ✅ Complete |
-| Parité Bruno (core) | v1.4.0 | 🔄 In Progress (Runner pending) |
+| Parité Bruno (core) | v1.4.0 | 🔄 In Progress (Runner + Chaining pending) |
 | Parité Yaak protocols | v1.5.0 | ⏳ Sprint 5 |
 | Enterprise-ready | v1.6.0 | ⏳ Sprint 6 |
 | CI/CD complete | v2.0.0 | ⏳ Sprint 7 |

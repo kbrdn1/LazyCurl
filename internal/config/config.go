@@ -79,6 +79,10 @@ type KeyBindings struct {
 	ImportCurl       []string `yaml:"import_curl"`
 	ExportCurl       []string `yaml:"export_curl"`
 	ImportOpenAPI    []string `yaml:"import_openapi"`
+	PanelLeft        []string `yaml:"panel_left"`
+	PanelRight       []string `yaml:"panel_right"`
+	SectionPrev      []string `yaml:"section_prev"`
+	SectionNext      []string `yaml:"section_next"`
 }
 
 // Environment represents an environment with variables
@@ -127,6 +131,10 @@ func DefaultKeyBindings() KeyBindings {
 		ImportCurl:       []string{"ctrl+i"},
 		ExportCurl:       []string{"ctrl+e"},
 		ImportOpenAPI:    []string{"ctrl+o"},
+		PanelLeft:        []string{"ctrl+w h"},
+		PanelRight:       []string{"ctrl+w l"},
+		SectionPrev:      []string{"["},
+		SectionNext:      []string{"]"},
 	}
 }
 

@@ -161,6 +161,7 @@ type Model struct {
 
 	// Mode system
 	mode         Mode
+	pendingCtrlW bool // Ctrl+W prefix for panel switching (neo-vim style)
 	jumpMode     *JumpModeState
 	statusBar    *StatusBar
 	commandInput *CommandInput
@@ -474,6 +475,60 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+		// Handle Ctrl+W prefix for panel switching (neo-vim style)
+		if m.pendingCtrlW {
+			m.pendingCtrlW = false
+			switch msg.String() {
+			case "h":
+				if m.activePanel > CollectionsPanel {
+					m.activePanel--
+					if m.isFullscreen {
+						m.fullscreenPanel = m.activePanel
+					}
+					return m, m.markSessionDirty()
+				}
+				return m, nil
+			case "l":
+				if m.activePanel < ResponsePanel {
+					m.activePanel++
+					if m.isFullscreen {
+						m.fullscreenPanel = m.activePanel
+					}
+					return m, m.markSessionDirty()
+				}
+				return m, nil
+			case "j":
+				// Down: Collections → Request, Request → Response
+				if m.activePanel < ResponsePanel {
+					m.activePanel++
+					if m.isFullscreen {
+						m.fullscreenPanel = m.activePanel
+					}
+					return m, m.markSessionDirty()
+				}
+				return m, nil
+			case "k":
+				// Up: Response → Request, Request → Collections
+				if m.activePanel > CollectionsPanel {
+					m.activePanel--
+					if m.isFullscreen {
+						m.fullscreenPanel = m.activePanel
+					}
+					return m, m.markSessionDirty()
+				}
+				return m, nil
+			default:
+				// Unknown key after Ctrl+W, cancel
+				return m, nil
+			}
+		}
+
+		// Detect Ctrl+W press
+		if msg.String() == "ctrl+w" {
+			m.pendingCtrlW = true
+			return m, nil
+		}
+
 		// Handle Escape key - exit fullscreen, jump mode, or return to NORMAL mode
 		if msg.String() == "esc" {
 			// Exit jump mode first if active
@@ -533,24 +588,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// This MUST return to prevent quit handler from catching 'q'
 		// BUT: Intercept H/L (uppercase) for panel switching
 		if m.activePanel == RequestPanel && m.requestPanel.IsEditorActive() {
-			// H/L (uppercase) switches panels even when editor is active
-			switch msg.String() {
-			case "H":
-				// Switch to left panel (Collections)
-				m.activePanel = CollectionsPanel
-				if m.isFullscreen {
-					m.fullscreenPanel = m.activePanel
-				}
-				return m, m.markSessionDirty()
-			case "L":
-				// Switch to right panel (Response)
-				m.activePanel = ResponsePanel
-				if m.isFullscreen {
-					m.fullscreenPanel = m.activePanel
-				}
-				return m, m.markSessionDirty()
-			}
-			// Forward other keys to editor
+			// Forward keys to editor
 			var cmd tea.Cmd
 			*m.requestPanel, cmd = m.requestPanel.Update(msg, m.globalConfig)
 			return m, cmd
@@ -631,67 +669,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			// Panel navigation with h/l only in NORMAL mode
-			// Skip navigation if search is active in the left panel
-			// Note: Body tab is handled earlier and returns before reaching here
-			// IMPORTANT: In CollectionsPanel, let the tree handle l/h first for expand/collapse
-			if m.mode.AllowsNavigation() && !m.leftPanel.IsSearching() {
-				// Left navigation (h) - in CollectionsPanel, only navigate if at root level collapsed folder
-				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateLeft) {
-					// In CollectionsPanel, h should collapse folders, not navigate panels
-					// Only navigate panels from Request or Response panels
-					if m.activePanel > CollectionsPanel {
-						m.activePanel--
-						// Update fullscreen panel if in fullscreen mode
-						if m.isFullscreen {
-							m.fullscreenPanel = m.activePanel
-						}
-						return m, m.markSessionDirty()
-					}
-					// In CollectionsPanel, let tree handle h for collapse
-				}
-				// Right navigation (l) - in CollectionsPanel, let tree handle it
-				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateRight) {
-					// In CollectionsPanel, l should expand folders or select requests
-					// Only navigate panels from Request panel
-					if m.activePanel == RequestPanel {
-						m.activePanel++
-						// Update fullscreen panel if in fullscreen mode
-						if m.isFullscreen {
-							m.fullscreenPanel = m.activePanel
-						}
-						return m, m.markSessionDirty()
-					}
-					// In CollectionsPanel, let tree handle l for expand/select
-					// In ResponsePanel, we're already at the rightmost panel
-				}
-			}
+			// Panel switching is now handled by Ctrl+W prefix (neo-vim style)
+			// h/l passes through to active panel handlers
 		}
 
-		// Handle VIEW mode navigation (read-only browsing)
-		if m.mode == ViewMode {
-			if m.mode.AllowsNavigation() {
-				// Same logic as NORMAL mode - let tree handle h/l in CollectionsPanel
-				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateLeft) {
-					if m.activePanel > CollectionsPanel {
-						m.activePanel--
-						if m.isFullscreen {
-							m.fullscreenPanel = m.activePanel
-						}
-						return m, m.markSessionDirty()
-					}
-				}
-				if m.matchKey(msg.String(), m.globalConfig.KeyBindings.NavigateRight) {
-					if m.activePanel == RequestPanel {
-						m.activePanel++
-						if m.isFullscreen {
-							m.fullscreenPanel = m.activePanel
-						}
-						return m, m.markSessionDirty()
-					}
-				}
-			}
-		}
+		// VIEW mode panel switching handled by Ctrl+W prefix
 
 	case ModeChangeMsg:
 		// Handle mode change side effects
@@ -2040,6 +2022,8 @@ func (m Model) handleDialogResult(msg components.DialogResultMsg) (tea.Model, te
 				m.syncParamsAndSave()
 			} else if ctx.Tab == "PathParams" {
 				m.syncPathParamsAndSave(ctx.Index, msg.Value)
+			} else if ctx.Tab == "Headers" {
+				m.saveHeadersToCollection()
 			}
 		}
 	case "request_delete":
@@ -2052,6 +2036,8 @@ func (m Model) handleDialogResult(msg components.DialogResultMsg) (tea.Model, te
 			} else if ctx.Tab == "PathParams" {
 				// Remove path param from URL
 				m.removePathParamFromURL(ctx.Key)
+			} else if ctx.Tab == "Headers" {
+				m.saveHeadersToCollection()
 			}
 		}
 	case "request_edit":
@@ -2062,6 +2048,8 @@ func (m Model) handleDialogResult(msg components.DialogResultMsg) (tea.Model, te
 			// Sync params to URL and save if Params tab
 			if ctx.Tab == "Params" {
 				m.syncParamsAndSave()
+			} else if ctx.Tab == "Headers" {
+				m.saveHeadersToCollection()
 			}
 			// Note: PathParams edit updates the value, not the key (which is in URL)
 		}
@@ -2079,6 +2067,8 @@ func (m Model) handleDialogResult(msg components.DialogResultMsg) (tea.Model, te
 				// Sync params to URL and save if Params tab
 				if ctx.Tab == "Params" {
 					m.syncParamsAndSave()
+				} else if ctx.Tab == "Headers" {
+					m.saveHeadersToCollection()
 				}
 			}
 		}
@@ -2225,6 +2215,19 @@ func (m *Model) saveURLToCollection() {
 	}
 }
 
+// saveHeadersToCollection saves the current headers table to the collection file
+func (m *Model) saveHeadersToCollection() {
+	requestID := m.requestPanel.GetCurrentRequestID()
+	if requestID != "" {
+		headers := m.requestPanel.GetHeaderEntries()
+		if err := m.leftPanel.GetCollections().UpdateRequestHeadersByID(requestID, headers); err != nil {
+			m.statusBar.Error(err)
+			return
+		}
+		m.leftPanel.GetCollections().ReloadCollections()
+	}
+}
+
 // overlayDialog overlays a dialog centered on the background content
 func (m Model) overlayDialog(background, dialog string) string {
 	bgLines := strings.Split(background, "\n")
@@ -2259,16 +2262,11 @@ func (m Model) overlayDialog(background, dialog string) string {
 				bgLine += " "
 			}
 
-			// We can't easily cut ANSI strings, so just use the dialog centered
-			// with spaces preserving the visual width
+			// Preserve background on both sides of the dialog
 			lineWidth := lipgloss.Width(dialogLine)
-			leftPad := strings.Repeat(" ", startCol)
-			rightPad := strings.Repeat(" ", m.width-startCol-lineWidth)
-			if m.width-startCol-lineWidth < 0 {
-				rightPad = ""
-			}
-
-			bgLines[bgIdx] = leftPad + dialogLine + rightPad
+			leftBg := ansiSlice(bgLine, 0, startCol)
+			rightBg := ansiSlice(bgLine, startCol+lineWidth, m.width)
+			bgLines[bgIdx] = leftBg + dialogLine + rightBg
 		}
 	}
 

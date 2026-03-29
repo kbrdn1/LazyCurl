@@ -713,16 +713,16 @@ func (r RequestView) Update(msg tea.Msg, cfg *config.GlobalConfig) (RequestView,
 			r.tabs.SetActive(4) // Scripts
 		}
 
-		// Handle Params tab section switching with h/l when in Params tab
+		// Handle Params tab section switching with [/] when in Params tab
 		if r.tabs.GetActive() == "Params" {
 			switch msg.String() {
-			case "h":
+			case "[":
 				// Switch to Path Params section (left)
 				if r.paramsSection != PathParamsSection {
 					r.paramsSection = PathParamsSection
 					return r, nil
 				}
-			case "l":
+			case "]":
 				// Switch to Query Params section (right)
 				if r.paramsSection != QueryParamsSection {
 					r.paramsSection = QueryParamsSection
@@ -2071,6 +2071,19 @@ func (r *RequestView) SetURL(url string) {
 // GetHeadersTable returns the headers table for HTTP request building
 func (r *RequestView) GetHeadersTable() *components.Table {
 	return r.headersTable
+}
+
+// GetHeaderEntries returns all header entries from the headers table
+func (r *RequestView) GetHeaderEntries() []api.KeyValueEntry {
+	entries := make([]api.KeyValueEntry, 0, len(r.headersTable.Rows))
+	for _, row := range r.headersTable.Rows {
+		entries = append(entries, api.KeyValueEntry{
+			Key:     row.Key,
+			Value:   row.Value,
+			Enabled: row.Enabled,
+		})
+	}
+	return entries
 }
 
 // GetBodyContent returns the body content from the body editor

@@ -579,6 +579,16 @@ func (c *CollectionFile) UpdateRequestScripts(id, preRequest, postRequest string
 	return false
 }
 
+// UpdateRequestHeaders updates the headers of a request by ID
+func (c *CollectionFile) UpdateRequestHeaders(id string, headers []KeyValueEntry) bool {
+	req := c.FindRequest(id)
+	if req != nil {
+		req.Headers = headers
+		return true
+	}
+	return false
+}
+
 // UpdateRequestAuth updates the auth configuration of a request by ID
 func (c *CollectionFile) UpdateRequestAuth(id string, auth *AuthConfig) bool {
 	req := c.FindRequest(id)

@@ -425,6 +425,87 @@ func TestUpdateRequestURLNested(t *testing.T) {
 	}
 }
 
+func TestUpdateRequestHeaders(t *testing.T) {
+	tests := []struct {
+		name      string
+		requestID string
+		headers   []KeyValueEntry
+		wantFound bool
+	}{
+		{
+			name:      "Update headers on top-level request",
+			requestID: "req1",
+			headers: []KeyValueEntry{
+				{Key: "Content-Type", Value: "application/json", Enabled: true},
+				{Key: "Authorization", Value: "Bearer token", Enabled: true},
+			},
+			wantFound: true,
+		},
+		{
+			name:      "Update headers on request in folder",
+			requestID: "req3",
+			headers: []KeyValueEntry{
+				{Key: "X-Custom", Value: "custom-value", Enabled: true},
+			},
+			wantFound: true,
+		},
+		{
+			name:      "Request not found returns false",
+			requestID: "nonexistent",
+			headers: []KeyValueEntry{
+				{Key: "X-Header", Value: "value", Enabled: true},
+			},
+			wantFound: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			collection := &CollectionFile{
+				Name: "Test",
+				Requests: []CollectionRequest{
+					{ID: "req1", Name: "Request 1", Method: GET, URL: "http://test1.com"},
+					{ID: "req2", Name: "Request 2", Method: POST, URL: "http://test2.com"},
+				},
+				Folders: []Folder{
+					{
+						Name: "Folder 1",
+						Requests: []CollectionRequest{
+							{ID: "req3", Name: "Request 3", Method: PUT, URL: "http://test3.com"},
+						},
+					},
+				},
+			}
+
+			result := collection.UpdateRequestHeaders(tt.requestID, tt.headers)
+			if result != tt.wantFound {
+				t.Errorf("UpdateRequestHeaders() = %v, want %v", result, tt.wantFound)
+			}
+
+			if tt.wantFound {
+				req := collection.FindRequest(tt.requestID)
+				if req == nil {
+					t.Fatalf("Expected to find request %s after update", tt.requestID)
+				}
+				if len(req.Headers) != len(tt.headers) {
+					t.Errorf("Expected %d headers, got %d", len(tt.headers), len(req.Headers))
+				}
+				for i, h := range tt.headers {
+					if req.Headers[i].Key != h.Key {
+						t.Errorf("Expected header key %q, got %q", h.Key, req.Headers[i].Key)
+					}
+					if req.Headers[i].Value != h.Value {
+						t.Errorf("Expected header value %q, got %q", h.Value, req.Headers[i].Value)
+					}
+					if req.Headers[i].Enabled != h.Enabled {
+						t.Errorf("Expected header enabled %v, got %v", h.Enabled, req.Headers[i].Enabled)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestValidateCollection(t *testing.T) {
 	tests := []struct {
 		name       string

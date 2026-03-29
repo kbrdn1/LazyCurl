@@ -325,9 +325,10 @@ func insertAtVisualPosition(line string, visualCol int, insertText string, repla
 		}
 	}
 
-	// If we couldn't find the start position, append at end
+	// If we couldn't find the start position, return line unchanged
 	if startBytePos == -1 {
-		return line + " " + insertText
+		// Position not found (col beyond line width), skip this target
+		return line
 	}
 
 	if endBytePos == -1 {
@@ -386,15 +387,7 @@ func (m *JumpModeState) RenderOverlay(baseView string, width, height int) string
 		// Check visual width of the line (without ANSI codes)
 		visualWidth := lipgloss.Width(line)
 		if col < 0 || col >= visualWidth {
-			// Adjust column if out of bounds
-			if col >= visualWidth && visualWidth > 0 {
-				col = visualWidth - len(target.Label)
-				if col < 0 {
-					col = 0
-				}
-			} else {
-				continue
-			}
+			continue // Skip labels that don't fit, don't reposition
 		}
 
 		// Build the styled label

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -326,6 +327,22 @@ func (c *CollectionsView) UpdateRequestScriptsByID(requestID, preRequest, postRe
 	}
 
 	return nil
+}
+
+// UpdateRequestHeadersByID finds a request by ID across all collections and updates its headers
+func (c *CollectionsView) UpdateRequestHeadersByID(requestID string, headers []api.KeyValueEntry) error {
+	if requestID == "" {
+		return nil
+	}
+
+	// Search through all collections
+	for _, col := range c.collections {
+		if col.UpdateRequestHeaders(requestID, headers) {
+			return col.Save()
+		}
+	}
+
+	return fmt.Errorf("request not found: %s", requestID)
 }
 
 // UpdateRequestAuthByID finds a request by ID across all collections and updates its auth

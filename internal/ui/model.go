@@ -2420,7 +2420,7 @@ func isDefaultScript(script string, scriptType string) bool {
 // buildHTTPRequest constructs an API Request from the current RequestView state
 func (m *Model) buildHTTPRequest() *api.Request {
 	method := m.requestPanel.GetMethod()
-	url := m.requestPanel.GetURL()
+	url := m.requestPanel.BuildURLWithPathParams()
 
 	// Replace environment variables in URL
 	envVars := m.leftPanel.GetEnvironments().GetActiveEnvironmentVariables()
